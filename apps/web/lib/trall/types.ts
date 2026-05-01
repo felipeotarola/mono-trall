@@ -23,6 +23,20 @@ export type ViewBox = {
   height: number
 }
 
+export type PointBounds = {
+  minX: number
+  maxX: number
+  minY: number
+  maxY: number
+}
+
+export type PlanContentBounds = {
+  left: number
+  right: number
+  top: number
+  bottom: number
+}
+
 export type EditableDimension = {
   edgeIndex: number
   value: string

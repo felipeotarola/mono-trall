@@ -1,6 +1,7 @@
 "use client"
 
 import type { Dispatch, SetStateAction } from "react"
+import { useEffect, useRef } from "react"
 
 import { PlanSvg } from "@/components/trall/plan-svg"
 import { ScaleIndicator } from "@/components/trall/svg/scale-indicator"
@@ -18,6 +19,7 @@ export function PlanningSurface({
   houseBounds,
   setActivePointIndex,
   setDeckPoints,
+  setViewAspectRatio,
   setViewBox,
   viewBox,
 }: {
@@ -27,9 +29,32 @@ export function PlanningSurface({
   houseBounds: HouseBounds
   setActivePointIndex: (index: number | null) => void
   setDeckPoints: Dispatch<SetStateAction<Point[]>>
+  setViewAspectRatio: (aspectRatio: number) => void
   setViewBox: Dispatch<SetStateAction<ViewBox>>
   viewBox: ViewBox
 }) {
+  const canvasFrameRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const canvasFrame = canvasFrameRef.current
+    if (!canvasFrame) {
+      return
+    }
+
+    const updateAspectRatio = () => {
+      const { width, height } = canvasFrame.getBoundingClientRect()
+      if (width > 0 && height > 0) {
+        setViewAspectRatio(width / height)
+      }
+    }
+
+    updateAspectRatio()
+    const resizeObserver = new ResizeObserver(updateAspectRatio)
+    resizeObserver.observe(canvasFrame)
+
+    return () => resizeObserver.disconnect()
+  }, [setViewAspectRatio])
+
   return (
     <div className="relative min-h-[calc(100svh-11rem)] overflow-hidden bg-stone-50 pt-16 dark:bg-zinc-950 md:min-h-[calc(100svh-7rem)]">
       <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.48)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.48)_1px,transparent_1px)] bg-[size:32px_32px]" />
@@ -46,8 +71,8 @@ export function PlanningSurface({
         Drag points to adjust deck shape
       </p>
 
-      <div className="relative flex min-h-[calc(100svh-13.5rem)] items-center justify-center px-3 py-8 md:min-h-[calc(100svh-10rem)]">
-        <div className="aspect-square w-[min(900px,98%)]">
+      <div className="relative flex h-[calc(100svh-13.5rem)] min-h-[520px] items-stretch justify-center px-3 py-8 md:h-[calc(100svh-10rem)]">
+        <div ref={canvasFrameRef} className="h-full w-full">
           <PlanSvg
             activeTool={activeTool}
             activePointIndex={activePointIndex}

@@ -1,11 +1,10 @@
 import {
   GRID_SIZE_PX,
-  POINT_BOUNDS,
   SNAP_THRESHOLD_PX,
 } from "./constants"
 import { clamp } from "./geometry"
 import { getHouseAttachEdge } from "./house"
-import type { HouseBounds, Point, SnapType } from "./types"
+import type { HouseBounds, Point, PointBounds, SnapType } from "./types"
 
 export function snapToGrid(value: number, gridSize: number): number {
   return Math.round(value / gridSize) * gridSize
@@ -45,22 +44,23 @@ export function snapPointToHouseAttachEdge(
 export function applySnap(
   point: Point,
   houseBounds: HouseBounds,
+  pointBounds: PointBounds,
   options: { disableGrid?: boolean; preferredSnapType?: SnapType } = {}
 ): {
   point: Point
   snapType: SnapType
 } {
   const clampedPoint = {
-    x: clamp(point.x, POINT_BOUNDS.minX, POINT_BOUNDS.maxX),
-    y: clamp(point.y, POINT_BOUNDS.minY, POINT_BOUNDS.maxY),
+    x: clamp(point.x, pointBounds.minX, pointBounds.maxX),
+    y: clamp(point.y, pointBounds.minY, pointBounds.maxY),
   }
   const gridPoint = options.disableGrid
     ? clampedPoint
     : snapPointToGrid(clampedPoint)
   const houseSnap = snapPointToHouseAttachEdge(gridPoint, houseBounds)
   const finalPoint = {
-    x: clamp(houseSnap.point.x, POINT_BOUNDS.minX, POINT_BOUNDS.maxX),
-    y: clamp(houseSnap.point.y, POINT_BOUNDS.minY, POINT_BOUNDS.maxY),
+    x: clamp(houseSnap.point.x, pointBounds.minX, pointBounds.maxX),
+    y: clamp(houseSnap.point.y, pointBounds.minY, pointBounds.maxY),
   }
 
   return {

@@ -7,25 +7,11 @@ export const ANGLE_SNAP_DEGREES = [0, 45, 90, 135, 180, 225, 270, 315]
 export const ANGLE_SNAP_THRESHOLD_DEG = 6
 export const PARALLEL_HINT_THRESHOLD_DEG = 4
 
-export const POINT_BOUNDS = {
-  minX: 80,
-  maxX: 1080,
-  minY: 120,
-  maxY: 760,
-}
-
 export const INITIAL_VIEW_BOX: ViewBox = {
   x: 80,
   y: 16,
   width: 1000,
   height: 744,
-}
-
-export const PAN_BOUNDS = {
-  minX: -300,
-  maxX: 600,
-  minY: -250,
-  maxY: 350,
 }
 
 export const baseMaterials: Material[] = [

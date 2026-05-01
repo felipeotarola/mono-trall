@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Maximize2Icon, Minimize2Icon } from "lucide-react"
 
 import { CalculatorPanel } from "@/components/trall/calculator-panel"
@@ -26,6 +26,11 @@ import type {
   Tool,
   ViewBox,
 } from "@/lib/trall/types"
+import {
+  getFitViewBox,
+  getPlanContentBounds,
+  isContentInsideViewBox,
+} from "@/lib/trall/view"
 import { useSidebar } from "@workspace/ui/components/sidebar"
 
 export function Workspace() {
@@ -33,11 +38,48 @@ export function Workspace() {
   const [calculatorOpen, setCalculatorOpen] = useState(true)
   const [activeTool, setActiveTool] = useState<ActiveTool>("select")
   const [viewBox, setViewBox] = useState<ViewBox>(INITIAL_VIEW_BOX)
+  const [viewAspectRatio, setViewAspectRatio] = useState(
+    INITIAL_VIEW_BOX.width / INITIAL_VIEW_BOX.height
+  )
   const [deckPoints, setDeckPoints] = useState<Point[]>(initialDeckPoints)
   const [activePointIndex, setActivePointIndex] = useState<number | null>(null)
   const [house, setHouse] = useState<HouseModel>(initialHouse)
+  const viewBoxRef = useRef(viewBox)
+  const viewAspectRatioRef = useRef(viewAspectRatio)
 
   const houseBounds = useMemo(() => getHouseBounds(house), [house])
+  const fitViewBox = useCallback(() => {
+    setViewBox(
+      getFitViewBox(houseBounds, deckPoints, viewAspectRatioRef.current)
+    )
+  }, [deckPoints, houseBounds])
+
+  function scheduleFitViewBox() {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(fitViewBox)
+    })
+  }
+
+  useEffect(() => {
+    viewBoxRef.current = viewBox
+  }, [viewBox])
+
+  useEffect(() => {
+    viewAspectRatioRef.current = viewAspectRatio
+  }, [viewAspectRatio])
+
+  useEffect(() => {
+    const contentBounds = getPlanContentBounds(houseBounds, deckPoints)
+    if (!isContentInsideViewBox(contentBounds, viewBoxRef.current)) {
+      const frameId = requestAnimationFrame(() => {
+        setViewBox(
+          getFitViewBox(houseBounds, deckPoints, viewAspectRatioRef.current)
+        )
+      })
+
+      return () => cancelAnimationFrame(frameId)
+    }
+  }, [deckPoints, houseBounds])
 
   const calculations = useMemo(() => {
     const areaM2 = polygonArea(deckPoints) / PIXELS_PER_METER ** 2
@@ -73,12 +115,14 @@ export function Workspace() {
       setOpen(false)
       setOpenMobile(false)
       setCalculatorOpen(false)
+      scheduleFitViewBox()
       return
     }
 
     setOpen(true)
     setOpenMobile(false)
     setCalculatorOpen(true)
+    scheduleFitViewBox()
   }
 
   const expandTool: Tool = {
@@ -101,7 +145,7 @@ export function Workspace() {
             <CanvasToolbar
               activeTool={activeTool}
               extraTool={expandTool}
-              onResetView={() => setViewBox(INITIAL_VIEW_BOX)}
+              onResetView={fitViewBox}
               setActiveTool={setActiveTool}
             />
             <PlanningSurface
@@ -111,6 +155,7 @@ export function Workspace() {
               houseBounds={houseBounds}
               setActivePointIndex={setActivePointIndex}
               setDeckPoints={setDeckPoints}
+              setViewAspectRatio={setViewAspectRatio}
               setViewBox={setViewBox}
               viewBox={viewBox}
             />

@@ -18,7 +18,6 @@ import { ParallelHintLabel } from "@/components/trall/svg/parallel-hint-label"
 import { SnapIndicator } from "@/components/trall/svg/snap-indicator"
 import {
   initialDeckPoints,
-  PAN_BOUNDS,
   PARALLEL_HINT_THRESHOLD_DEG,
   PIXELS_PER_METER,
 } from "@/lib/trall/constants"
@@ -43,6 +42,11 @@ import type {
   SnapType,
   ViewBox,
 } from "@/lib/trall/types"
+import {
+  clampPanViewBox,
+  getPlanContentBounds,
+  getPointBounds,
+} from "@/lib/trall/view"
 
 export function PlanSvg({
   activeTool,
@@ -135,6 +139,8 @@ export function PlanSvg({
   const rightWindowX2 = houseBounds.right - houseBounds.widthPx * 0.08
   const upperWindowY = houseBounds.top + houseBounds.depthPx * 0.25
   const lowerWindowY = houseBounds.top + houseBounds.depthPx * 0.55
+  const pointBounds = getPointBounds(houseBounds)
+  const contentBounds = getPlanContentBounds(houseBounds, deckPoints)
   const canPan = activeTool === "pan" || spacePressed
   const svgCursorClass = panStart
     ? "cursor-grabbing"
@@ -238,7 +244,9 @@ export function PlanSvg({
     svgRef.current.focus()
 
     const point = clientPointToSvgPoint(event, svgRef.current)
-    const snapped = applySnap(point, houseBounds, { disableGrid: event.altKey })
+    const snapped = applySnap(point, houseBounds, pointBounds, {
+      disableGrid: event.altKey,
+    })
     insertPointAfterEdge(edgeIndex, snapped.point)
   }
 
@@ -283,11 +291,16 @@ export function PlanSvg({
       const dxSvg = (event.clientX - panStart.clientX) * scaleX
       const dySvg = (event.clientY - panStart.clientY) * scaleY
 
-      setViewBox({
-        ...panStart.viewBox,
-        x: clamp(panStart.viewBox.x - dxSvg, PAN_BOUNDS.minX, PAN_BOUNDS.maxX),
-        y: clamp(panStart.viewBox.y - dySvg, PAN_BOUNDS.minY, PAN_BOUNDS.maxY),
-      })
+      setViewBox(
+        clampPanViewBox(
+          {
+            ...panStart.viewBox,
+            x: panStart.viewBox.x - dxSvg,
+            y: panStart.viewBox.y - dySvg,
+          },
+          contentBounds
+        )
+      )
       return
     }
 
@@ -344,7 +357,7 @@ export function PlanSvg({
       }
     }
 
-    const snapped = applySnap(point, houseBounds, {
+    const snapped = applySnap(point, houseBounds, pointBounds, {
       disableGrid: event.altKey,
       preferredSnapType: angleSnapType,
     })
@@ -471,7 +484,7 @@ export function PlanSvg({
         startPoint.y +
         ((endPoint.y - startPoint.y) / currentLength) * newLengthPx,
     }
-    const snapped = applySnap(newPoint, houseBounds)
+    const snapped = applySnap(newPoint, houseBounds, pointBounds)
 
     setDeckPoints((points) =>
       points.map((point, index) => (index === nextIndex ? snapped.point : point))
