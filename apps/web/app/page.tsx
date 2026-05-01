@@ -9,7 +9,7 @@ import type {
   ReactNode,
   SetStateAction,
 } from "react"
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   ClipboardListIcon,
   HandIcon,
@@ -32,6 +32,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card"
+import { Input } from "@workspace/ui/components/input"
 import { Separator } from "@workspace/ui/components/separator"
 import {
   Sheet,
@@ -61,9 +62,35 @@ type Point = {
 
 type SnapType = "none" | "grid" | "house" | "angle"
 
+type ActiveTool = "select" | "draw" | "measure" | "pan"
+
+type ViewBox = {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 type EditableDimension = {
   edgeIndex: number
   value: string
+}
+
+type HouseModel = {
+  centerX: number
+  topY: number
+  widthM: number
+  depthM: number
+}
+
+type HouseBounds = {
+  left: number
+  right: number
+  top: number
+  bottom: number
+  centerX: number
+  widthPx: number
+  depthPx: number
 }
 
 type Metric = {
@@ -89,16 +116,17 @@ const POINT_BOUNDS = {
   minY: 120,
   maxY: 760,
 }
-const HOUSE_BOUNDS = {
-  left: 238,
-  right: 674,
-  top: 116,
-  bottom: 368,
+const INITIAL_VIEW_BOX: ViewBox = {
+  x: 80,
+  y: 16,
+  width: 1000,
+  height: 744,
 }
-const HOUSE_ATTACH_EDGE = {
-  y: HOUSE_BOUNDS.bottom,
-  x1: HOUSE_BOUNDS.left,
-  x2: HOUSE_BOUNDS.right,
+const PAN_BOUNDS = {
+  minX: -300,
+  maxX: 600,
+  minY: -250,
+  maxY: 350,
 }
 
 const baseMaterials: Material[] = [
@@ -113,6 +141,13 @@ const initialDeckPoints: [Point, Point, Point, Point] = [
   { x: 742, y: 558 },
   { x: 175, y: 602 },
 ]
+
+const initialHouse: HouseModel = {
+  centerX: 456,
+  topY: 116,
+  widthM: 10.5,
+  depthM: 6,
+}
 
 export default function Page() {
   return (
@@ -136,8 +171,13 @@ export default function Page() {
 function Workspace() {
   const { setOpen, setOpenMobile } = useSidebar()
   const [calculatorOpen, setCalculatorOpen] = useState(true)
+  const [activeTool, setActiveTool] = useState<ActiveTool>("select")
+  const [viewBox, setViewBox] = useState<ViewBox>(INITIAL_VIEW_BOX)
   const [deckPoints, setDeckPoints] = useState<Point[]>(initialDeckPoints)
   const [activePointIndex, setActivePointIndex] = useState<number | null>(null)
+  const [house, setHouse] = useState<HouseModel>(initialHouse)
+
+  const houseBounds = useMemo(() => getHouseBounds(house), [house])
 
   const calculations = useMemo(() => {
     const areaM2 = polygonArea(deckPoints) / PIXELS_PER_METER ** 2
@@ -198,42 +238,71 @@ function Workspace() {
           }
         >
           <section className="relative min-w-0 overflow-hidden rounded-lg border bg-stone-50 shadow-sm dark:bg-zinc-950">
-            <CanvasToolbar extraTool={expandTool} />
+            <CanvasToolbar
+              activeTool={activeTool}
+              extraTool={expandTool}
+              onResetView={() => setViewBox(INITIAL_VIEW_BOX)}
+              setActiveTool={setActiveTool}
+            />
             <PlanningSurface
+              activeTool={activeTool}
               activePointIndex={activePointIndex}
               deckPoints={deckPoints}
+              houseBounds={houseBounds}
               setActivePointIndex={setActivePointIndex}
               setDeckPoints={setDeckPoints}
+              setViewBox={setViewBox}
+              viewBox={viewBox}
             />
           </section>
 
           {calculatorOpen ? (
             <aside className="hidden min-w-0 lg:block">
-              <CalculatorPanel calculations={calculations} />
+              <CalculatorPanel
+                calculations={calculations}
+                house={house}
+                setHouse={setHouse}
+              />
             </aside>
           ) : null}
         </div>
 
         <section className="lg:hidden">
-          <CalculatorPanel calculations={calculations} />
+          <CalculatorPanel
+            calculations={calculations}
+            house={house}
+            setHouse={setHouse}
+          />
         </section>
       </div>
 
-      <MobileSummary calculations={calculations} />
+      <MobileSummary
+        calculations={calculations}
+        house={house}
+        setHouse={setHouse}
+      />
     </main>
   )
 }
 
 function PlanningSurface({
+  activeTool,
   activePointIndex,
   deckPoints,
+  houseBounds,
   setActivePointIndex,
   setDeckPoints,
+  setViewBox,
+  viewBox,
 }: {
+  activeTool: ActiveTool
   activePointIndex: number | null
   deckPoints: Point[]
+  houseBounds: HouseBounds
   setActivePointIndex: (index: number | null) => void
   setDeckPoints: Dispatch<SetStateAction<Point[]>>
+  setViewBox: Dispatch<SetStateAction<ViewBox>>
+  viewBox: ViewBox
 }) {
   return (
     <div className="relative min-h-[calc(100svh-11rem)] overflow-hidden bg-stone-50 pt-16 dark:bg-zinc-950 md:min-h-[calc(100svh-7rem)]">
@@ -254,10 +323,14 @@ function PlanningSurface({
       <div className="relative flex min-h-[calc(100svh-13.5rem)] items-center justify-center px-3 py-8 md:min-h-[calc(100svh-10rem)]">
         <div className="aspect-square w-[min(900px,98%)]">
           <PlanSvg
+            activeTool={activeTool}
             activePointIndex={activePointIndex}
             deckPoints={deckPoints}
+            houseBounds={houseBounds}
             setActivePointIndex={setActivePointIndex}
             setDeckPoints={setDeckPoints}
+            setViewBox={setViewBox}
+            viewBox={viewBox}
           />
         </div>
       </div>
@@ -266,22 +339,54 @@ function PlanningSurface({
         <ScaleIndicator />
         <span>
           Scale 1:100 · 1 grid square = 0.5 m · Cmd/Ctrl snaps angle · Alt
-          disables grid · Shift locks axis · Click a dimension to edit length
+          disables grid · Shift locks axis · Space pans · Click a dimension to
+          edit length
         </span>
       </div>
     </div>
   )
 }
 
-function CanvasToolbar({ extraTool }: { extraTool: Tool }) {
+function CanvasToolbar({
+  activeTool,
+  extraTool,
+  onResetView,
+  setActiveTool,
+}: {
+  activeTool: ActiveTool
+  extraTool: Tool
+  onResetView: () => void
+  setActiveTool: (tool: ActiveTool) => void
+}) {
   const tools: Tool[][] = [
     [
-      { label: "Select", icon: <PointerIcon />, active: true },
-      { label: "Draw deck", icon: <PencilRulerIcon /> },
-      { label: "Measure", icon: <RulerIcon /> },
-      { label: "Pan", icon: <HandIcon /> },
+      {
+        label: "Select",
+        icon: <PointerIcon />,
+        active: activeTool === "select",
+        onClick: () => setActiveTool("select"),
+      },
+      {
+        label: "Draw deck",
+        icon: <PencilRulerIcon />,
+        active: activeTool === "draw",
+        onClick: () => setActiveTool("draw"),
+      },
+      {
+        label: "Measure",
+        icon: <RulerIcon />,
+        active: activeTool === "measure",
+        onClick: () => setActiveTool("measure"),
+      },
+      {
+        label: "Pan",
+        icon: <HandIcon />,
+        active: activeTool === "pan",
+        onClick: () => setActiveTool("pan"),
+      },
     ],
     [{ label: "Undo", icon: <Undo2Icon /> }],
+    [{ label: "Reset view", icon: <Maximize2Icon />, onClick: onResetView }],
     [extraTool],
   ]
 
@@ -302,15 +407,23 @@ function CanvasToolbar({ extraTool }: { extraTool: Tool }) {
 }
 
 function PlanSvg({
+  activeTool,
   activePointIndex,
   deckPoints,
+  houseBounds,
   setActivePointIndex,
   setDeckPoints,
+  setViewBox,
+  viewBox,
 }: {
+  activeTool: ActiveTool
   activePointIndex: number | null
   deckPoints: Point[]
+  houseBounds: HouseBounds
   setActivePointIndex: (index: number | null) => void
   setDeckPoints: Dispatch<SetStateAction<Point[]>>
+  setViewBox: Dispatch<SetStateAction<ViewBox>>
+  viewBox: ViewBox
 }) {
   const svgRef = useRef<SVGSVGElement>(null)
   const [snapState, setSnapState] = useState<{
@@ -333,6 +446,13 @@ function PlanSvg({
     pointIndex: number
     point: Point
   } | null>(null)
+  const [panStart, setPanStart] = useState<{
+    pointerId: number
+    clientX: number
+    clientY: number
+    viewBox: ViewBox
+  } | null>(null)
+  const [spacePressed, setSpacePressed] = useState(false)
   const [hoveredEdgeIndex, setHoveredEdgeIndex] = useState<number | null>(null)
   const [editingDimension, setEditingDimension] =
     useState<EditableDimension | null>(null)
@@ -365,14 +485,86 @@ function PlanSvg({
   const activePoint =
     activePointIndex !== null ? deckPoints[activePointIndex] : null
   const bottomEdgeIndex = Math.max(deckPoints.length - 2, 0)
+  const houseAttachEdge = getHouseAttachEdge(houseBounds)
+  const doorWidth = Math.min(80, houseBounds.widthPx * 0.22)
+  const doorHeight = Math.min(98, houseBounds.depthPx * 0.4)
+  const doorX = houseBounds.centerX - doorWidth / 2
+  const doorY = houseBounds.bottom - doorHeight
+  const roofPeakY = houseBounds.top - Math.min(82, houseBounds.widthPx * 0.2)
+  const leftWindowX1 = houseBounds.left + houseBounds.widthPx * 0.08
+  const leftWindowX2 = houseBounds.left + houseBounds.widthPx * 0.24
+  const rightWindowX1 = houseBounds.right - houseBounds.widthPx * 0.24
+  const rightWindowX2 = houseBounds.right - houseBounds.widthPx * 0.08
+  const upperWindowY = houseBounds.top + houseBounds.depthPx * 0.25
+  const lowerWindowY = houseBounds.top + houseBounds.depthPx * 0.55
+  const canPan = activeTool === "pan" || spacePressed
+  const svgCursorClass = panStart
+    ? "cursor-grabbing"
+    : canPan
+      ? "cursor-grab"
+      : ""
+
+  useEffect(() => {
+    function handleWindowKeyDown(event: KeyboardEvent) {
+      if (event.code !== "Space" || isTypingTarget(event.target)) {
+        return
+      }
+
+      event.preventDefault()
+      setSpacePressed(true)
+    }
+
+    function handleWindowKeyUp(event: KeyboardEvent) {
+      if (event.code === "Space") {
+        setSpacePressed(false)
+      }
+    }
+
+    window.addEventListener("keydown", handleWindowKeyDown)
+    window.addEventListener("keyup", handleWindowKeyUp)
+
+    return () => {
+      window.removeEventListener("keydown", handleWindowKeyDown)
+      window.removeEventListener("keyup", handleWindowKeyUp)
+    }
+  }, [])
+
+  function handleCanvasPointerDown(event: ReactPointerEvent<SVGSVGElement>) {
+    if (!svgRef.current || !canPan || isInteractiveTarget(event.target)) {
+      return
+    }
+
+    event.preventDefault()
+    setEditingDimension(null)
+    svgRef.current.focus()
+    const captured = setPointerCaptureIfPossible(svgRef.current, event.pointerId)
+    if (!captured && !event.isTrusted) {
+      return
+    }
+
+    setPanStart({
+      pointerId: event.pointerId,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      viewBox,
+    })
+  }
 
   function handlePointerDown(
     event: ReactPointerEvent<SVGGElement>,
     index: number
   ) {
     event.preventDefault()
+    event.stopPropagation()
     setEditingDimension(null)
     svgRef.current?.focus()
+    if (svgRef.current) {
+      const captured = setPointerCaptureIfPossible(svgRef.current, event.pointerId)
+      if (!captured && !event.isTrusted) {
+        return
+      }
+    }
+
     const point = deckPoints[index] ?? initialDeckPoints[0]
     setActivePointIndex(index)
     setHoveredEdgeIndex(null)
@@ -380,7 +572,6 @@ function PlanSvg({
     setSnapState({ pointIndex: index, type: "none", point: null })
     setAngleSnapState({ active: false, angle: null, anchor: null, point: null })
     setParallelHint({ active: false, start: null, end: null })
-    svgRef.current?.setPointerCapture(event.pointerId)
   }
 
   function insertPointAfterEdge(edgeIndex: number, point: Point) {
@@ -409,7 +600,7 @@ function PlanSvg({
     svgRef.current.focus()
 
     const point = clientPointToSvgPoint(event, svgRef.current)
-    const snapped = applySnap(point, { disableGrid: event.altKey })
+    const snapped = applySnap(point, houseBounds, { disableGrid: event.altKey })
     insertPointAfterEdge(edgeIndex, snapped.point)
   }
 
@@ -447,6 +638,21 @@ function PlanSvg({
   }
 
   function handlePointerMove(event: ReactPointerEvent<SVGSVGElement>) {
+    if (panStart && svgRef.current) {
+      const svg = svgRef.current
+      const scaleX = panStart.viewBox.width / svg.clientWidth
+      const scaleY = panStart.viewBox.height / svg.clientHeight
+      const dxSvg = (event.clientX - panStart.clientX) * scaleX
+      const dySvg = (event.clientY - panStart.clientY) * scaleY
+
+      setViewBox({
+        ...panStart.viewBox,
+        x: clamp(panStart.viewBox.x - dxSvg, PAN_BOUNDS.minX, PAN_BOUNDS.maxX),
+        y: clamp(panStart.viewBox.y - dySvg, PAN_BOUNDS.minY, PAN_BOUNDS.maxY),
+      })
+      return
+    }
+
     if (!dragStart || !svgRef.current) {
       return
     }
@@ -500,7 +706,7 @@ function PlanSvg({
       }
     }
 
-    const snapped = applySnap(point, {
+    const snapped = applySnap(point, houseBounds, {
       disableGrid: event.altKey,
       preferredSnapType: angleSnapType,
     })
@@ -545,6 +751,10 @@ function PlanSvg({
   function stopDragging(event: ReactPointerEvent<SVGSVGElement>) {
     if (svgRef.current?.hasPointerCapture(event.pointerId)) {
       svgRef.current.releasePointerCapture(event.pointerId)
+    }
+    if (panStart?.pointerId === event.pointerId) {
+      setPanStart(null)
+      return
     }
     setDragStart(null)
     setSnapState({ pointIndex: null, type: "none", point: null })
@@ -616,7 +826,7 @@ function PlanSvg({
       x: startPoint.x + ((endPoint.x - startPoint.x) / currentLength) * newLengthPx,
       y: startPoint.y + ((endPoint.y - startPoint.y) / currentLength) * newLengthPx,
     }
-    const snapped = applySnap(newPoint)
+    const snapped = applySnap(newPoint, houseBounds)
 
     setDeckPoints((points) =>
       points.map((point, index) => (index === nextIndex ? snapped.point : point))
@@ -629,10 +839,11 @@ function PlanSvg({
     <svg
       ref={svgRef}
       tabIndex={0}
-      viewBox="80 16 1000 744"
-      className="h-full w-full touch-none select-none outline-none drop-shadow-sm"
+      viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
+      className={`h-full w-full touch-none select-none outline-none drop-shadow-sm ${svgCursorClass}`}
       onKeyDown={handleKeyDown}
       onPointerCancel={stopDragging}
+      onPointerDown={handleCanvasPointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={stopDragging}
       role="img"
@@ -658,49 +869,83 @@ function PlanSvg({
       </defs>
 
       <rect
-        x="238"
-        y="116"
-        width="436"
-        height="252"
+        x={houseBounds.left}
+        y={houseBounds.top}
+        width={houseBounds.widthPx}
+        height={houseBounds.depthPx}
         rx="6"
         className="fill-slate-100 stroke-slate-700 dark:fill-slate-900 dark:stroke-slate-300"
         strokeWidth="5"
       />
       <path
-        d="M238 116 L456 38 L674 116"
+        d={`M${houseBounds.left} ${houseBounds.top} L${houseBounds.centerX} ${roofPeakY} L${houseBounds.right} ${houseBounds.top}`}
         className="fill-none stroke-slate-700 dark:stroke-slate-300"
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth="5"
       />
       <rect
-        x="404"
-        y="270"
-        width="96"
-        height="98"
+        x={doorX}
+        y={doorY}
+        width={doorWidth}
+        height={doorHeight}
         className="fill-background stroke-slate-500 dark:stroke-slate-400"
         strokeWidth="3"
       />
       <path
-        d="M258 178 H326 M584 178 H652 M258 254 H326 M584 254 H652"
+        d={`M${leftWindowX1} ${upperWindowY} H${leftWindowX2} M${rightWindowX1} ${upperWindowY} H${rightWindowX2} M${leftWindowX1} ${lowerWindowY} H${leftWindowX2} M${rightWindowX1} ${lowerWindowY} H${rightWindowX2}`}
         className="stroke-slate-400 dark:stroke-slate-500"
         strokeLinecap="round"
         strokeWidth="5"
       />
       <text
-        x="456"
-        y="232"
+        x={houseBounds.centerX}
+        y={houseBounds.top + houseBounds.depthPx * 0.46}
         textAnchor="middle"
         className="fill-slate-700 text-[22px] font-medium dark:fill-slate-200"
       >
         House
       </text>
+      <DimensionLine
+        edgeIndex={-1}
+        x1={houseBounds.left}
+        y1={houseBounds.bottom + 20}
+        x2={houseBounds.right}
+        y2={houseBounds.bottom + 20}
+        valueMeters={houseBounds.widthPx / PIXELS_PER_METER}
+        labelX={houseBounds.centerX}
+        labelY={houseBounds.bottom + 50}
+        rotate={0}
+        editingDimension={editingDimension}
+        onCancelEdit={cancelEditingDimension}
+        onCommitEdit={commitEditingDimension}
+        onEditValueChange={updateEditingDimension}
+        onStartEdit={() => undefined}
+        readonly
+      />
+      <DimensionLine
+        edgeIndex={-2}
+        x1={houseBounds.right + 20}
+        y1={houseBounds.top}
+        x2={houseBounds.right + 20}
+        y2={houseBounds.bottom}
+        valueMeters={houseBounds.depthPx / PIXELS_PER_METER}
+        labelX={houseBounds.right + 54}
+        labelY={houseBounds.top + houseBounds.depthPx / 2}
+        rotate={90}
+        editingDimension={editingDimension}
+        onCancelEdit={cancelEditingDimension}
+        onCommitEdit={commitEditingDimension}
+        onEditValueChange={updateEditingDimension}
+        onStartEdit={() => undefined}
+        readonly
+      />
       {snapState.type === "house" ? (
         <line
-          x1={HOUSE_ATTACH_EDGE.x1}
-          y1={HOUSE_ATTACH_EDGE.y}
-          x2={HOUSE_ATTACH_EDGE.x2}
-          y2={HOUSE_ATTACH_EDGE.y}
+          x1={houseAttachEdge.x1}
+          y1={houseAttachEdge.y}
+          x2={houseAttachEdge.x2}
+          y2={houseAttachEdge.y}
           className="stroke-sky-500"
           strokeLinecap="round"
           strokeWidth="8"
@@ -804,6 +1049,7 @@ function PlanSvg({
             x2={nextPoint.x}
             y2={nextPoint.y}
             data-edge-index={index}
+            data-interactive="true"
             className="cursor-copy stroke-transparent"
             strokeWidth="30"
             pointerEvents="stroke"
@@ -896,12 +1142,16 @@ function PlanSvg({
 
 function CalculatorPanel({
   calculations,
+  house,
+  setHouse,
 }: {
   calculations: {
     priceLabel: string
     metrics: Metric[]
     materials: Material[]
   }
+  house: HouseModel
+  setHouse: Dispatch<SetStateAction<HouseModel>>
 }) {
   return (
     <div className="space-y-3">
@@ -945,6 +1195,8 @@ function CalculatorPanel({
         </CardContent>
       </Card>
 
+      <HouseDimensionsCard house={house} setHouse={setHouse} />
+
       <Card size="sm">
         <CardHeader>
           <CardTitle>Project summary</CardTitle>
@@ -962,6 +1214,8 @@ function CalculatorPanel({
 
 function MobileSummary({
   calculations,
+  house,
+  setHouse,
 }: {
   calculations: {
     areaM2: number
@@ -970,6 +1224,8 @@ function MobileSummary({
     metrics: Metric[]
     materials: Material[]
   }
+  house: HouseModel
+  setHouse: Dispatch<SetStateAction<HouseModel>>
 }) {
   return (
     <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 p-3 shadow-lg backdrop-blur lg:hidden">
@@ -1001,7 +1257,11 @@ function MobileSummary({
               </SheetDescription>
             </SheetHeader>
             <div className="px-4 pb-4">
-              <CalculatorPanel calculations={calculations} />
+              <CalculatorPanel
+                calculations={calculations}
+                house={house}
+                setHouse={setHouse}
+              />
             </div>
           </SheetContent>
         </Sheet>
@@ -1049,6 +1309,78 @@ function MaterialRow({ label, value, detail }: Material) {
   )
 }
 
+function HouseDimensionsCard({
+  house,
+  setHouse,
+}: {
+  house: HouseModel
+  setHouse: Dispatch<SetStateAction<HouseModel>>
+}) {
+  function updateHouseDimension(key: "widthM" | "depthM", value: string) {
+    const numericValue = Number.parseFloat(value)
+    if (!Number.isFinite(numericValue)) {
+      return
+    }
+
+    const bounds =
+      key === "widthM" ? { min: 2, max: 30 } : { min: 2, max: 20 }
+
+    setHouse((current) => ({
+      ...current,
+      [key]: clamp(numericValue, bounds.min, bounds.max),
+    }))
+  }
+
+  return (
+    <Card size="sm">
+      <CardHeader>
+        <CardTitle>House dimensions</CardTitle>
+        <CardDescription>
+          Set house size first, then snap deck points to the wall.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid grid-cols-2 gap-2">
+        <label className="space-y-1">
+          <span className="text-xs text-muted-foreground">Width</span>
+          <div className="flex items-center gap-1 rounded-lg border bg-background px-2">
+            <Input
+              className="border-0 px-0 shadow-none focus-visible:ring-0"
+              inputMode="decimal"
+              max={30}
+              min={2}
+              step={0.1}
+              type="number"
+              value={house.widthM}
+              onChange={(event) =>
+                updateHouseDimension("widthM", event.target.value)
+              }
+            />
+            <span className="text-xs text-muted-foreground">m</span>
+          </div>
+        </label>
+        <label className="space-y-1">
+          <span className="text-xs text-muted-foreground">Depth</span>
+          <div className="flex items-center gap-1 rounded-lg border bg-background px-2">
+            <Input
+              className="border-0 px-0 shadow-none focus-visible:ring-0"
+              inputMode="decimal"
+              max={20}
+              min={2}
+              step={0.1}
+              type="number"
+              value={house.depthM}
+              onChange={(event) =>
+                updateHouseDimension("depthM", event.target.value)
+              }
+            />
+            <span className="text-xs text-muted-foreground">m</span>
+          </div>
+        </label>
+      </CardContent>
+    </Card>
+  )
+}
+
 function ScaleIndicator() {
   return (
     <div className="flex items-end gap-2">
@@ -1078,6 +1410,7 @@ function DeckHandle({
   return (
     <g
       className="group/handle cursor-grab touch-none active:cursor-grabbing"
+      data-interactive="true"
       data-point-index={label}
       onPointerDown={onPointerDown}
     >
@@ -1146,6 +1479,7 @@ function DimensionLine({
   onCommitEdit,
   onEditValueChange,
   onStartEdit,
+  readonly = false,
   rotate = 0,
 }: {
   edgeIndex: number
@@ -1161,12 +1495,14 @@ function DimensionLine({
   onCommitEdit: () => void
   onEditValueChange: (value: string) => void
   onStartEdit: (edgeIndex: number, valueMeters: number) => void
+  readonly?: boolean
   rotate?: number
 }) {
-  const isEditing = editingDimension?.edgeIndex === edgeIndex
+  const isEditing = !readonly && editingDimension?.edgeIndex === edgeIndex
 
   return (
     <g
+      data-interactive="true"
       className={
         isEditing
           ? "stroke-sky-700 text-[17px] font-semibold dark:stroke-sky-300"
@@ -1180,6 +1516,7 @@ function DimensionLine({
       <circle cx={x2} cy={y2} r="4" className="fill-sky-700 dark:fill-sky-300" />
       {isEditing ? (
         <foreignObject
+          data-interactive="true"
           x={labelX - 42}
           y={labelY - 20}
           width="84"
@@ -1188,6 +1525,7 @@ function DimensionLine({
         >
           <input
             autoFocus
+            data-interactive="true"
             className="h-7 w-20 rounded-md border bg-background px-2 text-center text-sm font-semibold text-foreground shadow-sm outline-none ring-2 ring-sky-500/40"
             inputMode="decimal"
             value={editingDimension.value}
@@ -1208,12 +1546,20 @@ function DimensionLine({
         </foreignObject>
       ) : (
         <text
+          data-interactive="true"
           x={labelX}
           y={labelY}
           textAnchor="middle"
           transform={`rotate(${rotate} ${labelX} ${labelY})`}
-          className="cursor-text fill-sky-700 stroke-transparent dark:fill-sky-300"
+          className={
+            readonly
+              ? "fill-slate-600 stroke-transparent text-[15px] dark:fill-slate-300"
+              : "cursor-text fill-sky-700 stroke-transparent dark:fill-sky-300"
+          }
           onClick={(event) => {
+            if (readonly) {
+              return
+            }
             event.preventDefault()
             event.stopPropagation()
             onStartEdit(edgeIndex, valueMeters)
@@ -1389,6 +1735,32 @@ function clientPointToSvgPoint(
   return { x: svgPoint.x, y: svgPoint.y }
 }
 
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  return target instanceof Element && Boolean(target.closest("[data-interactive='true']"))
+}
+
+function isTypingTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement &&
+    (target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.isContentEditable)
+  )
+}
+
+function setPointerCaptureIfPossible(
+  element: SVGSVGElement,
+  pointerId: number
+): boolean {
+  try {
+    element.setPointerCapture(pointerId)
+    return true
+  } catch {
+    // Synthetic pointer events used by tests may not have an active browser pointer.
+    return false
+  }
+}
+
 function polygonArea(points: Point[]): number {
   if (points.length < 3) {
     return 0
@@ -1415,6 +1787,33 @@ function polygonPerimeter(points: Point[]): number {
 
 function distance(a: Point, b: Point): number {
   return Math.hypot(b.x - a.x, b.y - a.y)
+}
+
+function getHouseBounds(house: HouseModel): HouseBounds {
+  const widthPx = house.widthM * PIXELS_PER_METER
+  const depthPx = house.depthM * PIXELS_PER_METER
+
+  return {
+    left: house.centerX - widthPx / 2,
+    right: house.centerX + widthPx / 2,
+    top: house.topY,
+    bottom: house.topY + depthPx,
+    centerX: house.centerX,
+    widthPx,
+    depthPx,
+  }
+}
+
+function getHouseAttachEdge(houseBounds: HouseBounds): {
+  y: number
+  x1: number
+  x2: number
+} {
+  return {
+    y: houseBounds.bottom,
+    x1: houseBounds.left,
+    x2: houseBounds.right,
+  }
 }
 
 function radiansToDegrees(rad: number): number {
@@ -1476,12 +1875,16 @@ function snapPointToGrid(point: Point): Point {
   }
 }
 
-function snapPointToHouseAttachEdge(point: Point): {
+function snapPointToHouseAttachEdge(
+  point: Point,
+  houseBounds: HouseBounds
+): {
   point: Point
   snapped: boolean
 } {
+  const houseAttachEdge = getHouseAttachEdge(houseBounds)
   const isNearAttachY =
-    Math.abs(point.y - HOUSE_ATTACH_EDGE.y) <= SNAP_THRESHOLD_PX
+    Math.abs(point.y - houseAttachEdge.y) <= SNAP_THRESHOLD_PX
 
   if (!isNearAttachY) {
     return { point, snapped: false }
@@ -1490,7 +1893,7 @@ function snapPointToHouseAttachEdge(point: Point): {
   return {
     point: {
       ...point,
-      y: HOUSE_ATTACH_EDGE.y,
+      y: houseAttachEdge.y,
     },
     snapped: true,
   }
@@ -1498,6 +1901,7 @@ function snapPointToHouseAttachEdge(point: Point): {
 
 function applySnap(
   point: Point,
+  houseBounds: HouseBounds,
   options: { disableGrid?: boolean; preferredSnapType?: SnapType } = {}
 ): {
   point: Point
@@ -1510,7 +1914,7 @@ function applySnap(
   const gridPoint = options.disableGrid
     ? clampedPoint
     : snapPointToGrid(clampedPoint)
-  const houseSnap = snapPointToHouseAttachEdge(gridPoint)
+  const houseSnap = snapPointToHouseAttachEdge(gridPoint, houseBounds)
   const finalPoint = {
     x: clamp(houseSnap.point.x, POINT_BOUNDS.minX, POINT_BOUNDS.maxX),
     y: clamp(houseSnap.point.y, POINT_BOUNDS.minY, POINT_BOUNDS.maxY),
