@@ -2,9 +2,7 @@
 
 import * as React from "react"
 
-import { NavDocuments } from "@/components/nav-documents"
 import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
 import {
   Sidebar,
@@ -15,17 +13,24 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@workspace/ui/components/sidebar"
-import { LayoutDashboardIcon, ListIcon, ChartBarIcon, FolderIcon, UsersIcon, CameraIcon, FileTextIcon, Settings2Icon, CircleHelpIcon, SearchIcon, DatabaseIcon, FileChartColumnIcon, FileIcon, CommandIcon } from "lucide-react"
+import {
+  CalculatorIcon,
+  FileTextIcon,
+  FolderIcon,
+  LayoutDashboardIcon,
+  PencilRulerIcon,
+  Settings2Icon,
+} from "lucide-react"
 
 const data = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    name: "TrallAI",
+    email: "planner@trall.ai",
+    avatar: "",
   },
   navMain: [
     {
-      title: "Dashboard",
+      title: "Workspace",
       url: "#",
       icon: (
         <LayoutDashboardIcon
@@ -41,86 +46,35 @@ const data = {
         />
       ),
     },
-  ],
-  navClouds: [
     {
-      title: "Capture",
+      title: "Deck planner",
+      url: "#",
       icon: (
-        <CameraIcon
+        <PencilRulerIcon
         />
       ),
-      isActive: true,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
     },
     {
-      title: "Proposal",
+      title: "Materials",
+      url: "#",
+      icon: (
+        <CalculatorIcon
+        />
+      ),
+    },
+    {
+      title: "Quotes",
+      url: "#",
       icon: (
         <FileTextIcon
         />
       ),
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
     },
-    {
-      title: "Prompts",
-      icon: (
-        <FileTextIcon
-        />
-      ),
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-  ],
-  navSecondary: [
     {
       title: "Settings",
       url: "#",
       icon: (
         <Settings2Icon
-        />
-      ),
-    },
-    {
-      title: "Get Help",
-      url: "#",
-      icon: (
-        <CircleHelpIcon
-        />
-      ),
-    },
-    {
-      title: "Search",
-      url: "#",
-      icon: (
-        <SearchIcon
         />
       ),
     },
@@ -138,8 +92,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
               <a href="#">
-                <CommandIcon className="size-5!" />
-                <span className="text-base font-semibold">Acme Inc.</span>
+                <PencilRulerIcon className="size-5!" />
+                <span className="text-base font-semibold">TrallAI</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
