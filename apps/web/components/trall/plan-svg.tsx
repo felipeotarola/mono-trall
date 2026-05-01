@@ -21,6 +21,7 @@ import {
   PARALLEL_HINT_THRESHOLD_DEG,
   PIXELS_PER_METER,
   SNAP_THRESHOLD_PX,
+  ZOOM_STEP,
 } from "@/lib/trall/constants"
 import {
   clamp,
@@ -49,6 +50,7 @@ import {
   clampPanViewBox,
   getPlanContentBounds,
   getPointBounds,
+  zoomViewBox,
 } from "@/lib/trall/view"
 
 export function PlanSvg({
@@ -59,6 +61,7 @@ export function PlanSvg({
   setActivePointIndex,
   setDeckPoints,
   setViewBox,
+  onResetView,
   viewBox,
 }: {
   activeTool: ActiveTool
@@ -68,6 +71,7 @@ export function PlanSvg({
   setActivePointIndex: (index: number | null) => void
   setDeckPoints: Dispatch<SetStateAction<Point[]>>
   setViewBox: Dispatch<SetStateAction<ViewBox>>
+  onResetView: () => void
   viewBox: ViewBox
 }) {
   const svgRef = useRef<SVGSVGElement>(null)
@@ -214,6 +218,29 @@ export function PlanSvg({
     }
   }, [])
 
+  useEffect(() => {
+    const svg = svgRef.current
+    if (!svg) {
+      return
+    }
+
+    function handleWheel(event: WheelEvent) {
+      if (!svg || (!event.ctrlKey && !event.metaKey)) {
+        return
+      }
+
+      event.preventDefault()
+      const center = clientPointToSvgPoint(event, svg)
+      const factor = event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP
+
+      setViewBox((currentViewBox) => zoomViewBox(currentViewBox, factor, center))
+    }
+
+    svg.addEventListener("wheel", handleWheel, { passive: false })
+
+    return () => svg.removeEventListener("wheel", handleWheel)
+  }, [setViewBox])
+
   function handleCanvasPointerDown(event: ReactPointerEvent<SVGSVGElement>) {
     if (!svgRef.current || !canPan || isInteractiveTarget(event.target)) {
       return
@@ -309,6 +336,26 @@ export function PlanSvg({
 
   function handleKeyDown(event: ReactKeyboardEvent<SVGSVGElement>) {
     if (editingDimension) {
+      return
+    }
+
+    if (event.key === "+" || event.key === "=") {
+      event.preventDefault()
+      setViewBox((currentViewBox) => zoomViewBox(currentViewBox, ZOOM_STEP))
+      return
+    }
+
+    if (event.key === "-") {
+      event.preventDefault()
+      setViewBox((currentViewBox) =>
+        zoomViewBox(currentViewBox, 1 / ZOOM_STEP)
+      )
+      return
+    }
+
+    if (event.key === "0") {
+      event.preventDefault()
+      onResetView()
       return
     }
 

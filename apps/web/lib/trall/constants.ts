@@ -6,6 +6,9 @@ export const SNAP_THRESHOLD_PX = 14
 export const ANGLE_SNAP_DEGREES = [0, 45, 90, 135, 180, 225, 270, 315]
 export const ANGLE_SNAP_THRESHOLD_DEG = 6
 export const PARALLEL_HINT_THRESHOLD_DEG = 4
+export const MIN_ZOOM_VIEWBOX_WIDTH = 350
+export const MAX_ZOOM_VIEWBOX_WIDTH = 2200
+export const ZOOM_STEP = 0.85
 
 export const INITIAL_VIEW_BOX: ViewBox = {
   x: 80,

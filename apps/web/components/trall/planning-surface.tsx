@@ -21,7 +21,9 @@ export function PlanningSurface({
   setDeckPoints,
   setViewAspectRatio,
   setViewBox,
+  onResetView,
   viewBox,
+  zoomPercent,
 }: {
   activeTool: ActiveTool
   activePointIndex: number | null
@@ -31,7 +33,9 @@ export function PlanningSurface({
   setDeckPoints: Dispatch<SetStateAction<Point[]>>
   setViewAspectRatio: (aspectRatio: number) => void
   setViewBox: Dispatch<SetStateAction<ViewBox>>
+  onResetView: () => void
   viewBox: ViewBox
+  zoomPercent: number
 }) {
   const canvasFrameRef = useRef<HTMLDivElement>(null)
 
@@ -81,6 +85,7 @@ export function PlanningSurface({
             setActivePointIndex={setActivePointIndex}
             setDeckPoints={setDeckPoints}
             setViewBox={setViewBox}
+            onResetView={onResetView}
             viewBox={viewBox}
           />
         </div>
@@ -90,8 +95,9 @@ export function PlanningSurface({
         <ScaleIndicator />
         <span>
           Scale 1:100 · 1 grid square = 0.5 m · Cmd/Ctrl snaps angle · Alt
-          disables grid · Shift locks axis · Space pans · Click a dimension to
-          edit length · When edge snaps to house, it becomes attached
+          disables grid · Shift locks axis · Space pans · Zoom {zoomPercent}% ·
+          Click a dimension to edit length · When edge snaps to house, it
+          becomes attached
         </span>
       </div>
     </div>

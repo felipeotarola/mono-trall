@@ -13,10 +13,18 @@ import {
   initialDeckPoints,
   initialHouse,
   PIXELS_PER_METER,
+  ZOOM_STEP,
 } from "@/lib/trall/constants"
 import { formatCurrency } from "@/lib/trall/format"
 import { polygonArea, polygonPerimeter } from "@/lib/trall/geometry"
 import { getHouseBounds } from "@/lib/trall/house"
+import {
+  createProject,
+  listProjects,
+  loadProject,
+  type PlannerProjectState,
+  saveProjectVersion,
+} from "@/lib/trall/project-storage"
 import type {
   ActiveTool,
   HouseModel,
@@ -30,8 +38,13 @@ import {
   getFitViewBox,
   getPlanContentBounds,
   isContentInsideViewBox,
+  zoomViewBox,
 } from "@/lib/trall/view"
 import { useSidebar } from "@workspace/ui/components/sidebar"
+
+type SaveStatus = "Unsaved changes" | "Saving..." | "Saved" | "Save failed"
+
+const CURRENT_PROJECT_STORAGE_KEY = "trallai.currentProjectId"
 
 export function Workspace() {
   const { setOpen, setOpenMobile } = useSidebar()
@@ -44,16 +57,27 @@ export function Workspace() {
   const [deckPoints, setDeckPoints] = useState<Point[]>(initialDeckPoints)
   const [activePointIndex, setActivePointIndex] = useState<number | null>(null)
   const [house, setHouse] = useState<HouseModel>(initialHouse)
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null)
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("Unsaved changes")
   const viewBoxRef = useRef(viewBox)
   const viewAspectRatioRef = useRef(viewAspectRatio)
+  const hydratingProjectRef = useRef(false)
 
   const houseBounds = useMemo(() => getHouseBounds(house), [house])
+  const zoomPercent = Math.round(
+    (INITIAL_VIEW_BOX.width / viewBox.width) * 100
+  )
   const fitViewBox = useCallback(() => {
     setViewBox(
       getFitViewBox(houseBounds, deckPoints, viewAspectRatioRef.current)
     )
   }, [deckPoints, houseBounds])
-
+  const zoomIn = useCallback(() => {
+    setViewBox((currentViewBox) => zoomViewBox(currentViewBox, ZOOM_STEP))
+  }, [])
+  const zoomOut = useCallback(() => {
+    setViewBox((currentViewBox) => zoomViewBox(currentViewBox, 1 / ZOOM_STEP))
+  }, [])
   function scheduleFitViewBox() {
     requestAnimationFrame(() => {
       requestAnimationFrame(fitViewBox)
@@ -80,6 +104,71 @@ export function Workspace() {
       return () => cancelAnimationFrame(frameId)
     }
   }, [deckPoints, houseBounds])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadInitialProject() {
+      try {
+        const projects = await listProjects()
+        if (cancelled || projects.length === 0) {
+          return
+        }
+
+        const storedProjectId = window.localStorage.getItem(
+          CURRENT_PROJECT_STORAGE_KEY
+        )
+        const projectToLoad =
+          projects.find((project) => project.id === storedProjectId) ??
+          projects[0]
+
+        if (!projectToLoad) {
+          return
+        }
+
+        const { project, version } = await loadProject(projectToLoad.id)
+        if (cancelled) {
+          return
+        }
+
+        hydratingProjectRef.current = true
+        setCurrentProjectId(project.id)
+        setHouse(version.state.house)
+        setDeckPoints(version.state.deckPoints)
+        setViewBox(version.state.viewBox)
+        setSaveStatus("Saved")
+        window.localStorage.setItem(CURRENT_PROJECT_STORAGE_KEY, project.id)
+        requestAnimationFrame(() => {
+          hydratingProjectRef.current = false
+        })
+      } catch (error) {
+        console.error("Failed to load TrallAI project", error)
+        if (!cancelled) {
+          setSaveStatus("Unsaved changes")
+        }
+      }
+    }
+
+    loadInitialProject()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!currentProjectId || hydratingProjectRef.current) {
+      return
+    }
+
+    const frameId = requestAnimationFrame(() => {
+      setSaveStatus((currentStatus) =>
+        currentStatus === "Saving..." ? currentStatus : "Unsaved changes"
+      )
+    })
+
+    return () => cancelAnimationFrame(frameId)
+  }, [currentProjectId, deckPoints, house, viewBox])
 
   const calculations = useMemo(() => {
     const areaM2 = polygonArea(deckPoints) / PIXELS_PER_METER ** 2
@@ -109,6 +198,81 @@ export function Workspace() {
       ] satisfies Material[],
     }
   }, [deckPoints])
+
+  const getPlannerState = useCallback(
+    (): PlannerProjectState => ({
+      house,
+      deckPoints,
+      viewBox,
+      materials: {
+        items: calculations.materials,
+      },
+    }),
+    [calculations.materials, deckPoints, house, viewBox]
+  )
+
+  async function handleNewProject() {
+    const nextHouse = initialHouse
+    const nextDeckPoints = [...initialDeckPoints]
+    const nextHouseBounds = getHouseBounds(nextHouse)
+    const nextViewBox = getFitViewBox(
+      nextHouseBounds,
+      nextDeckPoints,
+      viewAspectRatioRef.current
+    )
+    const state: PlannerProjectState = {
+      house: nextHouse,
+      deckPoints: nextDeckPoints,
+      viewBox: nextViewBox,
+      materials: {
+        items: calculations.materials,
+      },
+    }
+
+    setSaveStatus("Saving...")
+
+    try {
+      const project = await createProject("Untitled", state)
+      hydratingProjectRef.current = true
+      setCurrentProjectId(project.id)
+      setHouse(nextHouse)
+      setDeckPoints(nextDeckPoints)
+      setViewBox(nextViewBox)
+      setSaveStatus("Saved")
+      window.localStorage.setItem(CURRENT_PROJECT_STORAGE_KEY, project.id)
+      requestAnimationFrame(() => {
+        hydratingProjectRef.current = false
+      })
+    } catch (error) {
+      console.error("Failed to create TrallAI project", error)
+      setSaveStatus("Save failed")
+    }
+  }
+
+  async function handleSaveProject() {
+    setSaveStatus("Saving...")
+
+    try {
+      const state = getPlannerState()
+
+      if (!currentProjectId) {
+        const project = await createProject("Untitled", state)
+        hydratingProjectRef.current = true
+        setCurrentProjectId(project.id)
+        window.localStorage.setItem(CURRENT_PROJECT_STORAGE_KEY, project.id)
+        requestAnimationFrame(() => {
+          hydratingProjectRef.current = false
+        })
+      } else {
+        await saveProjectVersion(currentProjectId, state)
+      }
+
+      setSaveStatus("Saved")
+    } catch (error) {
+      console.error("Failed to save TrallAI project", error)
+      setSaveStatus("Save failed")
+    }
+  }
 
   function toggleWorkspacePanels() {
     if (calculatorOpen) {
@@ -145,8 +309,14 @@ export function Workspace() {
             <CanvasToolbar
               activeTool={activeTool}
               extraTool={expandTool}
+              onNewProject={handleNewProject}
+              onSaveProject={handleSaveProject}
+              onZoomIn={zoomIn}
+              onZoomOut={zoomOut}
               onResetView={fitViewBox}
+              saveStatus={saveStatus}
               setActiveTool={setActiveTool}
+              zoomPercent={zoomPercent}
             />
             <PlanningSurface
               activeTool={activeTool}
@@ -157,7 +327,9 @@ export function Workspace() {
               setDeckPoints={setDeckPoints}
               setViewAspectRatio={setViewAspectRatio}
               setViewBox={setViewBox}
+              onResetView={fitViewBox}
               viewBox={viewBox}
+              zoomPercent={zoomPercent}
             />
           </section>
 

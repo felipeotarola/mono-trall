@@ -5,6 +5,10 @@ import type {
   PointBounds,
   ViewBox,
 } from "./types"
+import {
+  MAX_ZOOM_VIEWBOX_WIDTH,
+  MIN_ZOOM_VIEWBOX_WIDTH,
+} from "./constants"
 
 const CONTENT_PADDING = 160
 const MIN_VIEW_BOX_WIDTH = 900
@@ -92,6 +96,29 @@ export function clampPanViewBox(
       contentBounds.top - PAN_PADDING,
       contentBounds.bottom + PAN_PADDING
     ),
+  }
+}
+
+export function zoomViewBox(
+  viewBox: ViewBox,
+  factor: number,
+  center?: Point
+): ViewBox {
+  const aspectRatio = viewBox.height / viewBox.width
+  const newWidth = clampViewBoxAxis(
+    viewBox.width * factor,
+    MIN_ZOOM_VIEWBOX_WIDTH,
+    MAX_ZOOM_VIEWBOX_WIDTH
+  )
+  const newHeight = newWidth * aspectRatio
+  const centerX = center?.x ?? viewBox.x + viewBox.width / 2
+  const centerY = center?.y ?? viewBox.y + viewBox.height / 2
+
+  return {
+    x: centerX - newWidth / 2,
+    y: centerY - newHeight / 2,
+    width: newWidth,
+    height: newHeight,
   }
 }
 

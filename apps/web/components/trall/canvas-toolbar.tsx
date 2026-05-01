@@ -1,9 +1,13 @@
 import {
+  FilePlusIcon,
   HandIcon,
   Maximize2Icon,
+  MinusIcon,
   PencilRulerIcon,
+  PlusIcon,
   PointerIcon,
   RulerIcon,
+  SaveIcon,
   Undo2Icon,
 } from "lucide-react"
 
@@ -14,13 +18,25 @@ import type { ActiveTool, Tool } from "@/lib/trall/types"
 export function CanvasToolbar({
   activeTool,
   extraTool,
+  onNewProject,
+  onSaveProject,
+  onZoomIn,
+  onZoomOut,
   onResetView,
+  saveStatus,
   setActiveTool,
+  zoomPercent,
 }: {
   activeTool: ActiveTool
   extraTool: Tool
+  onNewProject: () => void
+  onSaveProject: () => void
+  onZoomIn: () => void
+  onZoomOut: () => void
   onResetView: () => void
+  saveStatus: string
   setActiveTool: (tool: ActiveTool) => void
+  zoomPercent: number
 }) {
   const tools: Tool[][] = [
     [
@@ -49,8 +65,16 @@ export function CanvasToolbar({
         onClick: () => setActiveTool("pan"),
       },
     ],
+    [
+      { label: "New project", icon: <FilePlusIcon />, onClick: onNewProject },
+      { label: "Save", icon: <SaveIcon />, onClick: onSaveProject },
+    ],
     [{ label: "Undo", icon: <Undo2Icon /> }],
-    [{ label: "Reset view", icon: <Maximize2Icon />, onClick: onResetView }],
+    [
+      { label: "Zoom out", icon: <MinusIcon />, onClick: onZoomOut },
+      { label: "Zoom in", icon: <PlusIcon />, onClick: onZoomIn },
+      { label: "Reset view", icon: <Maximize2Icon />, onClick: onResetView },
+    ],
     [extraTool],
   ]
 
@@ -64,6 +88,16 @@ export function CanvasToolbar({
           {group.map((tool) => (
             <ToolButton key={tool.label} {...tool} />
           ))}
+          {groupIndex === 1 ? (
+            <div className="flex h-8 min-w-24 items-center justify-center rounded-md px-2 text-xs font-medium text-muted-foreground">
+              {saveStatus}
+            </div>
+          ) : null}
+          {groupIndex === 3 ? (
+            <div className="flex h-8 min-w-14 items-center justify-center rounded-md px-2 text-xs font-medium text-muted-foreground">
+              {zoomPercent}%
+            </div>
+          ) : null}
         </div>
       ))}
     </div>
