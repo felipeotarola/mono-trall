@@ -89,3 +89,15 @@ export function clamp(value: number, min: number, max: number): number {
 export function lineAngle(a: Point, b: Point): number {
   return (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI
 }
+
+export function isEdgeAttached(
+  p1: Point,
+  p2: Point,
+  houseAttachY: number,
+  thresholdPx = 4
+): boolean {
+  return (
+    Math.abs(p1.y - houseAttachY) <= thresholdPx &&
+    Math.abs(p2.y - houseAttachY) <= thresholdPx
+  )
+}

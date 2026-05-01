@@ -7,7 +7,7 @@ import type {
   PointerEvent as ReactPointerEvent,
   SetStateAction,
 } from "react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 import { AngleSnapGuide } from "@/components/trall/svg/angle-snap-guide"
 import { DeckHandle } from "@/components/trall/svg/deck-handle"
@@ -20,6 +20,7 @@ import {
   initialDeckPoints,
   PARALLEL_HINT_THRESHOLD_DEG,
   PIXELS_PER_METER,
+  SNAP_THRESHOLD_PX,
 } from "@/lib/trall/constants"
 import {
   clamp,
@@ -27,6 +28,7 @@ import {
   degreesToRadians,
   distance,
   edgeAngle,
+  isEdgeAttached,
   isNearlyParallel,
   lineAngle,
   radiansToDegrees,
@@ -36,6 +38,7 @@ import { applySnap } from "@/lib/trall/snap"
 import { clientPointToSvgPoint } from "@/lib/trall/svg"
 import type {
   ActiveTool,
+  AttachedEdge,
   EditableDimension,
   HouseBounds,
   Point,
@@ -128,6 +131,44 @@ export function PlanSvg({
     activePointIndex !== null ? deckPoints[activePointIndex] : null
   const bottomEdgeIndex = Math.max(deckPoints.length - 2, 0)
   const houseAttachEdge = getHouseAttachEdge(houseBounds)
+  const attachedEdges = useMemo(
+    (): AttachedEdge[] =>
+      deckPoints.map((point, edgeIndex) => {
+        const nextPoint = deckPoints[(edgeIndex + 1) % deckPoints.length]
+
+        return {
+          edgeIndex,
+          attached: nextPoint
+            ? isEdgeAttached(point, nextPoint, houseAttachEdge.y)
+            : false,
+        }
+      }),
+    [deckPoints, houseAttachEdge.y]
+  )
+  const attachedEdgeIndexes = useMemo(
+    () =>
+      new Set(
+        attachedEdges
+          .filter((edge) => edge.attached)
+          .map((edge) => edge.edgeIndex)
+      ),
+    [attachedEdges]
+  )
+  const attachedEdgeForActivePoint =
+    dragStart !== null
+      ? attachedEdges.find((edge) => {
+          if (!edge.attached) {
+            return false
+          }
+
+          const nextIndex = (edge.edgeIndex + 1) % deckPoints.length
+          return (
+            edge.edgeIndex === dragStart.pointIndex ||
+            nextIndex === dragStart.pointIndex
+          )
+        })
+      : null
+  const selectedEdgeAttached = attachedEdgeIndexes.has(selectedEdgeIndex)
   const doorWidth = Math.min(80, houseBounds.widthPx * 0.22)
   const doorHeight = Math.min(98, houseBounds.depthPx * 0.4)
   const doorX = houseBounds.centerX - doorWidth / 2
@@ -361,13 +402,19 @@ export function PlanSvg({
       disableGrid: event.altKey,
       preferredSnapType: angleSnapType,
     })
+    const shouldKeepAttached =
+      Boolean(attachedEdgeForActivePoint) &&
+      Math.abs(point.y - houseAttachEdge.y) <= SNAP_THRESHOLD_PX
+    const snappedPoint = shouldKeepAttached
+      ? { ...snapped.point, y: houseAttachEdge.y }
+      : snapped.point
     const referenceEdgeStart = deckPoints[0]
     const referenceEdgeEnd = deckPoints[1]
     const activeEdgeStart =
       deckPoints[
         (dragStart.pointIndex - 1 + deckPoints.length) % deckPoints.length
       ]
-    const activeEdgeEnd = snapped.point
+    const activeEdgeEnd = snappedPoint
     const showParallelHint =
       dragStart.pointIndex !== 1 &&
       Boolean(referenceEdgeStart && referenceEdgeEnd && activeEdgeStart) &&
@@ -382,23 +429,23 @@ export function PlanSvg({
 
     setDeckPoints((currentPoints) =>
       currentPoints.map((currentPoint, index) =>
-        index === dragStart.pointIndex ? snapped.point : currentPoint
+        index === dragStart.pointIndex ? snappedPoint : currentPoint
       )
     )
     setSnapState({
       pointIndex: dragStart.pointIndex,
-      type: snapped.snapType,
-      point: snapped.point,
+      type: shouldKeepAttached ? "house" : snapped.snapType,
+      point: snappedPoint,
     })
     setAngleSnapState(
       angleGuide.active
-        ? { ...angleGuide, point: snapped.point }
+        ? { ...angleGuide, point: snappedPoint }
         : { active: false, angle: null, anchor: null, point: null }
     )
     setParallelHint({
       active: showParallelHint,
       start: activeEdgeStart ?? null,
-      end: showParallelHint ? snapped.point : null,
+      end: showParallelHint ? snappedPoint : null,
     })
   }
 
@@ -629,15 +676,66 @@ export function PlanSvg({
           strokeWidth="3"
         />
       </g>
+      {attachedEdges.map((edge) => {
+        if (!edge.attached) {
+          return null
+        }
+
+        const start = deckPoints[edge.edgeIndex]
+        const end = deckPoints[(edge.edgeIndex + 1) % deckPoints.length]
+        if (!start || !end) {
+          return null
+        }
+
+        const labelPoint = {
+          x: (start.x + end.x) / 2,
+          y: houseAttachEdge.y - 18,
+        }
+
+        return (
+          <g key={`attached-edge-${edge.edgeIndex}`} className="pointer-events-none">
+            <line
+              x1={start.x}
+              y1={houseAttachEdge.y}
+              x2={end.x}
+              y2={houseAttachEdge.y}
+              className="stroke-stone-800 dark:stroke-stone-100"
+              strokeLinecap="round"
+              strokeWidth="8"
+              opacity="0.82"
+            />
+            <rect
+              x={labelPoint.x - 38}
+              y={labelPoint.y - 21}
+              width="76"
+              height="24"
+              rx="6"
+              className="fill-background/90 stroke-border"
+            />
+            <text
+              x={labelPoint.x}
+              y={labelPoint.y - 5}
+              textAnchor="middle"
+              className="fill-muted-foreground text-[12px] font-semibold"
+            >
+              Attached
+            </text>
+          </g>
+        )
+      })}
       <path
         d={`M${selectedEdgeStart.x} ${selectedEdgeStart.y} L${selectedEdgeEnd.x} ${selectedEdgeEnd.y}`}
-        className="stroke-orange-500"
+        className={selectedEdgeAttached ? "stroke-stone-700 dark:stroke-stone-200" : "stroke-orange-500"}
         strokeLinecap="round"
-        strokeWidth="9"
+        strokeWidth={selectedEdgeAttached ? "11" : "9"}
       />
       <path
         d={`M${selectedEdgeStart.x} ${selectedEdgeStart.y} L${selectedEdgeEnd.x} ${selectedEdgeEnd.y}`}
-        className="stroke-orange-950 dark:stroke-orange-100"
+        className={
+          selectedEdgeAttached
+            ? "stroke-amber-700 dark:stroke-amber-200"
+            : "stroke-orange-950 dark:stroke-orange-100"
+        }
         strokeLinecap="round"
         strokeWidth="3"
       />

@@ -91,7 +91,7 @@ export function PlanningSurface({
         <span>
           Scale 1:100 · 1 grid square = 0.5 m · Cmd/Ctrl snaps angle · Alt
           disables grid · Shift locks axis · Space pans · Click a dimension to
-          edit length
+          edit length · When edge snaps to house, it becomes attached
         </span>
       </div>
     </div>

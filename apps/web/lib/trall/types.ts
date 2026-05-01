@@ -37,6 +37,11 @@ export type PlanContentBounds = {
   bottom: number
 }
 
+export type AttachedEdge = {
+  edgeIndex: number
+  attached: boolean
+}
+
 export type EditableDimension = {
   edgeIndex: number
   value: string
