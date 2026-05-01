@@ -1,0 +1,57 @@
+import type { ReactNode } from "react"
+
+export type Tool = {
+  label: string
+  icon: ReactNode
+  active?: boolean
+  onClick?: () => void
+}
+
+export type Point = {
+  x: number
+  y: number
+}
+
+export type SnapType = "none" | "grid" | "house" | "angle"
+
+export type ActiveTool = "select" | "draw" | "measure" | "pan"
+
+export type ViewBox = {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export type EditableDimension = {
+  edgeIndex: number
+  value: string
+}
+
+export type HouseModel = {
+  centerX: number
+  topY: number
+  widthM: number
+  depthM: number
+}
+
+export type HouseBounds = {
+  left: number
+  right: number
+  top: number
+  bottom: number
+  centerX: number
+  widthPx: number
+  depthPx: number
+}
+
+export type Metric = {
+  label: string
+  value: string
+}
+
+export type Material = {
+  label: string
+  value: string
+  detail: string
+}
