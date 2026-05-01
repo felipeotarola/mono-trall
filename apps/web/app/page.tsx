@@ -1,7 +1,13 @@
 "use client"
 
-import type { CSSProperties, ReactNode } from "react"
-import { useState } from "react"
+import type {
+  CSSProperties,
+  Dispatch,
+  PointerEvent as ReactPointerEvent,
+  ReactNode,
+  SetStateAction,
+} from "react"
+import { useMemo, useRef, useState } from "react"
 import {
   ClipboardListIcon,
   HandIcon,
@@ -46,6 +52,11 @@ type Tool = {
   onClick?: () => void
 }
 
+type Point = {
+  x: number
+  y: number
+}
+
 type Metric = {
   label: string
   value: string
@@ -57,25 +68,25 @@ type Material = {
   detail: string
 }
 
-const metrics: Metric[] = [
-  { label: "Deck area", value: "42.8 m²" },
-  { label: "Perimeter", value: "28.4 m" },
-  { label: "Board run", value: "356 lm" },
-  { label: "Waste factor", value: "10%" },
-]
+const PIXELS_PER_METER = 40
+const POINT_BOUNDS = {
+  minX: 80,
+  maxX: 1080,
+  minY: 120,
+  maxY: 760,
+}
 
-const materials: Material[] = [
-  { label: "Decking boards", value: "356 lm", detail: "28 × 120 mm" },
+const baseMaterials: Material[] = [
   { label: "Joists", value: "94 lm", detail: "45 × 145 mm" },
   { label: "Post anchors", value: "12 pcs", detail: "Galvanized" },
   { label: "Deck screws", value: "1,250 pcs", detail: "A4 stainless" },
 ]
 
-const deckPoints: Array<[number, number]> = [
-  [184, 364],
-  [704, 364],
-  [766, 558],
-  [148, 602],
+const initialDeckPoints: [Point, Point, Point, Point] = [
+  { x: 184, y: 364 },
+  { x: 680, y: 364 },
+  { x: 742, y: 558 },
+  { x: 175, y: 602 },
 ]
 
 export default function Page() {
@@ -100,6 +111,37 @@ export default function Page() {
 function Workspace() {
   const { setOpen, setOpenMobile } = useSidebar()
   const [calculatorOpen, setCalculatorOpen] = useState(true)
+  const [deckPoints, setDeckPoints] = useState<Point[]>(initialDeckPoints)
+  const [activePointIndex, setActivePointIndex] = useState<number | null>(null)
+
+  const calculations = useMemo(() => {
+    const areaM2 = polygonArea(deckPoints) / PIXELS_PER_METER ** 2
+    const perimeterM = polygonPerimeter(deckPoints) / PIXELS_PER_METER
+    const boardRunLm = areaM2 / 0.12
+    const materialPrice = boardRunLm * 39 * 1.1
+
+    return {
+      areaM2,
+      perimeterM,
+      boardRunLm,
+      materialPrice,
+      priceLabel: formatCurrency(materialPrice),
+      metrics: [
+        { label: "Deck area", value: `${areaM2.toFixed(1)} m²` },
+        { label: "Perimeter", value: `${perimeterM.toFixed(1)} m` },
+        { label: "Board run", value: `${Math.round(boardRunLm)} lm` },
+        { label: "Waste factor", value: "10%" },
+      ] satisfies Metric[],
+      materials: [
+        {
+          label: "Decking boards",
+          value: `${Math.round(boardRunLm)} lm`,
+          detail: "28 × 120 mm",
+        },
+        ...baseMaterials,
+      ] satisfies Material[],
+    }
+  }, [deckPoints])
 
   function toggleWorkspacePanels() {
     if (calculatorOpen) {
@@ -132,27 +174,42 @@ function Workspace() {
         >
           <section className="relative min-w-0 overflow-hidden rounded-lg border bg-stone-50 shadow-sm dark:bg-zinc-950">
             <CanvasToolbar extraTool={expandTool} />
-            <PlanningSurface />
+            <PlanningSurface
+              activePointIndex={activePointIndex}
+              deckPoints={deckPoints}
+              setActivePointIndex={setActivePointIndex}
+              setDeckPoints={setDeckPoints}
+            />
           </section>
 
           {calculatorOpen ? (
             <aside className="hidden min-w-0 lg:block">
-              <CalculatorPanel />
+              <CalculatorPanel calculations={calculations} />
             </aside>
           ) : null}
         </div>
 
         <section className="lg:hidden">
-          <CalculatorPanel />
+          <CalculatorPanel calculations={calculations} />
         </section>
       </div>
 
-      <MobileSummary />
+      <MobileSummary calculations={calculations} />
     </main>
   )
 }
 
-function PlanningSurface() {
+function PlanningSurface({
+  activePointIndex,
+  deckPoints,
+  setActivePointIndex,
+  setDeckPoints,
+}: {
+  activePointIndex: number | null
+  deckPoints: Point[]
+  setActivePointIndex: (index: number | null) => void
+  setDeckPoints: Dispatch<SetStateAction<Point[]>>
+}) {
   return (
     <div className="relative min-h-[calc(100svh-11rem)] overflow-hidden bg-stone-50 pt-16 dark:bg-zinc-950 md:min-h-[calc(100svh-7rem)]">
       <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.48)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.48)_1px,transparent_1px)] bg-[size:32px_32px]" />
@@ -171,7 +228,12 @@ function PlanningSurface() {
 
       <div className="relative flex min-h-[calc(100svh-13.5rem)] items-center justify-center px-3 py-8 md:min-h-[calc(100svh-10rem)]">
         <div className="aspect-square w-[min(900px,98%)]">
-          <PlanSvg />
+          <PlanSvg
+            activePointIndex={activePointIndex}
+            deckPoints={deckPoints}
+            setActivePointIndex={setActivePointIndex}
+            setDeckPoints={setDeckPoints}
+          />
         </div>
       </div>
 
@@ -211,15 +273,77 @@ function CanvasToolbar({ extraTool }: { extraTool: Tool }) {
   )
 }
 
-function PlanSvg() {
+function PlanSvg({
+  activePointIndex,
+  deckPoints,
+  setActivePointIndex,
+  setDeckPoints,
+}: {
+  activePointIndex: number | null
+  deckPoints: Point[]
+  setActivePointIndex: (index: number | null) => void
+  setDeckPoints: Dispatch<SetStateAction<Point[]>>
+}) {
+  const svgRef = useRef<SVGSVGElement>(null)
+  const polygonPoints = deckPoints.map((point) => `${point.x},${point.y}`).join(" ")
+  const p1 = deckPoints[0] ?? initialDeckPoints[0]
+  const p2 = deckPoints[1] ?? initialDeckPoints[1]
+  const p3 = deckPoints[2] ?? initialDeckPoints[2]
+  const p4 = deckPoints[3] ?? initialDeckPoints[3]
+  const selectedEdgeIndex = activePointIndex ?? 0
+  const selectedEdgeStart = deckPoints[selectedEdgeIndex] ?? p1
+  const selectedEdgeEnd =
+    deckPoints[(selectedEdgeIndex + 1) % deckPoints.length] ?? p2
+
+  function handlePointerDown(
+    event: ReactPointerEvent<SVGGElement>,
+    index: number
+  ) {
+    event.preventDefault()
+    setActivePointIndex(index)
+    svgRef.current?.setPointerCapture(event.pointerId)
+  }
+
+  function handlePointerMove(event: ReactPointerEvent<SVGSVGElement>) {
+    if (activePointIndex === null || !svgRef.current) {
+      return
+    }
+
+    const point = clientPointToSvgPoint(event, svgRef.current)
+    const clampedPoint = {
+      x: clamp(point.x, POINT_BOUNDS.minX, POINT_BOUNDS.maxX),
+      y: clamp(point.y, POINT_BOUNDS.minY, POINT_BOUNDS.maxY),
+    }
+
+    setDeckPoints((currentPoints) =>
+      currentPoints.map((currentPoint, index) =>
+        index === activePointIndex ? clampedPoint : currentPoint
+      )
+    )
+  }
+
+  function stopDragging(event: ReactPointerEvent<SVGSVGElement>) {
+    if (svgRef.current?.hasPointerCapture(event.pointerId)) {
+      svgRef.current.releasePointerCapture(event.pointerId)
+    }
+    setActivePointIndex(null)
+  }
+
   return (
     <svg
-      viewBox="100 16 740 660"
-      className="h-full w-full drop-shadow-sm"
+      ref={svgRef}
+      viewBox="80 16 1000 744"
+      className="h-full w-full touch-none select-none drop-shadow-sm"
+      onPointerCancel={stopDragging}
+      onPointerMove={handlePointerMove}
+      onPointerUp={stopDragging}
       role="img"
       aria-label="Deck plan with house outline, deck polygon, dimensions, and draggable corner handles"
     >
       <defs>
+        <clipPath id="deck-clip">
+          <polygon points={polygonPoints} />
+        </clipPath>
         <pattern
           id="deck-board-lines"
           width="26"
@@ -275,77 +399,91 @@ function PlanSvg() {
       </text>
 
       <polygon
-        points="184,364 704,364 766,558 148,602"
+        points={polygonPoints}
         className="fill-amber-300/42 stroke-amber-800 dark:fill-amber-400/24 dark:stroke-amber-300"
         strokeLinejoin="round"
         strokeWidth="5"
       />
       <polygon
-        points="184,364 704,364 766,558 148,602"
+        points={polygonPoints}
         fill="url(#deck-board-lines)"
         className="stroke-transparent"
       />
+      <g clipPath="url(#deck-clip)">
+        <path
+          d="M120 396 H980 M120 438 H980 M120 482 H980 M120 526 H980 M120 570 H980 M120 614 H980 M120 658 H980 M120 702 H980"
+          className="stroke-amber-900/20 dark:stroke-amber-100/20"
+          strokeWidth="3"
+        />
+      </g>
       <path
-        d="M238 396 L710 396 M210 438 L724 438 M182 482 L740 482 M162 526 L754 526 M150 570 L762 570"
-        className="stroke-amber-900/20 dark:stroke-amber-100/20"
-        strokeWidth="3"
-      />
-      <path
-        d="M184 364 L704 364"
+        d={`M${selectedEdgeStart.x} ${selectedEdgeStart.y} L${selectedEdgeEnd.x} ${selectedEdgeEnd.y}`}
         className="stroke-orange-500"
         strokeLinecap="round"
         strokeWidth="9"
       />
       <path
-        d="M184 364 L704 364"
+        d={`M${selectedEdgeStart.x} ${selectedEdgeStart.y} L${selectedEdgeEnd.x} ${selectedEdgeEnd.y}`}
         className="stroke-orange-950 dark:stroke-orange-100"
         strokeLinecap="round"
         strokeWidth="3"
       />
 
       <DimensionLine
-        x1={184}
-        y1={338}
-        x2={704}
-        y2={338}
-        label="12.4 m"
-        labelX={444}
-        labelY={320}
+        x1={p1.x}
+        y1={p1.y - 26}
+        x2={p2.x}
+        y2={p2.y - 26}
+        label={formatMeters(distance(p1, p2) / PIXELS_PER_METER)}
+        labelX={(p1.x + p2.x) / 2}
+        labelY={(p1.y + p2.y) / 2 - 44}
+        rotate={lineAngle(p1, p2)}
       />
       <DimensionLine
-        x1={792}
-        y1={558}
-        x2={730}
-        y2={364}
-        label="5.1 m"
-        labelX={790}
-        labelY={462}
-        rotate={72}
+        x1={p2.x + 28}
+        y1={p2.y}
+        x2={p3.x + 28}
+        y2={p3.y}
+        label={formatMeters(distance(p2, p3) / PIXELS_PER_METER)}
+        labelX={(p2.x + p3.x) / 2 + 55}
+        labelY={(p2.y + p3.y) / 2}
+        rotate={lineAngle(p2, p3)}
       />
       <DimensionLine
-        x1={148}
-        y1={628}
-        x2={766}
-        y2={584}
-        label="14.2 m"
-        labelX={460}
-        labelY={656}
+        x1={p4.x}
+        y1={p4.y + 28}
+        x2={p3.x}
+        y2={p3.y + 28}
+        label={formatMeters(distance(p4, p3) / PIXELS_PER_METER)}
+        labelX={(p4.x + p3.x) / 2}
+        labelY={(p4.y + p3.y) / 2 + 58}
+        rotate={lineAngle(p4, p3)}
       />
 
-      {deckPoints.map(([x, y], index) => (
+      {deckPoints.map((point, index) => (
         <DeckHandle
-          key={`${x}-${y}`}
-          x={x}
-          y={y}
+          key={index}
+          x={point.x}
+          y={point.y}
           label={`P${index + 1}`}
-          selected={index === 0}
+          selected={index === activePointIndex}
+          dragging={index === activePointIndex}
+          onPointerDown={(event) => handlePointerDown(event, index)}
         />
       ))}
     </svg>
   )
 }
 
-function CalculatorPanel() {
+function CalculatorPanel({
+  calculations,
+}: {
+  calculations: {
+    priceLabel: string
+    metrics: Metric[]
+    materials: Material[]
+  }
+}) {
   return (
     <div className="space-y-3">
       <Card size="sm" className="bg-zinc-950 text-white dark:bg-primary">
@@ -353,7 +491,7 @@ function CalculatorPanel() {
           <div>
             <p className="text-sm text-white/70">Estimated material price</p>
             <p className="mt-1 text-3xl font-semibold tracking-tight">
-              18,940 kr
+              {calculations.priceLabel}
             </p>
             <p className="mt-1 text-xs text-white/60">
               Includes 10% waste factor
@@ -371,7 +509,7 @@ function CalculatorPanel() {
           <CardTitle>Measurements</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          {metrics.map((metric) => (
+          {calculations.metrics.map((metric) => (
             <MetricRow key={metric.label} {...metric} />
           ))}
         </CardContent>
@@ -382,7 +520,7 @@ function CalculatorPanel() {
           <CardTitle>Materials</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          {materials.map((material) => (
+          {calculations.materials.map((material) => (
             <MaterialRow key={material.label} {...material} />
           ))}
         </CardContent>
@@ -403,14 +541,27 @@ function CalculatorPanel() {
   )
 }
 
-function MobileSummary() {
+function MobileSummary({
+  calculations,
+}: {
+  calculations: {
+    areaM2: number
+    boardRunLm: number
+    priceLabel: string
+    metrics: Metric[]
+    materials: Material[]
+  }
+}) {
   return (
     <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 p-3 shadow-lg backdrop-blur lg:hidden">
       <div className="mx-auto flex max-w-xl items-center gap-3">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">18,940 kr</p>
+          <p className="truncate text-sm font-medium">
+            {calculations.priceLabel}
+          </p>
           <p className="text-xs text-muted-foreground">
-            42.8 m² deck · 356 lm boards
+            {calculations.areaM2.toFixed(1)} m² deck ·{" "}
+            {Math.round(calculations.boardRunLm)} lm boards
           </p>
         </div>
         <Sheet>
@@ -431,7 +582,7 @@ function MobileSummary() {
               </SheetDescription>
             </SheetHeader>
             <div className="px-4 pb-4">
-              <CalculatorPanel />
+              <CalculatorPanel calculations={calculations} />
             </div>
           </SheetContent>
         </Sheet>
@@ -493,19 +644,28 @@ function DeckHandle({
   y,
   label,
   selected,
+  dragging,
+  onPointerDown,
 }: {
   x: number
   y: number
   label: string
   selected?: boolean
+  dragging?: boolean
+  onPointerDown: (event: ReactPointerEvent<SVGGElement>) => void
 }) {
   return (
-    <g className="group/handle cursor-grab active:cursor-grabbing">
+    <g
+      className="group/handle cursor-grab touch-none active:cursor-grabbing"
+      data-point-index={label}
+      onPointerDown={onPointerDown}
+    >
+      <circle cx={x} cy={y} r="28" className="fill-transparent" />
       {selected ? (
         <circle
           cx={x}
           cy={y}
-          r="25"
+          r={dragging ? "28" : "24"}
           className="fill-orange-400/20 stroke-orange-500/35"
           strokeWidth="3"
         />
@@ -513,7 +673,7 @@ function DeckHandle({
       <circle
         cx={x}
         cy={y}
-        r="16"
+        r={dragging ? "17" : "14"}
         className="fill-background stroke-orange-700 transition group-hover/handle:stroke-orange-500 dark:stroke-orange-300"
         strokeWidth="5"
       />
@@ -526,7 +686,11 @@ function DeckHandle({
       <text
         x={x + 22}
         y={y - 13}
-        className="pointer-events-none fill-muted-foreground text-[15px] font-medium"
+        className={
+          selected
+            ? "pointer-events-none fill-orange-700 text-[16px] font-semibold dark:fill-orange-300"
+            : "pointer-events-none fill-muted-foreground text-[15px] font-medium"
+        }
       >
         {label}
       </text>
@@ -569,4 +733,65 @@ function DimensionLine({
       </text>
     </g>
   )
+}
+
+function clientPointToSvgPoint(
+  event: PointerEvent | ReactPointerEvent,
+  svg: SVGSVGElement
+): Point {
+  const point = svg.createSVGPoint()
+  point.x = event.clientX
+  point.y = event.clientY
+
+  const screenCtm = svg.getScreenCTM()
+  if (!screenCtm) {
+    return { x: point.x, y: point.y }
+  }
+
+  const svgPoint = point.matrixTransform(screenCtm.inverse())
+  return { x: svgPoint.x, y: svgPoint.y }
+}
+
+function polygonArea(points: Point[]): number {
+  if (points.length < 3) {
+    return 0
+  }
+
+  const signedArea = points.reduce((sum, point, index) => {
+    const nextPoint = points[(index + 1) % points.length]
+    if (!nextPoint) {
+      return sum
+    }
+
+    return sum + point.x * nextPoint.y - nextPoint.x * point.y
+  }, 0)
+
+  return Math.abs(signedArea) / 2
+}
+
+function polygonPerimeter(points: Point[]): number {
+  return points.reduce((sum, point, index) => {
+    const nextPoint = points[(index + 1) % points.length]
+    return nextPoint ? sum + distance(point, nextPoint) : sum
+  }, 0)
+}
+
+function distance(a: Point, b: Point): number {
+  return Math.hypot(b.x - a.x, b.y - a.y)
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max)
+}
+
+function lineAngle(a: Point, b: Point): number {
+  return (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI
+}
+
+function formatMeters(value: number): string {
+  return `${value.toFixed(1)} m`
+}
+
+function formatCurrency(value: number): string {
+  return `${Math.round(value).toLocaleString("sv-SE")} kr`
 }
