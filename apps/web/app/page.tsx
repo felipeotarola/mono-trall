@@ -107,36 +107,7 @@ function Workspace() {
   return (
     <main className="flex flex-1 flex-col bg-muted/20">
       <div className="@container/main flex flex-1 flex-col gap-4 p-3 pb-24 sm:p-4 md:p-6 lg:pb-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline">Draft estimate</Badge>
-              <span className="text-xs text-muted-foreground">Scale 1:100</span>
-            </div>
-            <h2 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">
-              Backyard deck extension
-            </h2>
-          </div>
-          <div className="flex items-center gap-2">
-            {!calculatorOpen ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCalculatorOpen(true)}
-              >
-                <ClipboardListIcon />
-                Summary
-              </Button>
-            ) : null}
-            <Button variant="outline" size="sm">
-              <MinusIcon />
-              80%
-            </Button>
-            <Button variant="outline" size="icon-sm" aria-label="Zoom in">
-              <PlusIcon />
-            </Button>
-          </div>
-        </div>
+     
 
         <div
           className={
