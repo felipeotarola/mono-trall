@@ -1,7 +1,11 @@
+"use client"
+
 import type { CSSProperties, ReactNode } from "react"
+import { useState } from "react"
 import {
   ClipboardListIcon,
   Maximize2Icon,
+  Minimize2Icon,
   MinusIcon,
   PencilRulerIcon,
   PlusIcon,
@@ -33,6 +37,7 @@ import {
 import {
   SidebarInset,
   SidebarProvider,
+  useSidebar,
 } from "@workspace/ui/components/sidebar"
 
 const tools = [
@@ -40,7 +45,6 @@ const tools = [
   { label: "Draw deck", icon: PencilRulerIcon },
   { label: "Measure", icon: RulerIcon },
   { label: "Undo", icon: Undo2Icon },
-  { label: "Zoom", icon: Maximize2Icon },
 ]
 
 const measurements: Array<[string, string]> = [
@@ -77,65 +81,112 @@ export default function Page() {
       <AppSidebar variant="inset" />
       <SidebarInset>
         <SiteHeader />
-        <main className="flex flex-1 flex-col bg-muted/20">
-          <div className="@container/main flex flex-1 flex-col gap-4 p-3 pb-24 sm:p-4 md:p-6 lg:pb-6">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <Workspace />
+      </SidebarInset>
+    </SidebarProvider>
+  )
+}
+
+function Workspace() {
+  const { setOpen, setOpenMobile } = useSidebar()
+  const [calculatorOpen, setCalculatorOpen] = useState(true)
+
+  function toggleWorkspacePanels() {
+    if (calculatorOpen) {
+      setOpen(false)
+      setOpenMobile(false)
+      setCalculatorOpen(false)
+      return
+    }
+
+    setOpen(true)
+    setOpenMobile(false)
+    setCalculatorOpen(true)
+  }
+
+  return (
+    <main className="flex flex-1 flex-col bg-muted/20">
+      <div className="@container/main flex flex-1 flex-col gap-4 p-3 pb-24 sm:p-4 md:p-6 lg:pb-6">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">Draft estimate</Badge>
+              <span className="text-xs text-muted-foreground">Scale 1:100</span>
+            </div>
+            <h2 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">
+              Backyard deck extension
+            </h2>
+          </div>
+          <div className="flex items-center gap-2">
+            {!calculatorOpen ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCalculatorOpen(true)}
+              >
+                <ClipboardListIcon />
+                Summary
+              </Button>
+            ) : null}
+            <Button variant="outline" size="sm">
+              <MinusIcon />
+              80%
+            </Button>
+            <Button variant="outline" size="icon-sm" aria-label="Zoom in">
+              <PlusIcon />
+            </Button>
+          </div>
+        </div>
+
+        <div
+          className={
+            calculatorOpen
+              ? "grid flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_240px] xl:grid-cols-[minmax(0,1fr)_280px]"
+              : "grid flex-1 gap-4 lg:grid-cols-1"
+          }
+        >
+          <section className="flex min-h-[calc(100svh-15rem)] flex-col overflow-hidden rounded-xl border bg-card shadow-sm md:min-h-[calc(100svh-13rem)]">
+            <div className="flex flex-col gap-3 border-b bg-background/80 p-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">Draft estimate</Badge>
-                  <span className="text-xs text-muted-foreground">
-                    Scale 1:100
-                  </span>
-                </div>
-                <h2 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">
-                  Backyard deck extension
-                </h2>
+                <h1 className="text-base font-semibold tracking-tight">
+                  Planning surface
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Draw the deck footprint against the house outline.
+                </p>
               </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm">
-                  <MinusIcon />
-                  80%
-                </Button>
-                <Button variant="outline" size="icon-sm" aria-label="Zoom in">
-                  <PlusIcon />
-                </Button>
+              <div className="flex gap-1 overflow-x-auto rounded-lg border bg-muted/40 p-1">
+                {tools.map((tool) => (
+                  <ToolButton
+                    key={tool.label}
+                    label={tool.label}
+                    icon={<tool.icon />}
+                    active={tool.active}
+                  />
+                ))}
+                <ToolButton
+                  label={
+                    calculatorOpen ? "Expand workspace" : "Restore panels"
+                  }
+                  icon={
+                    calculatorOpen ? <Maximize2Icon /> : <Minimize2Icon />
+                  }
+                  onClick={toggleWorkspacePanels}
+                />
               </div>
             </div>
 
-            <div className="grid flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_380px]">
-              <section className="flex min-h-[calc(100svh-15rem)] flex-col overflow-hidden rounded-xl border bg-card shadow-sm md:min-h-[calc(100svh-13rem)]">
-                <div className="flex flex-col gap-3 border-b bg-background/80 p-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h1 className="text-base font-semibold tracking-tight">
-                      Planning surface
-                    </h1>
-                    <p className="text-sm text-muted-foreground">
-                      Draw the deck footprint against the house outline.
-                    </p>
-                  </div>
-                  <div className="flex gap-1 overflow-x-auto rounded-lg border bg-muted/40 p-1">
-                    {tools.map((tool) => (
-                      <ToolButton
-                        key={tool.label}
-                        label={tool.label}
-                        icon={<tool.icon />}
-                        active={tool.active}
-                      />
-                    ))}
-                  </div>
-                </div>
+            <div className="relative flex flex-1 flex-col items-center justify-start overflow-hidden bg-background p-4">
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.55)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.55)_1px,transparent_1px)] bg-[size:28px_28px]" />
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.35)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.35)_1px,transparent_1px)] bg-[size:140px_140px]" />
 
-                <div className="relative flex flex-1 flex-col items-center justify-start overflow-hidden bg-background p-4">
-                  <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.55)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.55)_1px,transparent_1px)] bg-[size:28px_28px]" />
-                  <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.35)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.35)_1px,transparent_1px)] bg-[size:140px_140px]" />
-
-                  <div className="relative aspect-square w-[min(760px,96%)]">
-                    <svg
-                      viewBox="100 16 740 660"
-                      className="h-full w-full drop-shadow-sm"
-                      role="img"
-                      aria-label="Deck plan with house outline, deck polygon, dimensions, and corner handles"
-                    >
+              <div className="relative aspect-square w-[min(760px,96%)]">
+                <svg
+                  viewBox="100 16 740 660"
+                  className="h-full w-full drop-shadow-sm"
+                  role="img"
+                  aria-label="Deck plan with house outline, deck polygon, dimensions, and corner handles"
+                >
                       <defs>
                         <pattern
                           id="deck-board-lines"
@@ -260,28 +311,28 @@ export default function Page() {
                 </div>
               </section>
 
-              <aside className="hidden lg:block">
-                <CalculatorPanel />
-              </aside>
-            </div>
-          </div>
+          {calculatorOpen ? (
+            <aside className="hidden lg:block">
+              <CalculatorPanel />
+            </aside>
+          ) : null}
+        </div>
+      </div>
 
-          <MobileSummary />
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+      <MobileSummary />
+    </main>
   )
 }
 
 function CalculatorPanel() {
   return (
-    <div className="space-y-4">
-      <Card>
+    <div className="space-y-3">
+      <Card size="sm">
         <CardHeader>
           <CardTitle>Project summary</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="rounded-lg border bg-muted/30 p-3">
+        <CardContent className="space-y-2">
+          <div className="rounded-lg border bg-muted/30 p-2.5">
             <p className="text-sm font-medium">Backyard deck extension</p>
             <p className="mt-1 text-xs text-muted-foreground">
               Attached deck with angled outer edge and stair allowance.
@@ -294,13 +345,13 @@ function CalculatorPanel() {
         </CardContent>
       </Card>
 
-      <Card className="bg-primary text-primary-foreground">
-        <CardContent className="space-y-4">
+      <Card size="sm" className="bg-primary text-primary-foreground">
+        <CardContent className="space-y-3">
           <div>
             <p className="text-sm text-primary-foreground/75">
               Estimated material price
             </p>
-            <p className="mt-1 text-3xl font-semibold tracking-tight">
+            <p className="mt-1 text-2xl font-semibold tracking-tight">
               18,940 kr
             </p>
           </div>
@@ -312,7 +363,7 @@ function CalculatorPanel() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card size="sm">
         <CardHeader>
           <CardTitle>Measurements</CardTitle>
         </CardHeader>
@@ -323,7 +374,7 @@ function CalculatorPanel() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card size="sm">
         <CardHeader>
           <CardTitle>Materials</CardTitle>
         </CardHeader>
@@ -383,10 +434,12 @@ function ToolButton({
   label,
   icon,
   active,
+  onClick,
 }: {
   label: string
   icon: ReactNode
   active?: boolean
+  onClick?: () => void
 }) {
   return (
     <Button
@@ -395,6 +448,7 @@ function ToolButton({
       className="min-w-fit"
       aria-pressed={active}
       title={label}
+      onClick={onClick}
     >
       {icon}
       <span className="hidden 2xl:inline">{label}</span>
@@ -404,9 +458,9 @@ function ToolButton({
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border bg-background p-3">
+    <div className="rounded-lg border bg-background p-2.5">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 text-lg font-semibold tracking-tight">{value}</p>
+      <p className="mt-1 text-base font-semibold tracking-tight">{value}</p>
     </div>
   )
 }
@@ -421,7 +475,7 @@ function MaterialRow({
   value: string
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/25 px-3 py-2">
+    <div className="flex items-center justify-between gap-2 rounded-lg border bg-muted/25 px-2.5 py-2">
       <div className="min-w-0">
         <p className="truncate text-sm font-medium">{label}</p>
         {detail ? (
