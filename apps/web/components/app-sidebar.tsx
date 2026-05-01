@@ -49,6 +49,7 @@ const data = {
     {
       title: "Deck planner",
       url: "#",
+      isActive: true,
       icon: (
         <PencilRulerIcon
         />
