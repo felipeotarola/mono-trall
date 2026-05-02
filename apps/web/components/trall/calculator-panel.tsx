@@ -24,6 +24,7 @@ export function CalculatorPanel({
   setHouse,
 }: {
   calculations: {
+    areaM2: number
     priceLabel: string
     metrics: Metric[]
     materials: Material[]
@@ -64,7 +65,11 @@ export function CalculatorPanel({
         </CardContent>
       </Card>
 
-      <MaterialsManager ensureProject={ensureProject} projectId={projectId} />
+      <MaterialsManager
+        deckAreaM2={calculations.areaM2}
+        ensureProject={ensureProject}
+        projectId={projectId}
+      />
 
       <HouseDimensionsCard house={house} setHouse={setHouse} />
 

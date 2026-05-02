@@ -22,6 +22,9 @@ import {
 } from "@/lib/trall/materials-api"
 import { formatCurrency } from "@/lib/trall/format"
 import {
+  getDeckingLinearMetres,
+  getMaterialDimensionsLabel,
+  getPiecesForLinearMetres,
   getProjectMaterialLineTotal,
   getProjectMaterialTotals,
   materialUnitLabels,
@@ -48,9 +51,11 @@ import {
 } from "@workspace/ui/components/select"
 
 export function MaterialsManager({
+  deckAreaM2,
   ensureProject,
   projectId,
 }: {
+  deckAreaM2: number
   ensureProject: () => Promise<string>
   projectId: string | null
 }) {
@@ -70,6 +75,23 @@ export function MaterialsManager({
     () => getProjectMaterialTotals(projectMaterials),
     [projectMaterials]
   )
+  const selectedMaterial = materials.find(
+    (material) => material.id === selectedMaterialId
+  )
+  const suggestedLinearMetres =
+    selectedMaterial?.unit === "linear_metre"
+      ? getDeckingLinearMetres({
+          areaM2: deckAreaM2,
+          widthMm: selectedMaterial.width_mm,
+        })
+      : null
+  const suggestedPieces =
+    suggestedLinearMetres && selectedMaterial
+      ? getPiecesForLinearMetres({
+          lengthMm: selectedMaterial.length_mm,
+          linearMetres: suggestedLinearMetres,
+        })
+      : null
 
   useEffect(() => {
     let cancelled = false
@@ -328,6 +350,18 @@ export function MaterialsManager({
               onChange={(event) => setSelectedQuantity(event.target.value)}
             />
           </div>
+          {selectedMaterial ? (
+            <MaterialSelectionHint
+              material={selectedMaterial}
+              suggestedLinearMetres={suggestedLinearMetres}
+              suggestedPieces={suggestedPieces}
+              onUseSuggested={() =>
+                suggestedLinearMetres
+                  ? setSelectedQuantity(String(suggestedLinearMetres))
+                  : undefined
+              }
+            />
+          ) : null}
           <Button
             className="w-full"
             disabled={saving || materials.length === 0}
@@ -376,6 +410,8 @@ function ProjectMaterialRow({
   onQuantityCommit: () => void
   onRemove: () => void
 }) {
+  const dimensions = getMaterialDimensionsLabel(item.material)
+
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_80px_auto] gap-2 rounded-lg border bg-muted/25 px-3 py-2">
       <div className="min-w-0">
@@ -385,6 +421,9 @@ function ProjectMaterialRow({
           {materialUnitLabels[item.material.unit]} ·{" "}
           {formatCurrency(getProjectMaterialLineTotal(item))}
         </p>
+        {dimensions ? (
+          <p className="truncate text-xs text-muted-foreground">{dimensions}</p>
+        ) : null}
       </div>
       <Input
         aria-label={`${item.material.name} quantity`}
@@ -407,6 +446,43 @@ function ProjectMaterialRow({
       >
         <ArchiveIcon />
       </Button>
+    </div>
+  )
+}
+
+function MaterialSelectionHint({
+  material,
+  onUseSuggested,
+  suggestedLinearMetres,
+  suggestedPieces,
+}: {
+  material: MaterialRecord
+  onUseSuggested: () => void
+  suggestedLinearMetres: number | null
+  suggestedPieces: number | null
+}) {
+  const dimensions = getMaterialDimensionsLabel(material)
+
+  if (!dimensions && !suggestedLinearMetres) {
+    return null
+  }
+
+  return (
+    <div className="rounded-lg bg-muted/50 px-2 py-1.5 text-xs text-muted-foreground">
+      <div className="flex items-center justify-between gap-2">
+        <span className="min-w-0 truncate">
+          {dimensions ? `${dimensions}` : "No dimensions"}
+          {suggestedLinearMetres
+            ? ` · suggested ${suggestedLinearMetres} lpm`
+            : ""}
+          {suggestedPieces ? ` · ${suggestedPieces} boards` : ""}
+        </span>
+        {suggestedLinearMetres ? (
+          <Button size="xs" variant="outline" onClick={onUseSuggested}>
+            Use
+          </Button>
+        ) : null}
+      </div>
     </div>
   )
 }

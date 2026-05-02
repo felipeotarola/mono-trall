@@ -30,12 +30,24 @@ create table if not exists public.materials (
   category text not null,
   unit text not null check (unit in ('metre', 'linear_metre', 'square_metre', 'piece', 'box', 'pack')),
   cost numeric(12, 2) not null default 0 check (cost >= 0),
+  thickness_mm numeric(10, 1) check (thickness_mm is null or thickness_mm > 0),
+  width_mm numeric(10, 1) check (width_mm is null or width_mm > 0),
+  length_mm numeric(10, 1) check (length_mm is null or length_mm > 0),
   description text,
   created_by uuid references auth.users(id) on delete cascade,
   active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.materials
+  add column if not exists thickness_mm numeric(10, 1) check (thickness_mm is null or thickness_mm > 0);
+
+alter table public.materials
+  add column if not exists width_mm numeric(10, 1) check (width_mm is null or width_mm > 0);
+
+alter table public.materials
+  add column if not exists length_mm numeric(10, 1) check (length_mm is null or length_mm > 0);
 
 create index if not exists materials_created_by_idx
   on public.materials(created_by);
@@ -55,20 +67,24 @@ create table if not exists public.project_materials (
 create index if not exists project_materials_material_id_idx
   on public.project_materials(material_id);
 
-insert into public.materials (id, name, category, unit, cost, description, created_by, active)
+insert into public.materials (id, name, category, unit, cost, thickness_mm, width_mm, length_mm, description, created_by, active)
 values
-  ('00000000-0000-4000-8000-000000000001', 'Decking boards 28 x 120 mm', 'Decking', 'linear_metre', 39.00, 'Standard pressure-treated deck board.', null, true),
-  ('00000000-0000-4000-8000-000000000002', 'Joists 45 x 145 mm', 'Framing', 'linear_metre', 18.50, 'Structural timber joist for deck framing.', null, true),
-  ('00000000-0000-4000-8000-000000000003', 'Posts 98 x 98 mm', 'Framing', 'metre', 24.00, 'Support post material.', null, true),
-  ('00000000-0000-4000-8000-000000000004', 'Galvanized post anchors', 'Foundation', 'piece', 16.00, 'Post base anchor for concrete or pier fixing.', null, true),
-  ('00000000-0000-4000-8000-000000000005', 'A4 stainless deck screws', 'Fasteners', 'box', 32.00, 'Box of corrosion-resistant deck screws.', null, true),
-  ('00000000-0000-4000-8000-000000000006', 'Joist hangers', 'Fasteners', 'piece', 4.25, 'Galvanized connector for joist support.', null, true)
+  ('00000000-0000-4000-8000-000000000001', 'Decking boards 28 x 120 mm', 'Decking', 'linear_metre', 39.00, 28, 120, null, 'Standard pressure-treated deck board.', null, true),
+  ('00000000-0000-4000-8000-000000000002', 'Joists 45 x 145 mm', 'Framing', 'linear_metre', 18.50, 45, 145, null, 'Structural timber joist for deck framing.', null, true),
+  ('00000000-0000-4000-8000-000000000003', 'Posts 98 x 98 mm', 'Framing', 'metre', 24.00, 98, 98, null, 'Support post material.', null, true),
+  ('00000000-0000-4000-8000-000000000004', 'Galvanized post anchors', 'Foundation', 'piece', 16.00, null, null, null, 'Post base anchor for concrete or pier fixing.', null, true),
+  ('00000000-0000-4000-8000-000000000005', 'A4 stainless deck screws', 'Fasteners', 'box', 32.00, null, null, null, 'Box of corrosion-resistant deck screws.', null, true),
+  ('00000000-0000-4000-8000-000000000006', 'Joist hangers', 'Fasteners', 'piece', 4.25, null, null, null, 'Galvanized connector for joist support.', null, true),
+  ('00000000-0000-4000-8000-000000000007', 'Trall 34 x 170 mm impregnated XL Premium+ NTR/AB G4-2', 'Decking', 'linear_metre', 57.50, 34, 170, 5100, 'Pressure-treated premium deck board priced per löpmeter.', null, true)
 on conflict (id) do update
 set
   name = excluded.name,
   category = excluded.category,
   unit = excluded.unit,
   cost = excluded.cost,
+  thickness_mm = excluded.thickness_mm,
+  width_mm = excluded.width_mm,
+  length_mm = excluded.length_mm,
   description = excluded.description,
   active = excluded.active;
 

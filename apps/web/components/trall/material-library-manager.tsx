@@ -24,7 +24,11 @@ import {
   updateMaterial,
 } from "@/lib/trall/materials-api"
 import { formatCurrency } from "@/lib/trall/format"
-import { materialUnitLabels, type MaterialRecord } from "@/lib/trall/materials"
+import {
+  getMaterialDimensionsLabel,
+  materialUnitLabels,
+  type MaterialRecord,
+} from "@/lib/trall/materials"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
 import {
@@ -59,6 +63,7 @@ export function MaterialLibraryManager() {
         material.category,
         material.description ?? "",
         materialUnitLabels[material.unit],
+        getMaterialDimensionsLabel(material) ?? "",
       ]
         .join(" ")
         .toLowerCase()
@@ -148,6 +153,9 @@ export function MaterialLibraryManager() {
       category: material.category,
       unit: material.unit,
       cost: String(material.cost),
+      thickness_mm: material.thickness_mm ? String(material.thickness_mm) : "",
+      width_mm: material.width_mm ? String(material.width_mm) : "",
+      length_mm: material.length_mm ? String(material.length_mm) : "",
       description: material.description ?? "",
     })
   }
@@ -228,9 +236,10 @@ export function MaterialLibraryManager() {
           </CardHeader>
           <CardContent>
             <div className="overflow-hidden rounded-lg border">
-              <div className="grid grid-cols-[minmax(180px,1.5fr)_140px_90px_120px_120px] border-b bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground max-lg:hidden">
+              <div className="grid grid-cols-[minmax(180px,1.5fr)_140px_120px_90px_120px_120px] border-b bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground max-lg:hidden">
                 <span>Name</span>
                 <span>Category</span>
+                <span>Dimensions</span>
                 <span>Unit</span>
                 <span>Cost</span>
                 <span className="text-right">Actions</span>
@@ -282,9 +291,10 @@ function MaterialOverviewRow({
   onEdit: () => void
 }) {
   const isStandard = material.created_by === null
+  const dimensions = getMaterialDimensionsLabel(material)
 
   return (
-    <div className="grid gap-3 px-3 py-3 lg:grid-cols-[minmax(180px,1.5fr)_140px_90px_120px_120px] lg:items-center">
+    <div className="grid gap-3 px-3 py-3 lg:grid-cols-[minmax(180px,1.5fr)_140px_120px_90px_120px_120px] lg:items-center">
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-2">
           <LibraryIcon className="size-4 shrink-0 text-muted-foreground" />
@@ -298,8 +308,13 @@ function MaterialOverviewRow({
         ) : null}
       </div>
       <div className="text-sm text-muted-foreground">{material.category}</div>
+      <div className="text-sm text-muted-foreground">
+        {dimensions ?? "No dimensions"}
+      </div>
       <div className="text-sm">{materialUnitLabels[material.unit]}</div>
-      <div className="text-sm font-medium">{formatCurrency(material.cost)}</div>
+      <div className="text-sm font-medium">
+        {formatCurrency(material.cost)} / {materialUnitLabels[material.unit]}
+      </div>
       <div className="flex justify-end gap-1">
         <Button
           aria-label="Edit material"

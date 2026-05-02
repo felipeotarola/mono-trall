@@ -21,14 +21,20 @@ export type MaterialFormState = {
   category: string
   unit: MaterialUnit
   cost: string
+  thickness_mm: string
+  width_mm: string
+  length_mm: string
   description: string
 }
 
 export const emptyMaterialForm: MaterialFormState = {
   name: "",
   category: "Decking",
-  unit: "piece",
+  unit: "linear_metre",
   cost: "",
+  thickness_mm: "",
+  width_mm: "",
+  length_mm: "",
   description: "",
 }
 
@@ -101,6 +107,47 @@ export function MaterialFields({
           />
         </Label>
       </div>
+      <div className="grid grid-cols-3 gap-2">
+        <Label className="grid gap-1">
+          <span className="text-xs text-muted-foreground">Thickness mm</span>
+          <Input
+            inputMode="decimal"
+            min={0}
+            step={1}
+            type="number"
+            value={form.thickness_mm}
+            onChange={(event) =>
+              onChange({ ...form, thickness_mm: event.target.value })
+            }
+          />
+        </Label>
+        <Label className="grid gap-1">
+          <span className="text-xs text-muted-foreground">Width mm</span>
+          <Input
+            inputMode="decimal"
+            min={0}
+            step={1}
+            type="number"
+            value={form.width_mm}
+            onChange={(event) =>
+              onChange({ ...form, width_mm: event.target.value })
+            }
+          />
+        </Label>
+        <Label className="grid gap-1">
+          <span className="text-xs text-muted-foreground">Length mm</span>
+          <Input
+            inputMode="decimal"
+            min={0}
+            step={1}
+            type="number"
+            value={form.length_mm}
+            onChange={(event) =>
+              onChange({ ...form, length_mm: event.target.value })
+            }
+          />
+        </Label>
+      </div>
     </div>
   )
 }
@@ -122,6 +169,9 @@ export function toMaterialInput(form: MaterialFormState): MaterialInput | null {
     category: form.category,
     unit: form.unit,
     cost,
+    thickness_mm: parseOptionalDimension(form.thickness_mm),
+    width_mm: parseOptionalDimension(form.width_mm),
+    length_mm: parseOptionalDimension(form.length_mm),
     description: form.description,
   }
 }
@@ -138,4 +188,18 @@ export function parseQuantity(value: string) {
 
 export function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Something went wrong"
+}
+
+function parseOptionalDimension(value: string) {
+  if (!value.trim()) {
+    return null
+  }
+
+  const dimension = Number.parseFloat(value)
+
+  if (!Number.isFinite(dimension) || dimension <= 0) {
+    return null
+  }
+
+  return dimension
 }

@@ -4,6 +4,9 @@ import test from "node:test"
 import {
   getProjectMaterialLineTotal,
   getProjectMaterialTotals,
+  getDeckingLinearMetres,
+  getMaterialDimensionsLabel,
+  getPiecesForLinearMetres,
   isMaterialUnit,
   normalizeMaterialInput,
   parseMaterialInputBody,
@@ -20,6 +23,9 @@ test("normalizes material input for persistence", () => {
       category: " Decking ",
       unit: "linear_metre",
       cost: 12.345,
+      thickness_mm: 34,
+      width_mm: 170,
+      length_mm: 5100,
       description: "  Main surface ",
     }),
     {
@@ -27,6 +33,9 @@ test("normalizes material input for persistence", () => {
       category: "Decking",
       unit: "linear_metre",
       cost: 12.35,
+      thickness_mm: 34,
+      width_mm: 170,
+      length_mm: 5100,
       description: "Main surface",
     }
   )
@@ -44,6 +53,9 @@ test("parses API material payloads", () => {
       category: " Fasteners ",
       unit: "box",
       cost: "32.009",
+      thickness_mm: "",
+      width_mm: "4.5",
+      length_mm: null,
       description: "",
     }),
     {
@@ -52,6 +64,9 @@ test("parses API material payloads", () => {
         category: "Fasteners",
         unit: "box",
         cost: 32.01,
+        thickness_mm: null,
+        width_mm: 4.5,
+        length_mm: null,
         description: null,
       },
     }
@@ -65,6 +80,25 @@ test("parses project material quantities", () => {
   assert.equal(parseProjectMaterialQuantity("2.5"), 2.5)
   assert.equal(parseProjectMaterialQuantity(-1), null)
   assert.equal(parseProjectMaterialQuantity("bad"), null)
+})
+
+test("calculates decking linear metres from board width", () => {
+  assert.equal(
+    getDeckingLinearMetres({ areaM2: 24, widthMm: 170, wasteFactor: 0.1 }),
+    155.3
+  )
+  assert.equal(
+    getPiecesForLinearMetres({ linearMetres: 155.3, lengthMm: 5100 }),
+    31
+  )
+  assert.equal(
+    getMaterialDimensionsLabel({
+      thickness_mm: 34,
+      width_mm: 170,
+      length_mm: 5100,
+    }),
+    "34 x 170 x 5100 mm"
+  )
 })
 
 test("calculates project material totals by line and unit", () => {
@@ -107,6 +141,9 @@ function makeProjectMaterial(
       category: "Test",
       unit,
       cost,
+      thickness_mm: null,
+      width_mm: null,
+      length_mm: null,
       description: null,
       created_by: "user-1",
       active: true,
