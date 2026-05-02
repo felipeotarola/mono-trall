@@ -4,33 +4,12 @@ import {
   getPoolDeckRelationship,
   type ElevationSettings,
 } from "@/lib/trall/elevation"
+import { trallPlanColors as COLORS } from "@/lib/trall/visual-style"
 
 const SVG_WIDTH = 1180
 const SVG_HEIGHT = 680
 const CHART_TOP = 72
 const CHART_BOTTOM = 580
-const COLORS = {
-  canvas: "#fffdf7",
-  grid: "#e6e0d4",
-  gridStrong: "#d8d0c2",
-  ink: "#1f2933",
-  muted: "#687385",
-  ground: "#6f6658",
-  soil: "#e8dfcf",
-  wall: "#f2f0ea",
-  foundation: "#d2d6dc",
-  deck: "#c7a36f",
-  deckDark: "#7b5b31",
-  deckEdge: "#8a6a3d",
-  timberLine: "#9c7a48",
-  poolShell: "#d8e5ed",
-  water: "#9fd3e5",
-  poolEdge: "#2f6f86",
-  dimension: "#344054",
-  positive: "#15803d",
-  warning: "#b45309",
-}
-
 export function ElevationSectionSvg({
   elevation,
   hasPool,
@@ -74,7 +53,7 @@ export function ElevationSectionSvg({
           <path
             d="M -4 18 L 18 -4 M 4 22 L 22 4"
             fill="none"
-            stroke="#cfc2ad"
+            stroke={COLORS.soilHatch}
             strokeWidth="1"
           />
         </pattern>
@@ -263,7 +242,7 @@ function HouseSection({
         width="170"
         height={groundY - wallTop}
         fill={COLORS.wall}
-        stroke="#c9c5bd"
+        stroke={COLORS.wallStroke}
         strokeWidth="1.5"
       />
       <rect
@@ -272,7 +251,7 @@ function HouseSection({
         width="170"
         height="46"
         fill={COLORS.foundation}
-        stroke="#a9b0bb"
+        stroke={COLORS.foundationStroke}
       />
       <line
         x1="82"
@@ -379,7 +358,7 @@ function PoolSection({ bottomY, topY }: { bottomY: number; topY: number }) {
         y={topY + 18}
         width="106"
         height={Math.max(0, height - 30)}
-        fill={COLORS.water}
+        fill={COLORS.poolWater}
         opacity="0.8"
       />
       <line

@@ -33,6 +33,7 @@ import {
 } from "@/lib/trall/house"
 import { clientPointToSvgPoint } from "@/lib/trall/svg"
 import type { SupportSegment } from "@/lib/trall/supports"
+import { trallPlanClasses } from "@/lib/trall/visual-style"
 import type { EdgeConstraint, GeometryEdge } from "@/lib/trall/edge-model"
 import type {
   ActiveTool,
@@ -571,7 +572,7 @@ export function PlanSvg({
         >
           <path
             d="M 0 0 L 0 26"
-            className="stroke-amber-950/18 dark:stroke-amber-100/18"
+            className={trallPlanClasses.deckBoardLine}
             strokeWidth="3"
           />
         </pattern>
@@ -700,7 +701,7 @@ function DeckLayer({
 
       <polygon
         points={polygonPoints}
-        className="fill-amber-300/42 stroke-amber-800 dark:fill-amber-400/24 dark:stroke-amber-300"
+        className={trallPlanClasses.deckPolygon}
         strokeLinejoin="round"
         strokeWidth="5"
       />
@@ -712,7 +713,7 @@ function DeckLayer({
       <g clipPath="url(#deck-clip)">
         <path
           d="M120 396 H980 M120 438 H980 M120 482 H980 M120 526 H980 M120 570 H980 M120 614 H980 M120 658 H980 M120 702 H980"
-          className="stroke-amber-900/20 dark:stroke-amber-100/20"
+          className={trallPlanClasses.deckBoardLine}
           strokeWidth="3"
         />
       </g>
@@ -724,7 +725,7 @@ function DeckLayer({
             y1={segment.y1}
             x2={segment.x2}
             y2={segment.y2}
-            className="stroke-emerald-700/65 dark:stroke-emerald-300/70"
+            className={trallPlanClasses.deckSupport}
             strokeDasharray="7 5"
             strokeLinecap="round"
             strokeWidth="4"
@@ -758,7 +759,7 @@ function DeckLayer({
               y1={houseAttachEdge.y}
               x2={end.x}
               y2={houseAttachEdge.y}
-              className="stroke-stone-800 dark:stroke-stone-100"
+              className={trallPlanClasses.deckAttachedEdge}
               strokeLinecap="round"
               strokeWidth="8"
               opacity="0.82"
@@ -787,19 +788,15 @@ function DeckLayer({
         d={`M${selectedEdgeStart.x} ${selectedEdgeStart.y} L${selectedEdgeEnd.x} ${selectedEdgeEnd.y}`}
         className={
           selectedEdgeAttached
-            ? "stroke-stone-700 dark:stroke-stone-200"
-            : "stroke-orange-500"
+            ? trallPlanClasses.deckAttachedEdge
+            : trallPlanClasses.deckSelectedEdge
         }
         strokeLinecap="round"
         strokeWidth={selectedEdgeAttached ? "11" : "9"}
       />
       <path
         d={`M${selectedEdgeStart.x} ${selectedEdgeStart.y} L${selectedEdgeEnd.x} ${selectedEdgeEnd.y}`}
-        className={
-          selectedEdgeAttached
-            ? "stroke-amber-700 dark:stroke-amber-200"
-            : "stroke-orange-950 dark:stroke-orange-100"
-        }
+        className={trallPlanClasses.deckSelectedEdgeInner}
         strokeLinecap="round"
         strokeWidth="3"
       />
@@ -1027,8 +1024,8 @@ function PoolLayer({
         points={polygonPoints}
         className={
           canMovePlane
-            ? "cursor-grab fill-cyan-300/72 stroke-cyan-900 active:cursor-grabbing dark:fill-cyan-400/40 dark:stroke-cyan-200"
-            : "fill-cyan-300/72 stroke-cyan-900 dark:fill-cyan-400/40 dark:stroke-cyan-200"
+            ? `cursor-grab active:cursor-grabbing ${trallPlanClasses.poolPolygon}`
+            : trallPlanClasses.poolPolygon
         }
         strokeLinejoin="round"
         strokeWidth="4"
@@ -1036,7 +1033,7 @@ function PoolLayer({
       />
       <polygon
         points={polygonPoints}
-        className="pointer-events-none fill-transparent stroke-cyan-50/60 dark:stroke-cyan-950/30"
+        className={`pointer-events-none fill-transparent ${trallPlanClasses.poolHighlight}`}
         strokeDasharray="10 8"
         strokeLinejoin="round"
         strokeWidth="2"
@@ -1045,7 +1042,7 @@ function PoolLayer({
         x={center.x}
         y={center.y + 5}
         textAnchor="middle"
-        className="pointer-events-none fill-cyan-950 text-[18px] font-semibold dark:fill-cyan-50"
+        className={`pointer-events-none text-[18px] font-semibold ${trallPlanClasses.poolLabel}`}
       >
         Pool
       </text>

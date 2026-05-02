@@ -15,6 +15,7 @@ import type {
   ViewBox,
 } from "@/lib/trall/types"
 import type { SupportSegment } from "@/lib/trall/supports"
+import { trallPlanClasses } from "@/lib/trall/visual-style"
 
 export function PlanningSurface({
   activeTool,
@@ -90,18 +91,22 @@ export function PlanningSurface({
   }, [setViewAspectRatio])
 
   return (
-    <div className="relative min-h-[calc(100svh-11rem)] overflow-hidden bg-stone-50 pt-16 md:min-h-[calc(100svh-7rem)] dark:bg-zinc-950">
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.48)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.48)_1px,transparent_1px)] bg-[size:32px_32px]" />
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.36)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.36)_1px,transparent_1px)] bg-[size:160px_160px]" />
-      <div className="absolute top-16 left-0 h-px w-full bg-blue-500/20" />
-      <div className="absolute top-0 left-16 h-full w-px bg-blue-500/20" />
-      <div className="absolute top-16 left-16 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-600/50" />
+    <div
+      className={`relative min-h-[calc(100svh-11rem)] overflow-hidden pt-16 md:min-h-[calc(100svh-7rem)] ${trallPlanClasses.page}`}
+    >
+      <div className={`absolute inset-0 ${trallPlanClasses.gridFine}`} />
+      <div className={`absolute inset-0 ${trallPlanClasses.gridStrong}`} />
+      <div className="absolute top-16 left-0 h-px w-full bg-stone-500/20" />
+      <div className="absolute top-0 left-16 h-full w-px bg-stone-500/20" />
+      <div className="absolute top-16 left-16 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-stone-700/55" />
 
-      <div className="absolute top-20 left-4 hidden rounded-md border bg-background/80 px-2 py-1 text-[11px] font-medium text-muted-foreground backdrop-blur sm:block">
+      <div
+        className={`absolute top-20 left-4 hidden text-[11px] font-medium sm:block ${trallPlanClasses.floatingLabel}`}
+      >
         x 0, y 0
       </div>
 
-      <p className="absolute top-20 right-4 rounded-md border bg-background/85 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur">
+      <p className={`absolute top-20 right-4 ${trallPlanClasses.floatingLabel}`}>
         Drag points to adjust deck shape
       </p>
 
@@ -134,7 +139,9 @@ export function PlanningSurface({
         </div>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-2 border-t bg-background/80 px-4 py-3 text-xs text-muted-foreground backdrop-blur sm:flex-row sm:items-end sm:justify-between">
+      <div
+        className={`pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between ${trallPlanClasses.bottomLegend}`}
+      >
         <ScaleIndicator />
         <span>
           Scale 1:100 · 1 grid square = 0.5 m · Cmd/Ctrl snaps angle · Alt

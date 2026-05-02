@@ -7,6 +7,7 @@ import {
   type ElevationField,
   type ElevationSettings,
 } from "@/lib/trall/elevation"
+import { trallPlanClasses } from "@/lib/trall/visual-style"
 import { Badge } from "@workspace/ui/components/badge"
 
 export function ElevationView({
@@ -29,8 +30,10 @@ export function ElevationView({
         : "text-sky-700"
 
   return (
-    <div className="relative min-h-[calc(100svh-11rem)] overflow-hidden bg-[#f1eee6] pt-16 text-zinc-900 md:min-h-[calc(100svh-7rem)]">
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(120,113,101,0.13)_1px,transparent_1px),linear-gradient(to_bottom,rgba(120,113,101,0.13)_1px,transparent_1px)] bg-[size:44px_44px]" />
+    <div
+      className={`relative min-h-[calc(100svh-11rem)] overflow-hidden pt-16 md:min-h-[calc(100svh-7rem)] ${trallPlanClasses.page}`}
+    >
+      <div className={`absolute inset-0 ${trallPlanClasses.gridFine}`} />
 
       <div className="relative h-[calc(100svh-13.5rem)] min-h-[560px] overflow-y-auto px-3 py-5 md:h-[calc(100svh-10rem)] md:px-5">
         <section className="mx-auto grid max-w-7xl overflow-hidden rounded-xl border border-stone-200 bg-[#fffdf7] shadow-sm 2xl:grid-cols-[minmax(0,1fr)_360px]">

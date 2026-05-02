@@ -1,5 +1,7 @@
 import type { PointerEvent as ReactPointerEvent } from "react"
 
+import { trallPlanClasses } from "@/lib/trall/visual-style"
+
 export function DeckHandle({
   x,
   y,
@@ -21,20 +23,20 @@ export function DeckHandle({
 }) {
   const selectedClassName =
     variant === "pool"
-      ? "fill-cyan-400/20 stroke-cyan-600/40"
-      : "fill-orange-400/20 stroke-orange-500/35"
+      ? "fill-[#9fd3e5]/22 stroke-[#2f6f86]/45"
+      : "fill-[#c7a36f]/24 stroke-[#8a6a3d]/45"
   const ringClassName =
     variant === "pool"
-      ? "fill-background stroke-cyan-700 transition group-hover/handle:stroke-cyan-500 dark:stroke-cyan-300"
-      : "fill-background stroke-orange-700 transition group-hover/handle:stroke-orange-500 dark:stroke-orange-300"
+      ? "fill-white stroke-[#2f6f86] transition group-hover/handle:stroke-[#1b5264]"
+      : "fill-white stroke-[#8a6a3d] transition group-hover/handle:stroke-[#7b5b31]"
   const dotClassName =
     variant === "pool"
-      ? "fill-cyan-700 transition group-hover/handle:fill-cyan-500 dark:fill-cyan-300"
-      : "fill-orange-700 transition group-hover/handle:fill-orange-500 dark:fill-orange-300"
+      ? "fill-[#2f6f86] transition group-hover/handle:fill-[#1b5264]"
+      : "fill-[#8a6a3d] transition group-hover/handle:fill-[#7b5b31]"
   const labelClassName =
     variant === "pool"
-      ? "pointer-events-none fill-cyan-700 text-[16px] font-semibold dark:fill-cyan-300"
-      : "pointer-events-none fill-orange-700 text-[16px] font-semibold dark:fill-orange-300"
+      ? `pointer-events-none text-[16px] font-semibold ${trallPlanClasses.poolLabel}`
+      : "pointer-events-none fill-[#7b5b31] text-[16px] font-semibold"
 
   return (
     <g

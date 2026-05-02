@@ -2,6 +2,7 @@ import type { PointerEvent as ReactPointerEvent } from "react"
 
 import { DimensionLine } from "@/components/trall/svg/dimension-line"
 import { PIXELS_PER_METER } from "@/lib/trall/constants"
+import { trallPlanClasses } from "@/lib/trall/visual-style"
 import type {
   EditableDimension,
   HouseBounds,
@@ -53,12 +54,12 @@ export function HouseLayer({
         width={houseBounds.widthPx}
         height={houseBounds.depthPx}
         rx="6"
-        className="fill-slate-100 stroke-slate-700 dark:fill-slate-900 dark:stroke-slate-300"
+        className={trallPlanClasses.houseBody}
         strokeWidth="5"
       />
       <path
         d={`M${houseBounds.left} ${houseBounds.top} L${houseBounds.centerX} ${roofPeakY} L${houseBounds.right} ${houseBounds.top}`}
-        className="fill-none stroke-slate-700 dark:stroke-slate-300"
+        className={trallPlanClasses.houseRoof}
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth="5"
@@ -79,7 +80,7 @@ export function HouseLayer({
             y={doorY}
             width={doorWidth}
             height={doorHeight}
-            className="cursor-ew-resize fill-background stroke-slate-500 dark:stroke-slate-400"
+            className={`cursor-ew-resize ${trallPlanClasses.houseDoor}`}
             strokeWidth="3"
             onPointerDown={(event) => onDoorPointerDown(event, door)}
           />
@@ -108,7 +109,7 @@ export function HouseLayer({
               width={windowWidth}
               height={windowHeight}
               rx="4"
-              className="fill-sky-100 stroke-slate-500 transition group-hover/window:stroke-sky-700 dark:fill-sky-950 dark:stroke-slate-400 dark:group-hover/window:stroke-sky-300"
+              className={trallPlanClasses.houseWindow}
               strokeWidth="3"
             />
             <line
@@ -116,7 +117,7 @@ export function HouseLayer({
               x2={windowCenterX}
               y1={windowTop + 4}
               y2={windowTop + windowHeight - 4}
-              className="pointer-events-none stroke-slate-400 dark:stroke-slate-500"
+              className={`pointer-events-none ${trallPlanClasses.houseWindowLine}`}
               strokeWidth="2"
             />
             <line
@@ -124,7 +125,7 @@ export function HouseLayer({
               x2={windowX + windowWidth - 5}
               y1={windowY}
               y2={windowY}
-              className="pointer-events-none stroke-slate-400 dark:stroke-slate-500"
+              className={`pointer-events-none ${trallPlanClasses.houseWindowLine}`}
               strokeWidth="2"
             />
           </g>
@@ -134,7 +135,7 @@ export function HouseLayer({
         x={houseBounds.centerX}
         y={houseBounds.top + houseBounds.depthPx * 0.46}
         textAnchor="middle"
-        className="fill-slate-700 text-[22px] font-medium dark:fill-slate-200"
+        className={`${trallPlanClasses.houseLabel} text-[22px] font-medium`}
       >
         House
       </text>
