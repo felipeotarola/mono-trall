@@ -28,22 +28,30 @@ export function NavMain({
               tooltip="Quick Create"
               className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
             >
-              <CirclePlusIcon
-              />
+              <CirclePlusIcon />
               <span>Quick Create</span>
             </SidebarMenuButton>
- 
           </SidebarMenuItem>
         </SidebarMenu>
         <SidebarMenu>
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton
+                asChild={item.url !== "#"}
                 tooltip={item.title}
                 isActive={item.isActive}
               >
-                {item.icon}
-                <span>{item.title}</span>
+                {item.url === "#" ? (
+                  <>
+                    {item.icon}
+                    <span>{item.title}</span>
+                  </>
+                ) : (
+                  <a href={item.url}>
+                    {item.icon}
+                    <span>{item.title}</span>
+                  </a>
+                )}
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}

@@ -70,10 +70,10 @@ pnpm --filter web typecheck
 
 ## Materials Management
 
-The TrallAI planner has a materials manager in the calculator panel with two tabs:
+The TrallAI planner separates material library management from per-project material usage:
 
-- **Project Materials** stores the materials and quantities used by the current deck project in `project_materials`. Users can pick from the library or create a custom material while adding it to the project. Totals update immediately in the UI and persist through `/api/trall/projects/[projectId]/materials`.
-- **Materials Library** stores standard and custom library rows in `materials`. Standard rows are seeded by the Supabase schema and are read-only in the UI. Custom rows can be added, edited, and removed through `/api/trall/materials`. If a custom material is referenced by a project, delete archives it by setting `active = false` instead of removing the row.
+- The deck planner calculator shows **Project Materials** only: materials assigned to the current project, editable quantities, removals from the project, and project totals. Users can pick from the library or create a custom material while adding it to the project. These rows persist through `/api/trall/projects/[projectId]/materials`.
+- The dedicated `/materials` page manages the **Materials Library** with a wider overview, search, and custom material add/edit/delete controls. Standard rows are seeded by the Supabase schema and are read-only in the UI. Custom rows persist through `/api/trall/materials`. If a custom material is referenced by a project, delete archives it by setting `active = false` instead of removing the row.
 
 Shared material types and calculation helpers live in `apps/web/lib/trall/materials.ts`. Client API helpers live in `apps/web/lib/trall/materials-api.ts`, and the Next route handlers enforce authentication plus project ownership before reading or mutating rows.
 

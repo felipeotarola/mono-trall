@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { usePathname } from "next/navigation"
 
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
@@ -31,58 +32,48 @@ const data = {
   navMain: [
     {
       title: "Workspace",
-      url: "#",
-      icon: (
-        <LayoutDashboardIcon
-        />
-      ),
+      url: "/dashboard",
+      icon: <LayoutDashboardIcon />,
     },
 
     {
       title: "Projects",
       url: "#",
-      icon: (
-        <FolderIcon
-        />
-      ),
+      icon: <FolderIcon />,
     },
     {
       title: "Deck planner",
-      url: "#",
-      isActive: true,
-      icon: (
-        <PencilRulerIcon
-        />
-      ),
+      url: "/",
+      icon: <PencilRulerIcon />,
     },
     {
       title: "Materials",
-      url: "#",
-      icon: (
-        <CalculatorIcon
-        />
-      ),
+      url: "/materials",
+      icon: <CalculatorIcon />,
     },
     {
       title: "Quotes",
       url: "#",
-      icon: (
-        <FileTextIcon
-        />
-      ),
+      icon: <FileTextIcon />,
     },
     {
       title: "Settings",
       url: "#",
-      icon: (
-        <Settings2Icon
-        />
-      ),
+      icon: <Settings2Icon />,
     },
-  ]
+  ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const pathname = usePathname()
+  const items = data.navMain.map((item) => ({
+    ...item,
+    isActive:
+      item.url === "/"
+        ? pathname === "/"
+        : item.url !== "#" && pathname.startsWith(item.url),
+  }))
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -101,7 +92,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={items} />
         {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
       </SidebarContent>
       <SidebarFooter>
