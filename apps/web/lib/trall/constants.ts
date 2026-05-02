@@ -41,6 +41,12 @@ export const initialHouse: HouseModel = {
   centerX: 456,
   doorOffsetM: 0,
   doors: [{ id: "door-1", offsetM: 0 }],
+  windows: [
+    { id: "window-1", offsetM: -3.2, row: "upper" },
+    { id: "window-2", offsetM: 3.2, row: "upper" },
+    { id: "window-3", offsetM: -3.2, row: "lower" },
+    { id: "window-4", offsetM: 3.2, row: "lower" },
+  ],
   topY: 116,
   widthM: 10.5,
   depthM: 6,

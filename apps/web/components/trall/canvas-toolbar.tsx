@@ -1,6 +1,5 @@
 import type { ReactNode } from "react"
 import {
-  FilePlusIcon,
   HandIcon,
   Maximize2Icon,
   MinusIcon,
@@ -25,7 +24,6 @@ export function CanvasToolbar({
   activeTool,
   extraTool,
   onAddPool,
-  onNewProject,
   onSaveProject,
   onZoomIn,
   onZoomOut,
@@ -39,7 +37,6 @@ export function CanvasToolbar({
   activeTool: ActiveTool
   extraTool: Tool
   onAddPool: () => void
-  onNewProject: () => void
   onSaveProject: () => void
   onZoomIn: () => void
   onZoomOut: () => void
@@ -82,10 +79,7 @@ export function CanvasToolbar({
         onClick: () => setActiveTool("pan"),
       },
     ],
-    [
-      { label: "New project", icon: <FilePlusIcon />, onClick: onNewProject },
-      { label: "Save", icon: <SaveIcon />, onClick: onSaveProject },
-    ],
+    [{ label: "Save", icon: <SaveIcon />, onClick: onSaveProject }],
     [{ label: "Undo", icon: <Undo2Icon /> }],
     [
       { label: "Zoom out", icon: <MinusIcon />, onClick: onZoomOut },

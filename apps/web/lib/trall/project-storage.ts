@@ -1,6 +1,17 @@
 import { createClient } from "@/lib/supabase/client"
+import {
+  baseMaterials,
+  initialDeckPoints,
+  initialHouse,
+  PIXELS_PER_METER,
+} from "@/lib/trall/constants"
 import type { EdgeConstraint } from "@/lib/trall/edge-model"
-import type { ElevationSettings } from "@/lib/trall/elevation"
+import {
+  defaultElevationSettings,
+  type ElevationSettings,
+} from "@/lib/trall/elevation"
+import { polygonArea } from "@/lib/trall/geometry"
+import { getHouseBounds } from "@/lib/trall/house"
 import type {
   HouseModel,
   Material,
@@ -8,6 +19,9 @@ import type {
   Point,
   ViewBox,
 } from "@/lib/trall/types"
+import { getFitViewBox } from "@/lib/trall/view"
+
+export const CURRENT_PROJECT_STORAGE_KEY = "trallai.currentProjectId"
 
 export type PlannerProjectState = {
   house: HouseModel
@@ -68,6 +82,30 @@ export async function createProject(name: string, state: PlannerProjectState) {
   }
 
   return project
+}
+
+export async function updateProjectName(projectId: string, name: string) {
+  const supabase = createClient()
+  const userId = await getCurrentUserId()
+  const normalizedName = name.trim()
+
+  if (!normalizedName) {
+    throw new Error("Project name is required")
+  }
+
+  const { data, error } = await supabase
+    .from("trall_mono_projects")
+    .update({ name: normalizedName, updated_at: new Date().toISOString() })
+    .eq("id", projectId)
+    .eq("user_id", userId)
+    .select("*")
+    .single<TrallProject>()
+
+  if (error) {
+    throw error
+  }
+
+  return data
 }
 
 export async function saveProjectVersion(
@@ -166,6 +204,38 @@ export async function listProjects() {
   }
 
   return data satisfies TrallProject[]
+}
+
+export function createDefaultPlannerProjectState(): PlannerProjectState {
+  const deckPoints = [...initialDeckPoints]
+  const areaM2 = polygonArea(deckPoints) / PIXELS_PER_METER ** 2
+  const boardRunLm = areaM2 / 0.12
+  const houseBounds = getHouseBounds(initialHouse)
+
+  return {
+    house: {
+      ...initialHouse,
+      doors: initialHouse.doors?.map((door) => ({ ...door })),
+      windows: initialHouse.windows?.map((window) => ({ ...window })),
+    },
+    deckPoints,
+    deckEdgeConstraints: [],
+    measurements: [],
+    elevation: defaultElevationSettings,
+    poolPoints: null,
+    poolEdgeConstraints: [],
+    viewBox: getFitViewBox(houseBounds, deckPoints, []),
+    materials: {
+      items: [
+        {
+          label: "Decking boards",
+          value: `${Math.round(boardRunLm)} lm`,
+          detail: "28 × 120 mm",
+        },
+        ...baseMaterials,
+      ],
+    },
+  }
 }
 
 async function getCurrentUserId() {

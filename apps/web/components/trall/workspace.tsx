@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { Maximize2Icon, Minimize2Icon, PanelRightIcon } from "lucide-react"
 
 import { CalculatorPanel } from "@/components/trall/calculator-panel"
@@ -29,6 +30,7 @@ import {
 } from "@/lib/trall/elevation"
 import { getHouseBounds } from "@/lib/trall/house"
 import {
+  CURRENT_PROJECT_STORAGE_KEY,
   createProject,
   listProjects,
   loadProject,
@@ -58,11 +60,12 @@ import { useSidebar } from "@workspace/ui/components/sidebar"
 
 type SaveStatus = "Unsaved changes" | "Saving..." | "Saved" | "Save failed"
 
-const CURRENT_PROJECT_STORAGE_KEY = "trallai.currentProjectId"
 const AUTOSAVE_DELAY_MS = 1200
 
 export function Workspace() {
   const { setOpen, setOpenMobile } = useSidebar()
+  const searchParams = useSearchParams()
+  const requestedProjectId = searchParams.get("projectId")
   const [calculatorOpen, setCalculatorOpen] = useState(true)
   const [activeTool, setActiveTool] = useState<ActiveTool>("select")
   const [plannerView, setPlannerView] = useState<PlannerView>("top")
@@ -164,9 +167,9 @@ export function Workspace() {
           return
         }
 
-        const storedProjectId = window.localStorage.getItem(
-          CURRENT_PROJECT_STORAGE_KEY
-        )
+        const storedProjectId =
+          requestedProjectId ??
+          window.localStorage.getItem(CURRENT_PROJECT_STORAGE_KEY)
         const projectToLoad =
           projects.find((project) => project.id === storedProjectId) ??
           projects[0]
@@ -212,7 +215,7 @@ export function Workspace() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [requestedProjectId])
 
   const calculations = useMemo(() => {
     const areaM2 = polygonArea(deckPoints) / PIXELS_PER_METER ** 2
@@ -357,63 +360,6 @@ export function Workspace() {
     viewBox,
   ])
 
-  async function handleNewProject() {
-    const nextHouse = initialHouse
-    const nextDeckPoints = [...initialDeckPoints]
-    const nextDeckEdgeConstraints: EdgeConstraint[] = []
-    const nextMeasurements: MeasurementLine[] = []
-    const nextElevationSettings = defaultElevationSettings
-    const nextPoolPoints = null
-    const nextPoolEdgeConstraints: EdgeConstraint[] = []
-    const nextHouseBounds = getHouseBounds(nextHouse)
-    const nextViewBox = getFitViewBox(
-      nextHouseBounds,
-      nextDeckPoints,
-      [],
-      viewAspectRatioRef.current
-    )
-    const state: PlannerProjectState = {
-      house: nextHouse,
-      deckPoints: nextDeckPoints,
-      deckEdgeConstraints: nextDeckEdgeConstraints,
-      measurements: nextMeasurements,
-      elevation: nextElevationSettings,
-      poolPoints: nextPoolPoints,
-      poolEdgeConstraints: nextPoolEdgeConstraints,
-      viewBox: nextViewBox,
-      materials: {
-        items: calculations.materials,
-      },
-    }
-
-    setSaveStatus("Saving...")
-
-    try {
-      const project = await createProject("Untitled", state)
-      hydratingProjectRef.current = true
-      setCurrentProjectId(project.id)
-      setHouse(nextHouse)
-      setDeckPoints(nextDeckPoints)
-      setDeckEdgeConstraints(nextDeckEdgeConstraints)
-      setMeasurements(nextMeasurements)
-      setElevationSettings(nextElevationSettings)
-      setPoolPoints(nextPoolPoints)
-      setPoolEdgeConstraints(nextPoolEdgeConstraints)
-      setActivePointIndex(null)
-      setActivePoolPointIndex(null)
-      setViewBox(nextViewBox)
-      setSaveStatus("Saved")
-      window.localStorage.setItem(CURRENT_PROJECT_STORAGE_KEY, project.id)
-      requestAnimationFrame(() => {
-        hydratingProjectRef.current = false
-        autosaveReadyRef.current = true
-      })
-    } catch (error) {
-      console.error("Failed to create TrallAI project", error)
-      setSaveStatus("Save failed")
-    }
-  }
-
   async function handleSaveProject() {
     await savePlannerState({ source: "manual" })
   }
@@ -465,7 +411,6 @@ export function Workspace() {
             activeTool={activeTool}
             extraTool={expandTool}
             onAddPool={handleAddPool}
-            onNewProject={handleNewProject}
             onSaveProject={handleSaveProject}
             onZoomIn={zoomIn}
             onZoomOut={zoomOut}

@@ -26,7 +26,11 @@ import {
   PIXELS_PER_METER,
 } from "@/lib/trall/constants"
 import { distance, lineAngle } from "@/lib/trall/geometry"
-import { getHouseAttachEdge, getHouseDoors } from "@/lib/trall/house"
+import {
+  getHouseAttachEdge,
+  getHouseDoors,
+  getHouseWindows,
+} from "@/lib/trall/house"
 import { clientPointToSvgPoint } from "@/lib/trall/svg"
 import type { SupportSegment } from "@/lib/trall/supports"
 import type { EdgeConstraint, GeometryEdge } from "@/lib/trall/edge-model"
@@ -38,6 +42,7 @@ import type {
   MeasurementLine,
   Point,
   ViewBox,
+  HouseWindow,
 } from "@/lib/trall/types"
 import { getPlanContentBounds, getPointBounds } from "@/lib/trall/view"
 
@@ -115,7 +120,13 @@ export function PlanSvg({
     pointerStartX: number
     startOffsetM: number
   } | null>(null)
+  const [windowDrag, setWindowDrag] = useState<{
+    pointerStartX: number
+    startOffsetM: number
+    windowId: string
+  } | null>(null)
   const houseDoors = getHouseDoors(house)
+  const houseWindows = getHouseWindows(house)
   const pointBounds = getPointBounds(houseBounds)
   const contentBounds = getPlanContentBounds(
     houseBounds,
@@ -225,6 +236,10 @@ export function PlanSvg({
       return
     }
 
+    if (updateWindowDrag(event)) {
+      return
+    }
+
     if (updateMeasurementDrag(event)) {
       return
     }
@@ -245,6 +260,10 @@ export function PlanSvg({
       return
     }
 
+    if (finishWindowDrag(event)) {
+      return
+    }
+
     if (finishMeasurementDrag(event)) {
       return
     }
@@ -258,7 +277,7 @@ export function PlanSvg({
   }
 
   function startDoorDrag(
-    event: ReactPointerEvent<SVGRectElement>,
+    event: ReactPointerEvent<SVGElement>,
     door: HouseDoor
   ) {
     if (activeTool !== "select" || !svgRef.current) {
@@ -321,6 +340,71 @@ export function PlanSvg({
     }
 
     setDoorDrag(null)
+    return true
+  }
+
+  function startWindowDrag(
+    event: ReactPointerEvent<SVGElement>,
+    window: HouseWindow
+  ) {
+    if (activeTool !== "select" || !svgRef.current) {
+      return
+    }
+
+    event.preventDefault()
+    event.stopPropagation()
+    svgRef.current.focus()
+    svgRef.current.setPointerCapture(event.pointerId)
+    setActivePointIndex(null)
+    setActivePoolPointIndex(null)
+    setSelectedMeasurementId(null)
+    setEditingMeasurement(null)
+    setWindowDrag({
+      pointerStartX: clientPointToSvgPoint(event, svgRef.current).x,
+      startOffsetM: window.offsetM,
+      windowId: window.id,
+    })
+  }
+
+  function updateWindowDrag(event: ReactPointerEvent<SVGSVGElement>) {
+    if (!windowDrag || !svgRef.current) {
+      return false
+    }
+
+    event.preventDefault()
+    const point = clientPointToSvgPoint(event, svgRef.current)
+    const deltaM = (point.x - windowDrag.pointerStartX) / PIXELS_PER_METER
+    const windowWidthM =
+      Math.min(70, houseBounds.widthPx * 0.16) / PIXELS_PER_METER
+    const maxOffsetM = Math.max(0, house.widthM / 2 - windowWidthM / 2)
+    const nextOffsetM = clamp(
+      windowDrag.startOffsetM + deltaM,
+      -maxOffsetM,
+      maxOffsetM
+    )
+
+    setHouse((currentHouse) => ({
+      ...currentHouse,
+      windows: getHouseWindows(currentHouse).map((window) =>
+        window.id === windowDrag.windowId
+          ? { ...window, offsetM: nextOffsetM }
+          : window
+      ),
+    }))
+
+    return true
+  }
+
+  function finishWindowDrag(event: ReactPointerEvent<SVGSVGElement>) {
+    if (!windowDrag) {
+      return false
+    }
+
+    if (svgRef.current?.hasPointerCapture(event.pointerId)) {
+      svgRef.current.releasePointerCapture(event.pointerId)
+    }
+
+    setWindowDrag(null)
     return true
   }
 
@@ -501,6 +585,8 @@ export function PlanSvg({
         onCommitEdit={dimensions.commitEditingDimension}
         onDoorPointerDown={startDoorDrag}
         onEditValueChange={dimensions.updateEditingDimension}
+        onWindowPointerDown={startWindowDrag}
+        windows={houseWindows}
       />
       <DeckLayer
         activeTool={activeTool}

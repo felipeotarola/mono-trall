@@ -2,7 +2,7 @@
 
 import type { Dispatch, SetStateAction } from "react"
 import { useCallback, useState } from "react"
-import { QuoteIcon } from "lucide-react"
+import { Trash2Icon } from "lucide-react"
 
 import { MaterialsManager } from "@/components/trall/materials-manager"
 import { Button } from "@workspace/ui/components/button"
@@ -17,7 +17,7 @@ import { Input } from "@workspace/ui/components/input"
 import type { HouseModel, Material, Metric } from "@/lib/trall/types"
 import { clamp } from "@/lib/trall/geometry"
 import { formatCurrency } from "@/lib/trall/format"
-import { getHouseDoors } from "@/lib/trall/house"
+import { getHouseDoors, getHouseWindows } from "@/lib/trall/house"
 import {
   emptyMaterialTotals,
   type ProjectMaterialSummary,
@@ -144,6 +144,7 @@ function HouseDimensionsCard({
     }))
   }
   const doors = getHouseDoors(house)
+  const windows = getHouseWindows(house)
 
   function addDoor() {
     setHouse((current) => {
@@ -164,6 +165,37 @@ function HouseDimensionsCard({
         ],
       }
     })
+  }
+
+  function addWindow() {
+    setHouse((current) => {
+      const currentWindows = getHouseWindows(current)
+      const nextIndex = currentWindows.length + 1
+      const offsetStepM = Math.min(1.2, current.widthM / 6)
+      const rawOffsetM = (nextIndex % 2 === 0 ? 1 : -1) * offsetStepM
+      const maxOffsetM = Math.max(0, current.widthM / 2 - 0.9)
+
+      return {
+        ...current,
+        windows: [
+          ...currentWindows,
+          {
+            id: `window-${Date.now()}`,
+            offsetM: clamp(rawOffsetM, -maxOffsetM, maxOffsetM),
+            row: nextIndex % 2 === 0 ? "upper" : "lower",
+          },
+        ],
+      }
+    })
+  }
+
+  function removeWindow(windowId: string) {
+    setHouse((current) => ({
+      ...current,
+      windows: getHouseWindows(current).filter(
+        (window) => window.id !== windowId
+      ),
+    }))
   }
 
   return (
@@ -211,13 +243,46 @@ function HouseDimensionsCard({
             <span className="text-xs text-muted-foreground">m</span>
           </div>
         </label>
-        <div className="col-span-2 flex items-center justify-between gap-2 rounded-lg border bg-muted/25 px-2 py-2">
-          <span className="text-xs text-muted-foreground">
-            Doors: {doors.length}
-          </span>
-          <Button size="sm" variant="outline" onClick={addDoor}>
-            Add door
-          </Button>
+        <div className="col-span-2 grid gap-2 rounded-lg border bg-muted/25 p-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs text-muted-foreground">
+              Doors: {doors.length}
+            </span>
+            <Button size="sm" variant="outline" onClick={addDoor}>
+              Add door
+            </Button>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs text-muted-foreground">
+              Windows: {windows.length}
+            </span>
+            <Button size="sm" variant="outline" onClick={addWindow}>
+              Add window
+            </Button>
+          </div>
+          {windows.length > 0 ? (
+            <div className="grid gap-1">
+              {windows.map((window, index) => (
+                <div
+                  key={window.id}
+                  className="flex items-center justify-between gap-2 rounded-md bg-background px-2 py-1"
+                >
+                  <span className="min-w-0 truncate text-xs">
+                    Window {index + 1} · {window.row}
+                  </span>
+                  <Button
+                    aria-label={`Remove window ${index + 1}`}
+                    size="icon-xs"
+                    title="Remove window"
+                    variant="ghost"
+                    onClick={() => removeWindow(window.id)}
+                  >
+                    <Trash2Icon />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       </CardContent>
     </Card>

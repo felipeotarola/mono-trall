@@ -6,6 +6,7 @@ import type {
   EditableDimension,
   HouseBounds,
   HouseDoor,
+  HouseWindow,
 } from "@/lib/trall/types"
 
 export function HouseLayer({
@@ -16,6 +17,8 @@ export function HouseLayer({
   onCommitEdit,
   onDoorPointerDown,
   onEditValueChange,
+  onWindowPointerDown,
+  windows,
 }: {
   doors: HouseDoor[]
   editingDimension: EditableDimension | null
@@ -23,19 +26,22 @@ export function HouseLayer({
   onCancelEdit: () => void
   onCommitEdit: () => void
   onDoorPointerDown: (
-    event: ReactPointerEvent<SVGRectElement>,
+    event: ReactPointerEvent<SVGElement>,
     door: HouseDoor
   ) => void
   onEditValueChange: (value: string) => void
+  onWindowPointerDown: (
+    event: ReactPointerEvent<SVGElement>,
+    window: HouseWindow
+  ) => void
+  windows: HouseWindow[]
 }) {
   const doorWidth = Math.min(80, houseBounds.widthPx * 0.22)
   const doorHeight = Math.min(98, houseBounds.depthPx * 0.4)
   const doorY = houseBounds.bottom - doorHeight
+  const windowWidth = Math.min(70, houseBounds.widthPx * 0.16)
+  const windowHeight = Math.min(34, houseBounds.depthPx * 0.16)
   const roofPeakY = houseBounds.top - Math.min(82, houseBounds.widthPx * 0.2)
-  const leftWindowX1 = houseBounds.left + houseBounds.widthPx * 0.08
-  const leftWindowX2 = houseBounds.left + houseBounds.widthPx * 0.24
-  const rightWindowX1 = houseBounds.right - houseBounds.widthPx * 0.24
-  const rightWindowX2 = houseBounds.right - houseBounds.widthPx * 0.08
   const upperWindowY = houseBounds.top + houseBounds.depthPx * 0.25
   const lowerWindowY = houseBounds.top + houseBounds.depthPx * 0.55
 
@@ -79,12 +85,51 @@ export function HouseLayer({
           />
         )
       })}
-      <path
-        d={`M${leftWindowX1} ${upperWindowY} H${leftWindowX2} M${rightWindowX1} ${upperWindowY} H${rightWindowX2} M${leftWindowX1} ${lowerWindowY} H${leftWindowX2} M${rightWindowX1} ${lowerWindowY} H${rightWindowX2}`}
-        className="stroke-slate-400 dark:stroke-slate-500"
-        strokeLinecap="round"
-        strokeWidth="5"
-      />
+      {windows.map((window) => {
+        const windowCenterX = clamp(
+          houseBounds.centerX + window.offsetM * PIXELS_PER_METER,
+          houseBounds.left + windowWidth / 2,
+          houseBounds.right - windowWidth / 2
+        )
+        const windowY = window.row === "upper" ? upperWindowY : lowerWindowY
+        const windowX = windowCenterX - windowWidth / 2
+        const windowTop = windowY - windowHeight / 2
+
+        return (
+          <g
+            key={window.id}
+            data-interactive="true"
+            className="group/window cursor-ew-resize"
+            onPointerDown={(event) => onWindowPointerDown(event, window)}
+          >
+            <rect
+              x={windowX}
+              y={windowTop}
+              width={windowWidth}
+              height={windowHeight}
+              rx="4"
+              className="fill-sky-100 stroke-slate-500 transition group-hover/window:stroke-sky-700 dark:fill-sky-950 dark:stroke-slate-400 dark:group-hover/window:stroke-sky-300"
+              strokeWidth="3"
+            />
+            <line
+              x1={windowCenterX}
+              x2={windowCenterX}
+              y1={windowTop + 4}
+              y2={windowTop + windowHeight - 4}
+              className="pointer-events-none stroke-slate-400 dark:stroke-slate-500"
+              strokeWidth="2"
+            />
+            <line
+              x1={windowX + 5}
+              x2={windowX + windowWidth - 5}
+              y1={windowY}
+              y2={windowY}
+              className="pointer-events-none stroke-slate-400 dark:stroke-slate-500"
+              strokeWidth="2"
+            />
+          </g>
+        )
+      })}
       <text
         x={houseBounds.centerX}
         y={houseBounds.top + houseBounds.depthPx * 0.46}

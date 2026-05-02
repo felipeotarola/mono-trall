@@ -59,6 +59,7 @@ export type HouseModel = {
   centerX: number
   doorOffsetM?: number
   doors?: HouseDoor[]
+  windows?: HouseWindow[]
   topY: number
   widthM: number
   depthM: number
@@ -67,6 +68,12 @@ export type HouseModel = {
 export type HouseDoor = {
   id: string
   offsetM: number
+}
+
+export type HouseWindow = {
+  id: string
+  offsetM: number
+  row: "upper" | "lower"
 }
 
 export type HouseBounds = {
