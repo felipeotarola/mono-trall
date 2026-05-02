@@ -1,10 +1,20 @@
 import { createClient } from "@/lib/supabase/client"
-import type { HouseModel, Material, Point, ViewBox } from "@/lib/trall/types"
+import type { EdgeConstraint } from "@/lib/trall/edge-model"
+import type {
+  HouseModel,
+  Material,
+  MeasurementLine,
+  Point,
+  ViewBox,
+} from "@/lib/trall/types"
 
 export type PlannerProjectState = {
   house: HouseModel
   deckPoints: Point[]
+  deckEdgeConstraints?: EdgeConstraint[]
+  measurements?: MeasurementLine[]
   poolPoints?: Point[] | null
+  poolEdgeConstraints?: EdgeConstraint[]
   viewBox: ViewBox
   materials: {
     items: Material[]

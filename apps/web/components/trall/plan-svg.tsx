@@ -3,10 +3,11 @@
 import type {
   Dispatch,
   KeyboardEvent as ReactKeyboardEvent,
+  PointerEvent,
   PointerEvent as ReactPointerEvent,
   SetStateAction,
 } from "react"
-import { useRef } from "react"
+import { useRef, useState } from "react"
 
 import { AngleSnapGuide } from "@/components/trall/svg/angle-snap-guide"
 import { DeckHandle } from "@/components/trall/svg/deck-handle"
@@ -17,6 +18,7 @@ import { HouseLayer } from "@/components/trall/svg/house-layer"
 import { ParallelHintLabel } from "@/components/trall/svg/parallel-hint-label"
 import { SnapIndicator } from "@/components/trall/svg/snap-indicator"
 import { useCanvasViewport } from "@/hooks/trall/use-canvas-viewport"
+import { isInteractiveTarget } from "@/hooks/trall/use-canvas-viewport"
 import { useDeckEditor } from "@/hooks/trall/use-deck-editor"
 import {
   initialDeckPoints,
@@ -25,20 +27,46 @@ import {
 } from "@/lib/trall/constants"
 import { distance, lineAngle } from "@/lib/trall/geometry"
 import { getHouseAttachEdge } from "@/lib/trall/house"
+import { clientPointToSvgPoint } from "@/lib/trall/svg"
 import type { SupportSegment } from "@/lib/trall/supports"
-import type { ActiveTool, HouseBounds, Point, ViewBox } from "@/lib/trall/types"
+import type { EdgeConstraint, GeometryEdge } from "@/lib/trall/edge-model"
+import type {
+  ActiveTool,
+  HouseBounds,
+  MeasurementLine,
+  Point,
+  ViewBox,
+} from "@/lib/trall/types"
 import { getPlanContentBounds, getPointBounds } from "@/lib/trall/view"
+
+type MeasurementDrag =
+  | {
+      type: "create"
+      id: string
+    }
+  | {
+      type: "move" | "start" | "end"
+      id: string
+      pointerStart: Point
+      lineStart: MeasurementLine
+    }
 
 export function PlanSvg({
   activeTool,
   activePointIndex,
   activePoolPointIndex = null,
+  deckEdgeConstraints,
   deckPoints,
   houseBounds,
+  measurements,
+  poolEdgeConstraints,
   poolPoints = null,
   setActivePointIndex,
+  setDeckEdgeConstraints,
   setDeckPoints,
   setActivePoolPointIndex = noopSetActivePointIndex,
+  setMeasurements,
+  setPoolEdgeConstraints,
   setPoolPoints = noopSetPoolPoints,
   setViewBox,
   supportSegments,
@@ -48,12 +76,18 @@ export function PlanSvg({
   activeTool: ActiveTool
   activePointIndex: number | null
   activePoolPointIndex?: number | null
+  deckEdgeConstraints: EdgeConstraint[]
   deckPoints: Point[]
   houseBounds: HouseBounds
+  measurements: MeasurementLine[]
+  poolEdgeConstraints: EdgeConstraint[]
   poolPoints?: Point[] | null
   setActivePointIndex: (index: number | null) => void
+  setDeckEdgeConstraints: Dispatch<SetStateAction<EdgeConstraint[]>>
   setDeckPoints: Dispatch<SetStateAction<Point[]>>
   setActivePoolPointIndex?: (index: number | null) => void
+  setMeasurements: Dispatch<SetStateAction<MeasurementLine[]>>
+  setPoolEdgeConstraints: Dispatch<SetStateAction<EdgeConstraint[]>>
   setPoolPoints?: Dispatch<SetStateAction<Point[] | null>>
   setViewBox: Dispatch<SetStateAction<ViewBox>>
   supportSegments: SupportSegment[]
@@ -61,6 +95,16 @@ export function PlanSvg({
   viewBox: ViewBox
 }) {
   const svgRef = useRef<SVGSVGElement>(null)
+  const [selectedMeasurementId, setSelectedMeasurementId] = useState<
+    string | null
+  >(null)
+  const [editingMeasurement, setEditingMeasurement] = useState<{
+    id: string
+    value: string
+  } | null>(null)
+  const [measurementDrag, setMeasurementDrag] = useState<MeasurementDrag | null>(
+    null
+  )
   const pointBounds = getPointBounds(houseBounds)
   const contentBounds = getPlanContentBounds(
     houseBounds,
@@ -70,6 +114,8 @@ export function PlanSvg({
   const editor = useDeckEditor({
     activePointIndex,
     deckPoints,
+    edgeConstraints: deckEdgeConstraints,
+    edgePrefix: "deck",
     houseBounds,
     pointBounds,
     setActivePointIndex: (index) => {
@@ -79,11 +125,14 @@ export function PlanSvg({
       }
     },
     setDeckPoints,
+    setEdgeConstraints: setDeckEdgeConstraints,
     svgRef,
   })
   const poolEditor = useDeckEditor({
     activePointIndex: activePoolPointIndex,
     deckPoints: poolPoints ?? initialPoolPoints,
+    edgeConstraints: poolEdgeConstraints,
+    edgePrefix: "pool",
     houseBounds,
     pointBounds,
     setActivePointIndex: (index) => {
@@ -100,6 +149,7 @@ export function PlanSvg({
           : nextPoints
       })
     },
+    setEdgeConstraints: setPoolEdgeConstraints,
     snapToHouse: false,
     svgRef,
   })
@@ -150,12 +200,20 @@ export function PlanSvg({
   }
 
   function handlePointerDown(event: ReactPointerEvent<SVGSVGElement>) {
+    if (startMeasurementCreate(event)) {
+      return
+    }
+
     if (viewport.startPointer(event, canPan)) {
       return
     }
   }
 
   function handlePointerMove(event: ReactPointerEvent<SVGSVGElement>) {
+    if (updateMeasurementDrag(event)) {
+      return
+    }
+
     if (viewport.movePointer(event)) {
       return
     }
@@ -168,12 +226,153 @@ export function PlanSvg({
   }
 
   function handlePointerEnd(event: ReactPointerEvent<SVGSVGElement>) {
+    if (finishMeasurementDrag(event)) {
+      return
+    }
+
     if (viewport.stopPointer(event)) {
       return
     }
 
     editor.stopDragging(event)
     poolEditor.stopDragging(event)
+  }
+
+  function startMeasurementCreate(event: ReactPointerEvent<SVGSVGElement>) {
+    if (
+      activeTool !== "measure" ||
+      !svgRef.current ||
+      isInteractiveTarget(event.target)
+    ) {
+      return false
+    }
+
+    event.preventDefault()
+    svgRef.current.focus()
+    svgRef.current.setPointerCapture(event.pointerId)
+    const point = clientPointToSvgPoint(event, svgRef.current)
+    const id = `measurement-${Date.now()}`
+    setMeasurements((current) => [...current, { id, start: point, end: point }])
+    setSelectedMeasurementId(id)
+    setEditingMeasurement(null)
+    setMeasurementDrag({ type: "create", id })
+    return true
+  }
+
+  function updateMeasurementDrag(event: ReactPointerEvent<SVGSVGElement>) {
+    if (!measurementDrag || !svgRef.current) {
+      return false
+    }
+
+    event.preventDefault()
+    const point = clientPointToSvgPoint(event, svgRef.current)
+    setMeasurements((current) =>
+      current.map((line) => {
+        if (line.id !== measurementDrag.id) {
+          return line
+        }
+
+        if (measurementDrag.type === "create") {
+          return { ...line, end: point }
+        }
+
+        if (measurementDrag.type === "start") {
+          return { ...line, start: point }
+        }
+
+        if (measurementDrag.type === "end") {
+          return { ...line, end: point }
+        }
+
+        const delta = {
+          x: point.x - measurementDrag.pointerStart.x,
+          y: point.y - measurementDrag.pointerStart.y,
+        }
+
+        return {
+          ...line,
+          start: {
+            x: measurementDrag.lineStart.start.x + delta.x,
+            y: measurementDrag.lineStart.start.y + delta.y,
+          },
+          end: {
+            x: measurementDrag.lineStart.end.x + delta.x,
+            y: measurementDrag.lineStart.end.y + delta.y,
+          },
+        }
+      })
+    )
+    return true
+  }
+
+  function finishMeasurementDrag(event: ReactPointerEvent<SVGSVGElement>) {
+    if (!measurementDrag) {
+      return false
+    }
+
+    if (svgRef.current?.hasPointerCapture(event.pointerId)) {
+      svgRef.current.releasePointerCapture(event.pointerId)
+    }
+
+    const drag = measurementDrag
+    setMeasurementDrag(null)
+    if (drag.type === "create") {
+      setMeasurements((current) =>
+        current.filter(
+          (line) =>
+            line.id !== drag.id || distance(line.start, line.end) >= 8
+        )
+      )
+    }
+
+    return true
+  }
+
+  function startMeasurementDrag(
+    event: PointerEvent<SVGElement>,
+    line: MeasurementLine,
+    type: MeasurementDrag["type"]
+  ) {
+    if (type === "create" || !svgRef.current) {
+      return
+    }
+
+    event.preventDefault()
+    event.stopPropagation()
+    svgRef.current.focus()
+    svgRef.current.setPointerCapture(event.pointerId)
+    setSelectedMeasurementId(line.id)
+    setEditingMeasurement(null)
+    setMeasurementDrag({
+      type,
+      id: line.id,
+      pointerStart: clientPointToSvgPoint(event, svgRef.current),
+      lineStart: line,
+    })
+  }
+
+  function commitMeasurementLength() {
+    if (!editingMeasurement) {
+      return
+    }
+
+    const newLengthMeters = Number.parseFloat(
+      editingMeasurement.value.replace(",", ".")
+    )
+
+    if (!Number.isFinite(newLengthMeters) || newLengthMeters <= 0) {
+      setEditingMeasurement(null)
+      return
+    }
+
+    setMeasurements((current) =>
+      current.map((line) =>
+        line.id === editingMeasurement.id
+          ? setMeasurementLength(line, newLengthMeters)
+          : line
+      )
+    )
+    setEditingMeasurement(null)
   }
 
   return (
@@ -226,6 +425,31 @@ export function PlanSvg({
         poolPoints={poolPoints}
         supportSegments={supportSegments}
       />
+      <MeasurementLayer
+        editingMeasurement={editingMeasurement}
+        measurements={measurements}
+        selectedMeasurementId={selectedMeasurementId}
+        onCommitMeasurementLength={commitMeasurementLength}
+        onEditMeasurementValueChange={(value) =>
+          setEditingMeasurement((current) =>
+            current ? { ...current, value } : current
+          )
+        }
+        onSelectMeasurement={(id) => {
+          setSelectedMeasurementId(id)
+          setActivePointIndex(null)
+          setActivePoolPointIndex(null)
+        }}
+        onStartEdit={(line) =>
+          setEditingMeasurement({
+            id: line.id,
+            value: formatLengthInput(
+              distance(line.start, line.end) / PIXELS_PER_METER
+            ),
+          })
+        }
+        onStartDrag={startMeasurementDrag}
+      />
     </svg>
   )
 }
@@ -252,11 +476,7 @@ function DeckLayer({
   const polygonPoints = getPolygonPoints(deckPoints)
   const p1 = deckPoints[0] ?? initialDeckPoints[0]
   const p2 = deckPoints[1] ?? initialDeckPoints[1]
-  const p3 = deckPoints[2] ?? initialDeckPoints[2]
-  const previousPoint =
-    deckPoints[deckPoints.length - 2] ?? initialDeckPoints[2]
-  const lastPoint = deckPoints[deckPoints.length - 1] ?? initialDeckPoints[3]
-  const selectedEdgeIndex = activePointIndex ?? 0
+  const selectedEdgeIndex = editor.selectedEdgeIndex ?? activePointIndex ?? 0
   const selectedEdgeStart = deckPoints[selectedEdgeIndex] ?? p1
   const selectedEdgeEnd =
     deckPoints[(selectedEdgeIndex + 1) % deckPoints.length] ?? p2
@@ -277,10 +497,11 @@ function DeckLayer({
       : null
   const activePoint =
     activePointIndex !== null ? deckPoints[activePointIndex] : null
-  const bottomEdgeIndex = Math.max(deckPoints.length - 2, 0)
   const houseAttachEdge = getHouseAttachEdge(houseBounds)
   const selectedEdgeAttached = editor.attachedEdgeIndexes.has(selectedEdgeIndex)
   const dimensions = editor.dimensionEditing
+  const center = getPointsCenter(deckPoints)
+  const selectedEdge = editor.edges[selectedEdgeIndex]
 
   return (
     <>
@@ -483,6 +704,11 @@ function DeckLayer({
             onDoubleClick={(event) =>
               editor.handleEdgeDoubleClick(event, index)
             }
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              editor.selectEdge(index)
+            }}
             onPointerEnter={() => editor.setHoveredEdgeIndex(index)}
             onPointerLeave={() =>
               editor.setHoveredEdgeIndex((currentIndex) =>
@@ -497,54 +723,50 @@ function DeckLayer({
         <EdgeHoverLabel point={hoveredEdgeLabelPoint} />
       ) : null}
 
-      <DimensionLine
-        edgeIndex={0}
-        x1={p1.x}
-        y1={p1.y - 26}
-        x2={p2.x}
-        y2={p2.y - 26}
-        valueMeters={distance(p1, p2) / PIXELS_PER_METER}
-        labelX={(p1.x + p2.x) / 2}
-        labelY={(p1.y + p2.y) / 2 - 44}
-        rotate={lineAngle(p1, p2)}
-        editingDimension={editor.editingDimension}
-        onCancelEdit={dimensions.cancelEditingDimension}
-        onCommitEdit={dimensions.commitEditingDimension}
-        onEditValueChange={dimensions.updateEditingDimension}
-        onStartEdit={dimensions.startEditingDimension}
-      />
-      <DimensionLine
-        edgeIndex={1}
-        x1={p2.x + 28}
-        y1={p2.y}
-        x2={p3.x + 28}
-        y2={p3.y}
-        valueMeters={distance(p2, p3) / PIXELS_PER_METER}
-        labelX={(p2.x + p3.x) / 2 + 55}
-        labelY={(p2.y + p3.y) / 2}
-        rotate={lineAngle(p2, p3)}
-        editingDimension={editor.editingDimension}
-        onCancelEdit={dimensions.cancelEditingDimension}
-        onCommitEdit={dimensions.commitEditingDimension}
-        onEditValueChange={dimensions.updateEditingDimension}
-        onStartEdit={dimensions.startEditingDimension}
-      />
-      <DimensionLine
-        edgeIndex={bottomEdgeIndex}
-        x1={lastPoint.x}
-        y1={lastPoint.y + 28}
-        x2={previousPoint.x}
-        y2={previousPoint.y + 28}
-        valueMeters={distance(lastPoint, previousPoint) / PIXELS_PER_METER}
-        labelX={(lastPoint.x + previousPoint.x) / 2}
-        labelY={(lastPoint.y + previousPoint.y) / 2 + 58}
-        rotate={lineAngle(lastPoint, previousPoint)}
-        editingDimension={editor.editingDimension}
-        onCancelEdit={dimensions.cancelEditingDimension}
-        onCommitEdit={dimensions.commitEditingDimension}
-        onEditValueChange={dimensions.updateEditingDimension}
-        onStartEdit={dimensions.startEditingDimension}
-      />
+      {editor.edges.map((edge) => {
+        const labelPoint = getDimensionLabelPoint(edge.start, edge.end, center)
+
+        return (
+          <DimensionLine
+            key={edge.id}
+            edgeIndex={edge.index}
+            x1={edge.start.x}
+            y1={edge.start.y}
+            x2={edge.end.x}
+            y2={edge.end.y}
+            valueMeters={edge.length}
+            labelX={labelPoint.x}
+            labelY={labelPoint.y}
+            rotate={lineAngle(edge.start, edge.end)}
+            editingDimension={editor.editingDimension}
+            readonly={edge.locked}
+            onCancelEdit={dimensions.cancelEditingDimension}
+            onCommitEdit={dimensions.commitEditingDimension}
+            onEditValueChange={dimensions.updateEditingDimension}
+            onStartEdit={dimensions.startEditingDimension}
+          />
+        )
+      })}
+
+      {selectedEdge ? (
+        <EdgeConstraintControls
+          edge={selectedEdge}
+          point={getDimensionLabelPoint(
+            selectedEdge.start,
+            selectedEdge.end,
+            center
+          )}
+          onEdit={() =>
+            dimensions.startEditingDimension(
+              selectedEdge.index,
+              selectedEdge.length
+            )
+          }
+          onLink={dimensions.linkSelectedEdgeToOpposite}
+          onLock={dimensions.toggleSelectedEdgeLock}
+          onUnlink={dimensions.unlinkSelectedEdge}
+        />
+      ) : null}
 
       {deckPoints.map((point, index) => (
         <DeckHandle
@@ -610,6 +832,8 @@ function PoolLayer({
         }
       : null
   const dimensions = editor.dimensionEditing
+  const selectedEdge =
+    editor.selectedEdgeIndex !== null ? editor.edges[editor.selectedEdgeIndex] : null
 
   return (
     <>
@@ -670,6 +894,11 @@ function PoolLayer({
             onDoubleClick={(event) =>
               editor.handleEdgeDoubleClick(event, index)
             }
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              editor.selectEdge(index)
+            }}
             onPointerEnter={() => editor.setHoveredEdgeIndex(index)}
             onPointerLeave={() =>
               editor.setHoveredEdgeIndex((currentIndex) =>
@@ -684,27 +913,23 @@ function PoolLayer({
         <EdgeHoverLabel point={hoveredEdgeLabelPoint} />
       ) : null}
 
-      {points.map((point, index) => {
-        const nextPoint = points[(index + 1) % points.length]
-        if (!nextPoint) {
-          return null
-        }
-
-        const labelPoint = getDimensionLabelPoint(point, nextPoint, center)
+      {editor.edges.map((edge) => {
+        const labelPoint = getDimensionLabelPoint(edge.start, edge.end, center)
 
         return (
           <DimensionLine
-            key={`pool-dimension-${index}`}
-            edgeIndex={index}
-            x1={point.x}
-            y1={point.y}
-            x2={nextPoint.x}
-            y2={nextPoint.y}
-            valueMeters={distance(point, nextPoint) / PIXELS_PER_METER}
+            key={`pool-dimension-${edge.id}`}
+            edgeIndex={edge.index}
+            x1={edge.start.x}
+            y1={edge.start.y}
+            x2={edge.end.x}
+            y2={edge.end.y}
+            valueMeters={edge.length}
             labelX={labelPoint.x}
             labelY={labelPoint.y}
-            rotate={lineAngle(point, nextPoint)}
+            rotate={lineAngle(edge.start, edge.end)}
             editingDimension={editor.editingDimension}
+            readonly={edge.locked}
             onCancelEdit={dimensions.cancelEditingDimension}
             onCommitEdit={dimensions.commitEditingDimension}
             onEditValueChange={dimensions.updateEditingDimension}
@@ -712,6 +937,26 @@ function PoolLayer({
           />
         )
       })}
+
+      {selectedEdge ? (
+        <EdgeConstraintControls
+          edge={selectedEdge}
+          point={getDimensionLabelPoint(
+            selectedEdge.start,
+            selectedEdge.end,
+            center
+          )}
+          onEdit={() =>
+            dimensions.startEditingDimension(
+              selectedEdge.index,
+              selectedEdge.length
+            )
+          }
+          onLink={dimensions.linkSelectedEdgeToOpposite}
+          onLock={dimensions.toggleSelectedEdgeLock}
+          onUnlink={dimensions.unlinkSelectedEdge}
+        />
+      ) : null}
 
       {points.map((point, index) => (
         <DeckHandle
@@ -733,6 +978,196 @@ function PoolLayer({
         <DeletePointHint point={activePoint} />
       ) : null}
     </>
+  )
+}
+
+function EdgeConstraintControls({
+  edge,
+  onEdit,
+  onLink,
+  onLock,
+  onUnlink,
+  point,
+}: {
+  edge: GeometryEdge
+  onEdit: () => void
+  onLink: () => void
+  onLock: () => void
+  onUnlink: () => void
+  point: Point
+}) {
+  return (
+    <foreignObject
+      data-interactive="true"
+      x={point.x - 126}
+      y={point.y + 14}
+      width="252"
+      height="34"
+    >
+      <div className="flex h-8 items-center justify-center gap-1 rounded-md border bg-background/95 px-1 shadow-sm">
+        <button
+          className="h-6 rounded px-2 text-[11px] font-medium text-foreground hover:bg-muted"
+          type="button"
+          onClick={onEdit}
+        >
+          Edit
+        </button>
+        <button
+          className="h-6 rounded px-2 text-[11px] font-medium text-foreground hover:bg-muted"
+          type="button"
+          onClick={onLock}
+        >
+          {edge.locked ? "Unlock" : "Lock"}
+        </button>
+        {edge.linkedEdgeId ? (
+          <button
+            className="h-6 rounded px-2 text-[11px] font-medium text-foreground hover:bg-muted"
+            type="button"
+            onClick={onUnlink}
+          >
+            Unlink
+          </button>
+        ) : (
+          <button
+            className="h-6 rounded px-2 text-[11px] font-medium text-foreground hover:bg-muted"
+            type="button"
+            onClick={onLink}
+          >
+            Link opposite
+          </button>
+        )}
+      </div>
+    </foreignObject>
+  )
+}
+
+function MeasurementLayer({
+  editingMeasurement,
+  measurements,
+  onCommitMeasurementLength,
+  onEditMeasurementValueChange,
+  onSelectMeasurement,
+  onStartDrag,
+  onStartEdit,
+  selectedMeasurementId,
+}: {
+  editingMeasurement: { id: string; value: string } | null
+  measurements: MeasurementLine[]
+  onCommitMeasurementLength: () => void
+  onEditMeasurementValueChange: (value: string) => void
+  onSelectMeasurement: (id: string) => void
+  onStartDrag: (
+    event: PointerEvent<SVGElement>,
+    line: MeasurementLine,
+    type: "move" | "start" | "end"
+  ) => void
+  onStartEdit: (line: MeasurementLine) => void
+  selectedMeasurementId: string | null
+}) {
+  return (
+    <g>
+      {measurements.map((line) => {
+        const selected = line.id === selectedMeasurementId
+        const editing = editingMeasurement?.id === line.id
+        const lengthM = distance(line.start, line.end) / PIXELS_PER_METER
+        const labelPoint = {
+          x: (line.start.x + line.end.x) / 2,
+          y: (line.start.y + line.end.y) / 2 - 18,
+        }
+
+        return (
+          <g key={line.id} data-interactive="true">
+            <line
+              x1={line.start.x}
+              y1={line.start.y}
+              x2={line.end.x}
+              y2={line.end.y}
+              className={
+                selected
+                  ? "stroke-fuchsia-600 dark:stroke-fuchsia-300"
+                  : "stroke-fuchsia-500/70 dark:stroke-fuchsia-300/70"
+              }
+              strokeDasharray="8 6"
+              strokeLinecap="round"
+              strokeWidth={selected ? "4" : "3"}
+            />
+            <line
+              x1={line.start.x}
+              y1={line.start.y}
+              x2={line.end.x}
+              y2={line.end.y}
+              className="cursor-grab stroke-transparent active:cursor-grabbing"
+              pointerEvents="stroke"
+              strokeWidth="28"
+              onClick={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                onSelectMeasurement(line.id)
+              }}
+              onPointerDown={(event) => onStartDrag(event, line, "move")}
+            />
+            {(["start", "end"] as const).map((key) => {
+              const point = line[key]
+
+              return (
+                <circle
+                  key={key}
+                  cx={point.x}
+                  cy={point.y}
+                  r="8"
+                  className="cursor-grab fill-background stroke-fuchsia-600 active:cursor-grabbing dark:stroke-fuchsia-300"
+                  strokeWidth="3"
+                  onPointerDown={(event) => onStartDrag(event, line, key)}
+                />
+              )
+            })}
+            {editing ? (
+              <foreignObject
+                data-interactive="true"
+                x={labelPoint.x - 42}
+                y={labelPoint.y - 18}
+                width="84"
+                height="34"
+              >
+                <input
+                  autoFocus
+                  data-interactive="true"
+                  className="h-7 w-20 rounded-md border bg-background px-2 text-center text-sm font-semibold text-foreground shadow-sm outline-none ring-2 ring-fuchsia-500/40"
+                  inputMode="decimal"
+                  value={editingMeasurement.value}
+                  onBlur={onCommitMeasurementLength}
+                  onChange={(event) =>
+                    onEditMeasurementValueChange(event.target.value)
+                  }
+                  onFocus={(event) => event.currentTarget.select()}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault()
+                      onCommitMeasurementLength()
+                    }
+                  }}
+                />
+              </foreignObject>
+            ) : (
+              <text
+                x={labelPoint.x}
+                y={labelPoint.y}
+                textAnchor="middle"
+                className="cursor-text fill-fuchsia-700 text-[15px] font-semibold stroke-transparent dark:fill-fuchsia-300"
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  onSelectMeasurement(line.id)
+                  onStartEdit(line)
+                }}
+              >
+                {formatDisplayMeters(lengthM)}
+              </text>
+            )}
+          </g>
+        )
+      })}
+    </g>
   )
 }
 
@@ -770,3 +1205,38 @@ function getDimensionLabelPoint(start: Point, end: Point, center: Point): Point 
 function noopSetActivePointIndex() {}
 
 function noopSetPoolPoints() {}
+
+function formatLengthInput(value: number) {
+  return Number.isInteger(value) ? String(value) : String(roundLength(value))
+}
+
+function formatDisplayMeters(value: number) {
+  return `${formatLengthInput(value)} m`
+}
+
+function roundLength(value: number) {
+  return Math.round((value + Number.EPSILON) * 1000) / 1000
+}
+
+function setMeasurementLength(
+  line: MeasurementLine,
+  lengthM: number
+): MeasurementLine {
+  const currentLength = distance(line.start, line.end)
+  if (currentLength === 0) {
+    return line
+  }
+
+  const newLengthPx = lengthM * PIXELS_PER_METER
+  return {
+    ...line,
+    end: {
+      x:
+        line.start.x +
+        ((line.end.x - line.start.x) / currentLength) * newLengthPx,
+      y:
+        line.start.y +
+        ((line.end.y - line.start.y) / currentLength) * newLengthPx,
+    },
+  }
+}

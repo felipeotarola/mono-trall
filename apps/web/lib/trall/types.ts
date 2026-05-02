@@ -12,6 +12,12 @@ export type Point = {
   y: number
 }
 
+export type MeasurementLine = {
+  id: string
+  start: Point
+  end: Point
+}
+
 export type SnapType = "none" | "grid" | "house" | "angle"
 
 export type ActiveTool = "select" | "draw" | "measure" | "pan"

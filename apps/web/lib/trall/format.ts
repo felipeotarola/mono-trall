@@ -1,5 +1,6 @@
 export function formatMeters(value: number): string {
-  return `${value.toFixed(1)} m`
+  const rounded = Math.round((value + Number.EPSILON) * 1000) / 1000
+  return `${Number.isInteger(rounded) ? rounded : rounded.toString()} m`
 }
 
 export function formatCurrency(value: number): string {

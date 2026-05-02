@@ -5,19 +5,32 @@ import { useEffect, useRef } from "react"
 
 import { PlanSvg } from "@/components/trall/plan-svg"
 import { ScaleIndicator } from "@/components/trall/svg/scale-indicator"
-import type { ActiveTool, HouseBounds, Point, ViewBox } from "@/lib/trall/types"
+import type { EdgeConstraint } from "@/lib/trall/edge-model"
+import type {
+  ActiveTool,
+  HouseBounds,
+  MeasurementLine,
+  Point,
+  ViewBox,
+} from "@/lib/trall/types"
 import type { SupportSegment } from "@/lib/trall/supports"
 
 export function PlanningSurface({
   activeTool,
   activePointIndex,
   activePoolPointIndex,
+  deckEdgeConstraints,
   deckPoints,
   houseBounds,
+  measurements,
+  poolEdgeConstraints,
   poolPoints,
   setActivePointIndex,
+  setDeckEdgeConstraints,
   setDeckPoints,
   setActivePoolPointIndex,
+  setMeasurements,
+  setPoolEdgeConstraints,
   setPoolPoints,
   setViewAspectRatio,
   setViewBox,
@@ -29,12 +42,18 @@ export function PlanningSurface({
   activeTool: ActiveTool
   activePointIndex: number | null
   activePoolPointIndex: number | null
+  deckEdgeConstraints: EdgeConstraint[]
   deckPoints: Point[]
   houseBounds: HouseBounds
+  measurements: MeasurementLine[]
+  poolEdgeConstraints: EdgeConstraint[]
   poolPoints: Point[] | null
   setActivePointIndex: (index: number | null) => void
+  setDeckEdgeConstraints: Dispatch<SetStateAction<EdgeConstraint[]>>
   setDeckPoints: Dispatch<SetStateAction<Point[]>>
   setActivePoolPointIndex: (index: number | null) => void
+  setMeasurements: Dispatch<SetStateAction<MeasurementLine[]>>
+  setPoolEdgeConstraints: Dispatch<SetStateAction<EdgeConstraint[]>>
   setPoolPoints: Dispatch<SetStateAction<Point[] | null>>
   setViewAspectRatio: (aspectRatio: number) => void
   setViewBox: Dispatch<SetStateAction<ViewBox>>
@@ -87,12 +106,18 @@ export function PlanningSurface({
             activeTool={activeTool}
             activePointIndex={activePointIndex}
             activePoolPointIndex={activePoolPointIndex}
+            deckEdgeConstraints={deckEdgeConstraints}
             deckPoints={deckPoints}
             houseBounds={houseBounds}
+            measurements={measurements}
+            poolEdgeConstraints={poolEdgeConstraints}
             poolPoints={poolPoints}
             setActivePointIndex={setActivePointIndex}
+            setDeckEdgeConstraints={setDeckEdgeConstraints}
             setDeckPoints={setDeckPoints}
             setActivePoolPointIndex={setActivePoolPointIndex}
+            setMeasurements={setMeasurements}
+            setPoolEdgeConstraints={setPoolEdgeConstraints}
             setPoolPoints={setPoolPoints}
             setViewBox={setViewBox}
             supportSegments={supportSegments}

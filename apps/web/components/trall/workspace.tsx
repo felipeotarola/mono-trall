@@ -24,6 +24,7 @@ import {
 } from "@/lib/trall/constants"
 import { formatCurrency } from "@/lib/trall/format"
 import { polygonArea, polygonPerimeter } from "@/lib/trall/geometry"
+import type { EdgeConstraint } from "@/lib/trall/edge-model"
 import { getHouseBounds } from "@/lib/trall/house"
 import {
   createProject,
@@ -37,6 +38,7 @@ import type {
   ActiveTool,
   HouseModel,
   Material,
+  MeasurementLine,
   Metric,
   Point,
   Tool,
@@ -65,7 +67,14 @@ export function Workspace() {
     INITIAL_VIEW_BOX.width / INITIAL_VIEW_BOX.height
   )
   const [deckPoints, setDeckPoints] = useState<Point[]>(initialDeckPoints)
+  const [deckEdgeConstraints, setDeckEdgeConstraints] = useState<
+    EdgeConstraint[]
+  >([])
+  const [measurements, setMeasurements] = useState<MeasurementLine[]>([])
   const [poolPoints, setPoolPoints] = useState<Point[] | null>(null)
+  const [poolEdgeConstraints, setPoolEdgeConstraints] = useState<
+    EdgeConstraint[]
+  >([])
   const [activePointIndex, setActivePointIndex] = useState<number | null>(null)
   const [activePoolPointIndex, setActivePoolPointIndex] = useState<
     number | null
@@ -168,7 +177,10 @@ export function Workspace() {
         setCurrentProjectId(project.id)
         setHouse(version.state.house)
         setDeckPoints(version.state.deckPoints)
+        setDeckEdgeConstraints(version.state.deckEdgeConstraints ?? [])
+        setMeasurements(version.state.measurements ?? [])
         setPoolPoints(version.state.poolPoints ?? null)
+        setPoolEdgeConstraints(version.state.poolEdgeConstraints ?? [])
         setViewBox(version.state.viewBox)
         setSaveStatus("Saved")
         window.localStorage.setItem(CURRENT_PROJECT_STORAGE_KEY, project.id)
@@ -193,11 +205,7 @@ export function Workspace() {
   }, [])
 
   const calculations = useMemo(() => {
-    const grossAreaM2 = polygonArea(deckPoints) / PIXELS_PER_METER ** 2
-    const poolAreaM2 = poolPoints
-      ? polygonArea(poolPoints) / PIXELS_PER_METER ** 2
-      : 0
-    const areaM2 = Math.max(0, grossAreaM2 - poolAreaM2)
+    const areaM2 = polygonArea(deckPoints) / PIXELS_PER_METER ** 2
     const perimeterM = polygonPerimeter(deckPoints) / PIXELS_PER_METER
     const boardRunLm = areaM2 / 0.12
     const materialPrice = boardRunLm * 39 * 1.1
@@ -209,20 +217,11 @@ export function Workspace() {
       materialPrice,
       priceLabel: formatCurrency(materialPrice),
       supportLayout: getSupportLayout({
-        holes: poolPoints ? [poolPoints] : [],
         points: deckPoints,
         spacingM: 0.6,
       }),
       metrics: [
         { label: "Deck area", value: `${areaM2.toFixed(1)} m²` },
-        ...(poolPoints
-          ? [
-              {
-                label: "Pool cutout",
-                value: `${poolAreaM2.toFixed(1)} m²`,
-              },
-            ]
-          : []),
         { label: "Perimeter", value: `${perimeterM.toFixed(1)} m` },
         { label: "Board run", value: `${Math.round(boardRunLm)} lm` },
         { label: "Waste factor", value: "10%" },
@@ -236,19 +235,31 @@ export function Workspace() {
         ...baseMaterials,
       ] satisfies Material[],
     }
-  }, [deckPoints, poolPoints])
+  }, [deckPoints])
 
   const getPlannerState = useCallback(
     (): PlannerProjectState => ({
       house,
       deckPoints,
+      deckEdgeConstraints,
+      measurements,
       poolPoints,
+      poolEdgeConstraints,
       viewBox,
       materials: {
         items: calculations.materials,
       },
     }),
-    [calculations.materials, deckPoints, house, poolPoints, viewBox]
+    [
+      calculations.materials,
+      deckEdgeConstraints,
+      deckPoints,
+      house,
+      measurements,
+      poolEdgeConstraints,
+      poolPoints,
+      viewBox,
+    ]
   )
 
   const savePlannerState = useCallback(
@@ -322,12 +333,24 @@ export function Workspace() {
       cancelAnimationFrame(frameId)
       window.clearTimeout(timeoutId)
     }
-  }, [deckPoints, house, poolPoints, savePlannerState, viewBox])
+  }, [
+    deckEdgeConstraints,
+    deckPoints,
+    house,
+    measurements,
+    poolEdgeConstraints,
+    poolPoints,
+    savePlannerState,
+    viewBox,
+  ])
 
   async function handleNewProject() {
     const nextHouse = initialHouse
     const nextDeckPoints = [...initialDeckPoints]
+    const nextDeckEdgeConstraints: EdgeConstraint[] = []
+    const nextMeasurements: MeasurementLine[] = []
     const nextPoolPoints = null
+    const nextPoolEdgeConstraints: EdgeConstraint[] = []
     const nextHouseBounds = getHouseBounds(nextHouse)
     const nextViewBox = getFitViewBox(
       nextHouseBounds,
@@ -338,7 +361,10 @@ export function Workspace() {
     const state: PlannerProjectState = {
       house: nextHouse,
       deckPoints: nextDeckPoints,
+      deckEdgeConstraints: nextDeckEdgeConstraints,
+      measurements: nextMeasurements,
       poolPoints: nextPoolPoints,
+      poolEdgeConstraints: nextPoolEdgeConstraints,
       viewBox: nextViewBox,
       materials: {
         items: calculations.materials,
@@ -353,7 +379,10 @@ export function Workspace() {
       setCurrentProjectId(project.id)
       setHouse(nextHouse)
       setDeckPoints(nextDeckPoints)
+      setDeckEdgeConstraints(nextDeckEdgeConstraints)
+      setMeasurements(nextMeasurements)
       setPoolPoints(nextPoolPoints)
+      setPoolEdgeConstraints(nextPoolEdgeConstraints)
       setActivePointIndex(null)
       setActivePoolPointIndex(null)
       setViewBox(nextViewBox)
@@ -427,12 +456,18 @@ export function Workspace() {
             activeTool={activeTool}
             activePointIndex={activePointIndex}
             activePoolPointIndex={activePoolPointIndex}
+            deckEdgeConstraints={deckEdgeConstraints}
             deckPoints={deckPoints}
             houseBounds={houseBounds}
+            measurements={measurements}
+            poolEdgeConstraints={poolEdgeConstraints}
             poolPoints={poolPoints}
             setActivePointIndex={setActivePointIndex}
+            setDeckEdgeConstraints={setDeckEdgeConstraints}
             setDeckPoints={setDeckPoints}
             setActivePoolPointIndex={setActivePoolPointIndex}
+            setMeasurements={setMeasurements}
+            setPoolEdgeConstraints={setPoolEdgeConstraints}
             setPoolPoints={setPoolPoints}
             setViewAspectRatio={setViewAspectRatio}
             setViewBox={setViewBox}

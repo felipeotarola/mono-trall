@@ -13,7 +13,6 @@ import {
   GRID_SIZE_PX,
   initialDeckPoints,
   PARALLEL_HINT_THRESHOLD_DEG,
-  PIXELS_PER_METER,
   SNAP_THRESHOLD_PX,
 } from "@/lib/trall/constants"
 import {
@@ -26,6 +25,16 @@ import {
   isNearlyParallel,
   radiansToDegrees,
 } from "@/lib/trall/geometry"
+import {
+  getOppositeEdgeId,
+  getPolygonEdges,
+  linkEdges,
+  normalizeEdgeConstraints,
+  setEdgeAndLinkedLengths,
+  toggleEdgeLock,
+  unlinkEdge,
+  type EdgeConstraint,
+} from "@/lib/trall/edge-model"
 import { getHouseAttachEdge } from "@/lib/trall/house"
 import { applySnap } from "@/lib/trall/snap"
 import { clientPointToSvgPoint } from "@/lib/trall/svg"
@@ -41,19 +50,25 @@ import type {
 export function useDeckEditor({
   activePointIndex,
   deckPoints,
+  edgeConstraints,
+  edgePrefix,
   houseBounds,
   pointBounds,
   setActivePointIndex,
   setDeckPoints,
+  setEdgeConstraints,
   snapToHouse = true,
   svgRef,
 }: {
   activePointIndex: number | null
   deckPoints: Point[]
+  edgeConstraints: EdgeConstraint[]
+  edgePrefix: string
   houseBounds: HouseBounds
   pointBounds: PointBounds
   setActivePointIndex: (index: number | null) => void
   setDeckPoints: Dispatch<SetStateAction<Point[]>>
+  setEdgeConstraints: Dispatch<SetStateAction<EdgeConstraint[]>>
   snapToHouse?: boolean
   svgRef: RefObject<SVGSVGElement | null>
 }) {
@@ -84,8 +99,29 @@ export function useDeckEditor({
   const [hoveredEdgeIndex, setHoveredEdgeIndex] = useState<number | null>(null)
   const [editingDimension, setEditingDimension] =
     useState<EditableDimension | null>(null)
+  const [selectedEdgeIndex, setSelectedEdgeIndex] = useState<number | null>(
+    null
+  )
   const cancelDimensionEditRef = useRef(false)
   const houseAttachEdge = getHouseAttachEdge(houseBounds)
+  const normalizedEdgeConstraints = useMemo(
+    () =>
+      normalizeEdgeConstraints({
+        constraints: edgeConstraints,
+        points: deckPoints,
+        prefix: edgePrefix,
+      }),
+    [deckPoints, edgeConstraints, edgePrefix]
+  )
+  const edges = useMemo(
+    () =>
+      getPolygonEdges({
+        constraints: normalizedEdgeConstraints,
+        points: deckPoints,
+        prefix: edgePrefix,
+      }),
+    [deckPoints, edgePrefix, normalizedEdgeConstraints]
+  )
 
   const attachedEdges = useMemo(
     (): AttachedEdge[] =>
@@ -156,6 +192,7 @@ export function useDeckEditor({
     const point = deckPoints[index] ?? initialDeckPoints[0]
     setActivePointIndex(index)
     setHoveredEdgeIndex(null)
+    setSelectedEdgeIndex(null)
     setDragStart({ pointIndex: index, point })
     setSnapState({ pointIndex: index, type: "none", point: null })
     setAngleSnapState({ active: false, angle: null, anchor: null, point: null })
@@ -183,6 +220,7 @@ export function useDeckEditor({
 
     setActivePointIndex(null)
     setHoveredEdgeIndex(null)
+    setSelectedEdgeIndex(null)
     setDragStart(null)
     setShapeDragStart({
       point: clientPointToSvgPoint(event, svgRef.current),
@@ -211,6 +249,7 @@ export function useDeckEditor({
     )
     setActivePointIndex(null)
     setHoveredEdgeIndex(null)
+    setSelectedEdgeIndex(null)
     setDragStart(null)
     resetTransientState()
   }
@@ -385,12 +424,24 @@ export function useDeckEditor({
     resetTransientState()
   }
 
+  function selectEdge(edgeIndex: number) {
+    setSelectedEdgeIndex(edgeIndex)
+    setActivePointIndex(null)
+  }
+
   function startEditingDimension(edgeIndex: number, valueMeters: number) {
+    const edge = edges[edgeIndex]
+    if (edge?.locked) {
+      selectEdge(edgeIndex)
+      return
+    }
+
     cancelDimensionEditRef.current = false
     setEditingDimension({
       edgeIndex,
-      value: valueMeters.toFixed(1),
+      value: formatLengthInput(valueMeters),
     })
+    setSelectedEdgeIndex(edgeIndex)
     setHoveredEdgeIndex(null)
     setDragStart(null)
     resetTransientState()
@@ -425,43 +476,85 @@ export function useDeckEditor({
       return
     }
 
-    const clampedMeters = clamp(newLengthMeters, 0.5, 100)
+    const clampedMeters = clamp(newLengthMeters, 0.01, 100)
     const edgeIndex = editingDimension.edgeIndex
-    const nextIndex = (edgeIndex + 1) % deckPoints.length
-    const startPoint = deckPoints[edgeIndex]
-    const endPoint = deckPoints[nextIndex]
-
-    if (!startPoint || !endPoint) {
+    const edge = edges[edgeIndex]
+    if (!edge || edge.locked) {
       setEditingDimension(null)
       return
     }
-
-    const currentLength = distance(startPoint, endPoint)
-    if (currentLength === 0) {
-      setEditingDimension(null)
-      return
-    }
-
-    const newLengthPx = clampedMeters * PIXELS_PER_METER
-    const newPoint = {
-      x:
-        startPoint.x +
-        ((endPoint.x - startPoint.x) / currentLength) * newLengthPx,
-      y:
-        startPoint.y +
-        ((endPoint.y - startPoint.y) / currentLength) * newLengthPx,
-    }
-    const snapped = applySnap(newPoint, houseBounds, pointBounds, {
-      disableHouse: !snapToHouse,
-    })
 
     setDeckPoints((points) =>
-      points.map((point, index) =>
-        index === nextIndex ? snapped.point : point
+      setEdgeAndLinkedLengths({
+        constraints: normalizedEdgeConstraints,
+        edgeIndex,
+        lengthM: clampedMeters,
+        pointBounds,
+        points,
+        prefix: edgePrefix,
+      })
+    )
+    setActivePointIndex((edgeIndex + 1) % deckPoints.length)
+    setSelectedEdgeIndex(edgeIndex)
+    setEditingDimension(null)
+  }
+
+  function toggleSelectedEdgeLock() {
+    const edge = selectedEdgeIndex !== null ? edges[selectedEdgeIndex] : null
+    if (!edge) {
+      return
+    }
+
+    setEdgeConstraints((constraints) =>
+      toggleEdgeLock(
+        normalizeEdgeConstraints({
+          constraints,
+          points: deckPoints,
+          prefix: edgePrefix,
+        }),
+        edge.id
       )
     )
-    setActivePointIndex(nextIndex)
-    setEditingDimension(null)
+  }
+
+  function linkSelectedEdgeToOpposite() {
+    const edge = selectedEdgeIndex !== null ? edges[selectedEdgeIndex] : null
+    const linkedEdgeId =
+      selectedEdgeIndex !== null ? getOppositeEdgeId(edges, selectedEdgeIndex) : null
+
+    if (!edge || !linkedEdgeId) {
+      return
+    }
+
+    setEdgeConstraints((constraints) =>
+      linkEdges(
+        normalizeEdgeConstraints({
+          constraints,
+          points: deckPoints,
+          prefix: edgePrefix,
+        }),
+        edge.id,
+        linkedEdgeId
+      )
+    )
+  }
+
+  function unlinkSelectedEdge() {
+    const edge = selectedEdgeIndex !== null ? edges[selectedEdgeIndex] : null
+    if (!edge) {
+      return
+    }
+
+    setEdgeConstraints((constraints) =>
+      unlinkEdge(
+        normalizeEdgeConstraints({
+          constraints,
+          points: deckPoints,
+          prefix: edgePrefix,
+        }),
+        edge.id
+      )
+    )
   }
 
   return {
@@ -470,6 +563,7 @@ export function useDeckEditor({
     attachedEdges,
     dragStart,
     editingDimension,
+    edges,
     handleEdgeDoubleClick,
     handlePointPointerDown,
     handlePointerMove,
@@ -477,16 +571,29 @@ export function useDeckEditor({
     hoveredEdgeIndex,
     parallelHint,
     removeActivePoint,
+    selectEdge,
+    selectedEdgeIndex,
     setHoveredEdgeIndex,
     snapState,
     stopDragging,
     dimensionEditing: {
       cancelEditingDimension,
       commitEditingDimension,
+      linkSelectedEdgeToOpposite,
       startEditingDimension,
+      toggleSelectedEdgeLock,
+      unlinkSelectedEdge,
       updateEditingDimension,
     },
   }
+}
+
+function formatLengthInput(value: number) {
+  return Number.isInteger(value) ? String(value) : String(roundLength(value))
+}
+
+function roundLength(value: number) {
+  return Math.round((value + Number.EPSILON) * 1000) / 1000
 }
 
 function snapDelta(value: number) {
