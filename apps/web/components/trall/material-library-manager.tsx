@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import Image from "next/image"
 import {
   CheckIcon,
   LibraryIcon,
@@ -64,6 +65,7 @@ export function MaterialLibraryManager() {
         material.description ?? "",
         materialUnitLabels[material.unit],
         getMaterialDimensionsLabel(material) ?? "",
+        material.image_url ?? "",
       ]
         .join(" ")
         .toLowerCase()
@@ -156,6 +158,7 @@ export function MaterialLibraryManager() {
       thickness_mm: material.thickness_mm ? String(material.thickness_mm) : "",
       width_mm: material.width_mm ? String(material.width_mm) : "",
       length_mm: material.length_mm ? String(material.length_mm) : "",
+      image_url: material.image_url ?? "",
       description: material.description ?? "",
     })
   }
@@ -236,7 +239,7 @@ export function MaterialLibraryManager() {
           </CardHeader>
           <CardContent>
             <div className="overflow-hidden rounded-lg border">
-              <div className="grid grid-cols-[minmax(180px,1.5fr)_140px_120px_90px_120px_120px] border-b bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground max-lg:hidden">
+              <div className="grid grid-cols-[minmax(220px,1.5fr)_140px_120px_90px_120px_120px] border-b bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground max-lg:hidden">
                 <span>Name</span>
                 <span>Category</span>
                 <span>Dimensions</span>
@@ -294,18 +297,21 @@ function MaterialOverviewRow({
   const dimensions = getMaterialDimensionsLabel(material)
 
   return (
-    <div className="grid gap-3 px-3 py-3 lg:grid-cols-[minmax(180px,1.5fr)_140px_120px_90px_120px_120px] lg:items-center">
-      <div className="min-w-0">
-        <div className="flex min-w-0 items-center gap-2">
-          <LibraryIcon className="size-4 shrink-0 text-muted-foreground" />
-          <span className="truncate font-medium">{material.name}</span>
-          {isStandard ? <Badge variant="secondary">Standard</Badge> : null}
+    <div className="grid gap-3 px-3 py-3 lg:grid-cols-[minmax(220px,1.5fr)_140px_120px_90px_120px_120px] lg:items-center">
+      <div className="grid min-w-0 grid-cols-[48px_minmax(0,1fr)] gap-3">
+        <MaterialImage material={material} />
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-2">
+            <LibraryIcon className="size-4 shrink-0 text-muted-foreground" />
+            <span className="truncate font-medium">{material.name}</span>
+            {isStandard ? <Badge variant="secondary">Standard</Badge> : null}
+          </div>
+          {material.description ? (
+            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+              {material.description}
+            </p>
+          ) : null}
         </div>
-        {material.description ? (
-          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-            {material.description}
-          </p>
-        ) : null}
       </div>
       <div className="text-sm text-muted-foreground">{material.category}</div>
       <div className="text-sm text-muted-foreground">
@@ -338,5 +344,25 @@ function MaterialOverviewRow({
         </Button>
       </div>
     </div>
+  )
+}
+
+function MaterialImage({ material }: { material: MaterialRecord }) {
+  if (!material.image_url) {
+    return (
+      <div className="flex size-12 items-center justify-center rounded-md border bg-muted text-muted-foreground">
+        <LibraryIcon className="size-4" />
+      </div>
+    )
+  }
+
+  return (
+    <Image
+      alt={material.name}
+      className="size-12 rounded-md border object-cover"
+      height={48}
+      src={material.image_url}
+      width={48}
+    />
   )
 }

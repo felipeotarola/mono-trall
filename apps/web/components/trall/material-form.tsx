@@ -24,6 +24,7 @@ export type MaterialFormState = {
   thickness_mm: string
   width_mm: string
   length_mm: string
+  image_url: string
   description: string
 }
 
@@ -35,6 +36,7 @@ export const emptyMaterialForm: MaterialFormState = {
   thickness_mm: "",
   width_mm: "",
   length_mm: "",
+  image_url: "",
   description: "",
 }
 
@@ -148,6 +150,18 @@ export function MaterialFields({
           />
         </Label>
       </div>
+      <Label className="grid gap-1">
+        <span className="text-xs text-muted-foreground">Image URL</span>
+        <Input
+          inputMode="url"
+          placeholder="https://..."
+          type="url"
+          value={form.image_url}
+          onChange={(event) =>
+            onChange({ ...form, image_url: event.target.value })
+          }
+        />
+      </Label>
     </div>
   )
 }
@@ -172,6 +186,7 @@ export function toMaterialInput(form: MaterialFormState): MaterialInput | null {
     thickness_mm: parseOptionalDimension(form.thickness_mm),
     width_mm: parseOptionalDimension(form.width_mm),
     length_mm: parseOptionalDimension(form.length_mm),
+    image_url: form.image_url,
     description: form.description,
   }
 }

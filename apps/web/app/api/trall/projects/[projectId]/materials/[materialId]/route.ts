@@ -25,6 +25,7 @@ const projectMaterialSelect = `
     thickness_mm,
     width_mm,
     length_mm,
+    image_url,
     description,
     created_by,
     active,

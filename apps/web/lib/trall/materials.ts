@@ -18,6 +18,7 @@ export type MaterialRecord = {
   thickness_mm: number | null
   width_mm: number | null
   length_mm: number | null
+  image_url: string | null
   description: string | null
   created_by: string | null
   active: boolean
@@ -33,6 +34,7 @@ export type MaterialInput = {
   thickness_mm?: number | null
   width_mm?: number | null
   length_mm?: number | null
+  image_url?: string | null
   description?: string | null
 }
 
@@ -89,6 +91,7 @@ export function normalizeMaterialInput(input: MaterialInput): MaterialInput {
     thickness_mm: normalizePositiveDimension(input.thickness_mm),
     width_mm: normalizePositiveDimension(input.width_mm),
     length_mm: normalizePositiveDimension(input.length_mm),
+    image_url: normalizeOptionalUrl(input.image_url),
     description: input.description?.trim() || null,
   }
 }
@@ -113,6 +116,8 @@ export function parseMaterialInputBody(
   const thicknessMm = parseOptionalDimension(record.thickness_mm)
   const widthMm = parseOptionalDimension(record.width_mm)
   const lengthMm = parseOptionalDimension(record.length_mm)
+  const imageUrl =
+    typeof record.image_url === "string" ? record.image_url.trim() : null
 
   if (!name.trim()) {
     return { error: "Material name is required" }
@@ -143,6 +148,7 @@ export function parseMaterialInputBody(
       thickness_mm: thicknessMm,
       width_mm: widthMm,
       length_mm: lengthMm,
+      image_url: imageUrl,
       description,
     }),
   }
@@ -256,6 +262,16 @@ function normalizePositiveDimension(value: number | null | undefined) {
   }
 
   return value > 0 ? Math.round(value * 10) / 10 : null
+}
+
+function normalizeOptionalUrl(value: string | null | undefined) {
+  const trimmedValue = value?.trim()
+
+  if (!trimmedValue) {
+    return null
+  }
+
+  return trimmedValue
 }
 
 function parseOptionalDimension(value: unknown) {

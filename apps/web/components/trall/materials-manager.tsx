@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import Image from "next/image"
 import { ArchiveIcon, CheckIcon, PlusIcon } from "lucide-react"
 import { toast } from "sonner"
 
@@ -414,16 +415,21 @@ function ProjectMaterialRow({
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_80px_auto] gap-2 rounded-lg border bg-muted/25 px-3 py-2">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium">{item.material.name}</p>
-        <p className="truncate text-xs text-muted-foreground">
-          {formatCurrency(item.material.cost)} /{" "}
-          {materialUnitLabels[item.material.unit]} ·{" "}
-          {formatCurrency(getProjectMaterialLineTotal(item))}
-        </p>
-        {dimensions ? (
-          <p className="truncate text-xs text-muted-foreground">{dimensions}</p>
-        ) : null}
+      <div className="grid min-w-0 grid-cols-[40px_minmax(0,1fr)] gap-2">
+        <MaterialThumbnail material={item.material} />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium">{item.material.name}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {formatCurrency(item.material.cost)} /{" "}
+            {materialUnitLabels[item.material.unit]} ·{" "}
+            {formatCurrency(getProjectMaterialLineTotal(item))}
+          </p>
+          {dimensions ? (
+            <p className="truncate text-xs text-muted-foreground">
+              {dimensions}
+            </p>
+          ) : null}
+        </div>
       </div>
       <Input
         aria-label={`${item.material.name} quantity`}
@@ -447,6 +453,22 @@ function ProjectMaterialRow({
         <ArchiveIcon />
       </Button>
     </div>
+  )
+}
+
+function MaterialThumbnail({ material }: { material: MaterialRecord }) {
+  if (!material.image_url) {
+    return <div className="size-10 rounded-md border bg-muted" />
+  }
+
+  return (
+    <Image
+      alt={material.name}
+      className="size-10 rounded-md border object-cover"
+      height={40}
+      src={material.image_url}
+      width={40}
+    />
   )
 }
 

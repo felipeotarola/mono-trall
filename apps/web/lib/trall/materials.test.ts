@@ -26,6 +26,7 @@ test("normalizes material input for persistence", () => {
       thickness_mm: 34,
       width_mm: 170,
       length_mm: 5100,
+      image_url: " https://example.com/deck.jpg ",
       description: "  Main surface ",
     }),
     {
@@ -36,6 +37,7 @@ test("normalizes material input for persistence", () => {
       thickness_mm: 34,
       width_mm: 170,
       length_mm: 5100,
+      image_url: "https://example.com/deck.jpg",
       description: "Main surface",
     }
   )
@@ -56,6 +58,7 @@ test("parses API material payloads", () => {
       thickness_mm: "",
       width_mm: "4.5",
       length_mm: null,
+      image_url: "",
       description: "",
     }),
     {
@@ -67,6 +70,7 @@ test("parses API material payloads", () => {
         thickness_mm: null,
         width_mm: 4.5,
         length_mm: null,
+        image_url: null,
         description: null,
       },
     }
@@ -144,6 +148,7 @@ function makeProjectMaterial(
       thickness_mm: null,
       width_mm: null,
       length_mm: null,
+      image_url: null,
       description: null,
       created_by: "user-1",
       active: true,

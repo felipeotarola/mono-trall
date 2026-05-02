@@ -12,6 +12,14 @@ if (existsSync(repoEnvPath)) {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        hostname: "media-prod.beijerflow.com",
+        protocol: "https",
+      },
+    ],
+  },
   transpilePackages: ["@workspace/ui"],
 }
 
