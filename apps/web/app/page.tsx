@@ -1,5 +1,6 @@
 "use client"
 
+import { Suspense } from "react"
 import type { CSSProperties } from "react"
 
 import { AppSidebar } from "@/components/app-sidebar"
@@ -23,7 +24,9 @@ export default function Page() {
       <AppSidebar variant="inset" />
       <SidebarInset>
         <SiteHeader />
-        <Workspace />
+        <Suspense fallback={null}>
+          <Workspace />
+        </Suspense>
       </SidebarInset>
     </SidebarProvider>
   )
