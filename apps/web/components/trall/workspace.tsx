@@ -1,7 +1,13 @@
 "use client"
 
+import type { ReactNode } from "react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Maximize2Icon, Minimize2Icon } from "lucide-react"
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  Maximize2Icon,
+  Minimize2Icon,
+} from "lucide-react"
 
 import { CalculatorPanel } from "@/components/trall/calculator-panel"
 import { CanvasToolbar } from "@/components/trall/canvas-toolbar"
@@ -40,11 +46,13 @@ import {
   isContentInsideViewBox,
   zoomViewBox,
 } from "@/lib/trall/view"
+import { Button } from "@workspace/ui/components/button"
 import { useSidebar } from "@workspace/ui/components/sidebar"
 
 type SaveStatus = "Unsaved changes" | "Saving..." | "Saved" | "Save failed"
 
 const CURRENT_PROJECT_STORAGE_KEY = "trallai.currentProjectId"
+const AUTOSAVE_DELAY_MS = 1200
 
 export function Workspace() {
   const { setOpen, setOpenMobile } = useSidebar()
@@ -62,6 +70,8 @@ export function Workspace() {
   const viewBoxRef = useRef(viewBox)
   const viewAspectRatioRef = useRef(viewAspectRatio)
   const hydratingProjectRef = useRef(false)
+  const autosaveReadyRef = useRef(false)
+  const latestSaveRequestRef = useRef(0)
 
   const houseBounds = useMemo(() => getHouseBounds(house), [house])
   const zoomPercent = Math.round(
@@ -111,7 +121,12 @@ export function Workspace() {
     async function loadInitialProject() {
       try {
         const projects = await listProjects()
-        if (cancelled || projects.length === 0) {
+        if (cancelled) {
+          return
+        }
+
+        if (projects.length === 0) {
+          autosaveReadyRef.current = true
           return
         }
 
@@ -140,11 +155,13 @@ export function Workspace() {
         window.localStorage.setItem(CURRENT_PROJECT_STORAGE_KEY, project.id)
         requestAnimationFrame(() => {
           hydratingProjectRef.current = false
+          autosaveReadyRef.current = true
         })
       } catch (error) {
         console.error("Failed to load TrallAI project", error)
         if (!cancelled) {
           setSaveStatus("Unsaved changes")
+          autosaveReadyRef.current = true
         }
       }
     }
@@ -155,20 +172,6 @@ export function Workspace() {
       cancelled = true
     }
   }, [])
-
-  useEffect(() => {
-    if (!currentProjectId || hydratingProjectRef.current) {
-      return
-    }
-
-    const frameId = requestAnimationFrame(() => {
-      setSaveStatus((currentStatus) =>
-        currentStatus === "Saving..." ? currentStatus : "Unsaved changes"
-      )
-    })
-
-    return () => cancelAnimationFrame(frameId)
-  }, [currentProjectId, deckPoints, house, viewBox])
 
   const calculations = useMemo(() => {
     const areaM2 = polygonArea(deckPoints) / PIXELS_PER_METER ** 2
@@ -211,6 +214,60 @@ export function Workspace() {
     [calculations.materials, deckPoints, house, viewBox]
   )
 
+  const savePlannerState = useCallback(
+    async ({ source }: { source: "manual" | "autosave" }) => {
+      const saveRequestId = latestSaveRequestRef.current + 1
+      latestSaveRequestRef.current = saveRequestId
+      setSaveStatus("Saving...")
+
+      try {
+        const state = getPlannerState()
+
+        if (!currentProjectId) {
+          const project = await createProject("Untitled", state)
+          hydratingProjectRef.current = true
+          setCurrentProjectId(project.id)
+          window.localStorage.setItem(CURRENT_PROJECT_STORAGE_KEY, project.id)
+          requestAnimationFrame(() => {
+            hydratingProjectRef.current = false
+          })
+        } else {
+          await saveProjectVersion(currentProjectId, state)
+        }
+
+        if (latestSaveRequestRef.current === saveRequestId) {
+          setSaveStatus("Saved")
+        }
+      } catch (error) {
+        console.error(`Failed to ${source} TrallAI project`, error)
+        if (latestSaveRequestRef.current === saveRequestId) {
+          setSaveStatus("Save failed")
+        }
+      }
+    },
+    [currentProjectId, getPlannerState]
+  )
+
+  useEffect(() => {
+    if (!autosaveReadyRef.current || hydratingProjectRef.current) {
+      return
+    }
+
+    const frameId = requestAnimationFrame(() => {
+      setSaveStatus((currentStatus) =>
+        currentStatus === "Saving..." ? currentStatus : "Unsaved changes"
+      )
+    })
+    const timeoutId = window.setTimeout(() => {
+      void savePlannerState({ source: "autosave" })
+    }, AUTOSAVE_DELAY_MS)
+
+    return () => {
+      cancelAnimationFrame(frameId)
+      window.clearTimeout(timeoutId)
+    }
+  }, [deckPoints, house, savePlannerState, viewBox])
+
   async function handleNewProject() {
     const nextHouse = initialHouse
     const nextDeckPoints = [...initialDeckPoints]
@@ -242,6 +299,7 @@ export function Workspace() {
       window.localStorage.setItem(CURRENT_PROJECT_STORAGE_KEY, project.id)
       requestAnimationFrame(() => {
         hydratingProjectRef.current = false
+        autosaveReadyRef.current = true
       })
     } catch (error) {
       console.error("Failed to create TrallAI project", error)
@@ -250,28 +308,7 @@ export function Workspace() {
   }
 
   async function handleSaveProject() {
-    setSaveStatus("Saving...")
-
-    try {
-      const state = getPlannerState()
-
-      if (!currentProjectId) {
-        const project = await createProject("Untitled", state)
-        hydratingProjectRef.current = true
-        setCurrentProjectId(project.id)
-        window.localStorage.setItem(CURRENT_PROJECT_STORAGE_KEY, project.id)
-        requestAnimationFrame(() => {
-          hydratingProjectRef.current = false
-        })
-      } else {
-        await saveProjectVersion(currentProjectId, state)
-      }
-
-      setSaveStatus("Saved")
-    } catch (error) {
-      console.error("Failed to save TrallAI project", error)
-      setSaveStatus("Save failed")
-    }
+    await savePlannerState({ source: "manual" })
   }
 
   function toggleWorkspacePanels() {
@@ -297,52 +334,61 @@ export function Workspace() {
 
   return (
     <main className="flex flex-1 flex-col overflow-x-hidden bg-stone-100/60 dark:bg-background">
-      <div className="flex flex-1 flex-col gap-3 p-3 pb-24 sm:p-4 lg:pb-4 xl:p-5">
-        <div
-          className={
-            calculatorOpen
-              ? "grid flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px]"
-              : "grid flex-1 gap-3 lg:grid-cols-1"
-          }
-        >
-          <section className="relative min-w-0 overflow-hidden rounded-lg border bg-stone-50 shadow-sm dark:bg-zinc-950">
-            <CanvasToolbar
-              activeTool={activeTool}
-              extraTool={expandTool}
-              onNewProject={handleNewProject}
-              onSaveProject={handleSaveProject}
-              onZoomIn={zoomIn}
-              onZoomOut={zoomOut}
-              onResetView={fitViewBox}
-              saveStatus={saveStatus}
-              setActiveTool={setActiveTool}
-              zoomPercent={zoomPercent}
-            />
-            <PlanningSurface
-              activeTool={activeTool}
-              activePointIndex={activePointIndex}
-              deckPoints={deckPoints}
-              houseBounds={houseBounds}
-              setActivePointIndex={setActivePointIndex}
-              setDeckPoints={setDeckPoints}
-              setViewAspectRatio={setViewAspectRatio}
-              setViewBox={setViewBox}
-              onResetView={fitViewBox}
-              viewBox={viewBox}
-              zoomPercent={zoomPercent}
-            />
-          </section>
+      <div
+        className={
+          calculatorOpen
+            ? "flex flex-1 flex-col gap-3 p-3 pb-24 transition-[padding] duration-200 sm:p-4 lg:pb-4 lg:pr-[348px] xl:p-5 xl:pr-[388px]"
+            : "flex flex-1 flex-col gap-3 p-3 pb-24 transition-[padding] duration-200 sm:p-4 lg:pb-4 xl:p-5"
+        }
+      >
+        <section className="relative min-w-0 flex-1 overflow-hidden rounded-lg border bg-stone-50 shadow-sm dark:bg-zinc-950">
+          <CanvasToolbar
+            activeTool={activeTool}
+            extraTool={expandTool}
+            onNewProject={handleNewProject}
+            onSaveProject={handleSaveProject}
+            onZoomIn={zoomIn}
+            onZoomOut={zoomOut}
+            onResetView={fitViewBox}
+            saveStatus={saveStatus}
+            setActiveTool={setActiveTool}
+            zoomPercent={zoomPercent}
+          />
+          <PlanningSurface
+            activeTool={activeTool}
+            activePointIndex={activePointIndex}
+            deckPoints={deckPoints}
+            houseBounds={houseBounds}
+            setActivePointIndex={setActivePointIndex}
+            setDeckPoints={setDeckPoints}
+            setViewAspectRatio={setViewAspectRatio}
+            setViewBox={setViewBox}
+            onResetView={fitViewBox}
+            viewBox={viewBox}
+            zoomPercent={zoomPercent}
+          />
+        </section>
 
-          {calculatorOpen ? (
-            <aside className="hidden min-w-0 lg:block">
-              <CalculatorPanel
-                calculations={calculations}
-                house={house}
-                setHouse={setHouse}
-              />
-            </aside>
-          ) : null}
-        </div>
+        <RightCalculatorSidebar
+          open={calculatorOpen}
+          onClose={() => {
+            setCalculatorOpen(false)
+            scheduleFitViewBox()
+          }}
+        >
+          <CalculatorPanel
+            calculations={calculations}
+            house={house}
+            setHouse={setHouse}
+          />
+        </RightCalculatorSidebar>
+        <CalculatorSidebarToggle
+          open={calculatorOpen}
+          onToggle={() => {
+            setCalculatorOpen((currentOpen) => !currentOpen)
+            scheduleFitViewBox()
+          }}
+        />
 
         <section className="lg:hidden">
           <CalculatorPanel
@@ -359,5 +405,74 @@ export function Workspace() {
         setHouse={setHouse}
       />
     </main>
+  )
+}
+
+function RightCalculatorSidebar({
+  children,
+  onClose,
+  open,
+}: {
+  children: ReactNode
+  onClose: () => void
+  open: boolean
+}) {
+  return (
+    <aside
+      aria-hidden={!open}
+      className={
+        open
+          ? "fixed right-3 top-[calc(var(--header-height)+var(--spacing)*5)] bottom-3 z-20 hidden w-[320px] translate-x-0 overflow-hidden rounded-lg border bg-sidebar text-sidebar-foreground shadow-sm transition-transform duration-200 lg:block xl:right-5 xl:top-[calc(var(--header-height)+var(--spacing)*6)] xl:bottom-5 xl:w-[360px]"
+          : "fixed right-3 top-[calc(var(--header-height)+var(--spacing)*5)] bottom-3 z-20 hidden w-[320px] translate-x-[calc(100%+var(--spacing)*6)] overflow-hidden rounded-lg border bg-sidebar text-sidebar-foreground shadow-sm transition-transform duration-200 lg:block xl:right-5 xl:top-[calc(var(--header-height)+var(--spacing)*6)] xl:bottom-5 xl:w-[360px]"
+      }
+    >
+      <div className="flex h-full flex-col">
+        <div className="flex items-start gap-3 border-b px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">Project calculator</p>
+            <p className="text-xs text-muted-foreground">
+              Measurements, materials, and quote estimate.
+            </p>
+          </div>
+          <Button
+            aria-label="Close calculator sidebar"
+            className="-me-1 size-8 shrink-0"
+            size="icon"
+            title="Close calculator"
+            variant="ghost"
+            onClick={onClose}
+          >
+            <ChevronRightIcon />
+          </Button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-3">{children}</div>
+      </div>
+    </aside>
+  )
+}
+
+function CalculatorSidebarToggle({
+  onToggle,
+  open,
+}: {
+  onToggle: () => void
+  open: boolean
+}) {
+  if (open) {
+    return null
+  }
+
+  return (
+    <Button
+      aria-label="Open calculator sidebar"
+      className="fixed right-3 top-[calc(var(--header-height)+var(--spacing)*6)] z-30 hidden h-10 rounded-full border bg-background/95 px-3 shadow-sm backdrop-blur lg:inline-flex xl:right-5"
+      size="sm"
+      title="Open calculator"
+      variant="secondary"
+      onClick={onToggle}
+    >
+      <ChevronLeftIcon />
+      Calculator
+    </Button>
   )
 }
