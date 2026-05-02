@@ -55,6 +55,7 @@ export type EditableDimension = {
 
 export type HouseModel = {
   centerX: number
+  doorOffsetM?: number
   topY: number
   widthM: number
   depthM: number

@@ -458,6 +458,7 @@ export function Workspace() {
             activePoolPointIndex={activePoolPointIndex}
             deckEdgeConstraints={deckEdgeConstraints}
             deckPoints={deckPoints}
+            house={house}
             houseBounds={houseBounds}
             measurements={measurements}
             poolEdgeConstraints={poolEdgeConstraints}
@@ -466,6 +467,7 @@ export function Workspace() {
             setDeckEdgeConstraints={setDeckEdgeConstraints}
             setDeckPoints={setDeckPoints}
             setActivePoolPointIndex={setActivePoolPointIndex}
+            setHouse={setHouse}
             setMeasurements={setMeasurements}
             setPoolEdgeConstraints={setPoolEdgeConstraints}
             setPoolPoints={setPoolPoints}

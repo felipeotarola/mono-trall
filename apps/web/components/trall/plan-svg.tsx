@@ -32,6 +32,7 @@ import type { SupportSegment } from "@/lib/trall/supports"
 import type { EdgeConstraint, GeometryEdge } from "@/lib/trall/edge-model"
 import type {
   ActiveTool,
+  HouseModel,
   HouseBounds,
   MeasurementLine,
   Point,
@@ -57,6 +58,7 @@ export function PlanSvg({
   activePoolPointIndex = null,
   deckEdgeConstraints,
   deckPoints,
+  house,
   houseBounds,
   measurements,
   poolEdgeConstraints,
@@ -65,6 +67,7 @@ export function PlanSvg({
   setDeckEdgeConstraints,
   setDeckPoints,
   setActivePoolPointIndex = noopSetActivePointIndex,
+  setHouse,
   setMeasurements,
   setPoolEdgeConstraints,
   setPoolPoints = noopSetPoolPoints,
@@ -78,6 +81,7 @@ export function PlanSvg({
   activePoolPointIndex?: number | null
   deckEdgeConstraints: EdgeConstraint[]
   deckPoints: Point[]
+  house: HouseModel
   houseBounds: HouseBounds
   measurements: MeasurementLine[]
   poolEdgeConstraints: EdgeConstraint[]
@@ -86,6 +90,7 @@ export function PlanSvg({
   setDeckEdgeConstraints: Dispatch<SetStateAction<EdgeConstraint[]>>
   setDeckPoints: Dispatch<SetStateAction<Point[]>>
   setActivePoolPointIndex?: (index: number | null) => void
+  setHouse: Dispatch<SetStateAction<HouseModel>>
   setMeasurements: Dispatch<SetStateAction<MeasurementLine[]>>
   setPoolEdgeConstraints: Dispatch<SetStateAction<EdgeConstraint[]>>
   setPoolPoints?: Dispatch<SetStateAction<Point[] | null>>
@@ -105,6 +110,10 @@ export function PlanSvg({
   const [measurementDrag, setMeasurementDrag] = useState<MeasurementDrag | null>(
     null
   )
+  const [doorDrag, setDoorDrag] = useState<{
+    pointerStartX: number
+    startOffsetM: number
+  } | null>(null)
   const pointBounds = getPointBounds(houseBounds)
   const contentBounds = getPlanContentBounds(
     houseBounds,
@@ -210,6 +219,10 @@ export function PlanSvg({
   }
 
   function handlePointerMove(event: ReactPointerEvent<SVGSVGElement>) {
+    if (updateDoorDrag(event)) {
+      return
+    }
+
     if (updateMeasurementDrag(event)) {
       return
     }
@@ -226,6 +239,10 @@ export function PlanSvg({
   }
 
   function handlePointerEnd(event: ReactPointerEvent<SVGSVGElement>) {
+    if (finishDoorDrag(event)) {
+      return
+    }
+
     if (finishMeasurementDrag(event)) {
       return
     }
@@ -236,6 +253,62 @@ export function PlanSvg({
 
     editor.stopDragging(event)
     poolEditor.stopDragging(event)
+  }
+
+  function startDoorDrag(event: ReactPointerEvent<SVGRectElement>) {
+    if (activeTool !== "select" || !svgRef.current) {
+      return
+    }
+
+    event.preventDefault()
+    event.stopPropagation()
+    svgRef.current.focus()
+    svgRef.current.setPointerCapture(event.pointerId)
+    setActivePointIndex(null)
+    setActivePoolPointIndex(null)
+    setSelectedMeasurementId(null)
+    setEditingMeasurement(null)
+    setDoorDrag({
+      pointerStartX: clientPointToSvgPoint(event, svgRef.current).x,
+      startOffsetM: house.doorOffsetM ?? 0,
+    })
+  }
+
+  function updateDoorDrag(event: ReactPointerEvent<SVGSVGElement>) {
+    if (!doorDrag || !svgRef.current) {
+      return false
+    }
+
+    event.preventDefault()
+    const point = clientPointToSvgPoint(event, svgRef.current)
+    const deltaM = (point.x - doorDrag.pointerStartX) / PIXELS_PER_METER
+    const doorWidthM = Math.min(80, houseBounds.widthPx * 0.22) / PIXELS_PER_METER
+    const maxOffsetM = Math.max(0, house.widthM / 2 - doorWidthM / 2)
+    const nextOffsetM = clamp(
+      doorDrag.startOffsetM + deltaM,
+      -maxOffsetM,
+      maxOffsetM
+    )
+
+    setHouse((currentHouse) => ({
+      ...currentHouse,
+      doorOffsetM: nextOffsetM,
+    }))
+
+    return true
+  }
+
+  function finishDoorDrag(event: ReactPointerEvent<SVGSVGElement>) {
+    if (!doorDrag) {
+      return false
+    }
+
+    if (svgRef.current?.hasPointerCapture(event.pointerId)) {
+      svgRef.current.releasePointerCapture(event.pointerId)
+    }
+
+    setDoorDrag(null)
+    return true
   }
 
   function startMeasurementCreate(event: ReactPointerEvent<SVGSVGElement>) {
@@ -409,13 +482,16 @@ export function PlanSvg({
       </defs>
 
       <HouseLayer
+        doorOffsetM={house.doorOffsetM ?? 0}
         editingDimension={editor.editingDimension}
         houseBounds={houseBounds}
         onCancelEdit={dimensions.cancelEditingDimension}
         onCommitEdit={dimensions.commitEditingDimension}
+        onDoorPointerDown={startDoorDrag}
         onEditValueChange={dimensions.updateEditingDimension}
       />
       <DeckLayer
+        activeTool={activeTool}
         activePointIndex={activePointIndex}
         activePoolPointIndex={activePoolPointIndex}
         deckPoints={deckPoints}
@@ -455,6 +531,7 @@ export function PlanSvg({
 }
 
 function DeckLayer({
+  activeTool,
   activePointIndex,
   activePoolPointIndex,
   deckPoints,
@@ -464,6 +541,7 @@ function DeckLayer({
   poolPoints,
   supportSegments,
 }: {
+  activeTool: ActiveTool
   activePointIndex: number | null
   activePoolPointIndex: number | null
   deckPoints: Point[]
@@ -799,6 +877,7 @@ function DeckLayer({
       {poolPoints ? (
         <PoolLayer
           activePointIndex={activePoolPointIndex}
+          canMovePlane={activeTool === "select"}
           editor={poolEditor}
           points={poolPoints}
         />
@@ -809,10 +888,12 @@ function DeckLayer({
 
 function PoolLayer({
   activePointIndex,
+  canMovePlane,
   editor,
   points,
 }: {
   activePointIndex: number | null
+  canMovePlane: boolean
   editor: ReturnType<typeof useDeckEditor>
   points: Point[]
 }) {
@@ -841,14 +922,20 @@ function PoolLayer({
     <>
       <polygon
         points={polygonPoints}
-        className="cursor-grab fill-cyan-300/72 stroke-cyan-900 active:cursor-grabbing dark:fill-cyan-400/40 dark:stroke-cyan-200"
+        className={
+          canMovePlane
+            ? "cursor-grab fill-cyan-300/72 stroke-cyan-900 active:cursor-grabbing dark:fill-cyan-400/40 dark:stroke-cyan-200"
+            : "fill-cyan-300/72 stroke-cyan-900 dark:fill-cyan-400/40 dark:stroke-cyan-200"
+        }
         strokeLinejoin="round"
         strokeWidth="4"
-        onPointerDown={editor.handleShapePointerDown}
+        onPointerDown={
+          canMovePlane ? editor.handleShapePointerDown : undefined
+        }
       />
       <polygon
         points={polygonPoints}
-        className="fill-transparent stroke-cyan-50/60 dark:stroke-cyan-950/30"
+        className="pointer-events-none fill-transparent stroke-cyan-50/60 dark:stroke-cyan-950/30"
         strokeDasharray="10 8"
         strokeLinejoin="round"
         strokeWidth="2"
@@ -1261,4 +1348,8 @@ function setMeasurementLength(
         ((line.end.y - line.start.y) / currentLength) * newLengthPx,
     },
   }
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max)
 }

@@ -9,6 +9,7 @@ import type { EdgeConstraint } from "@/lib/trall/edge-model"
 import type {
   ActiveTool,
   HouseBounds,
+  HouseModel,
   MeasurementLine,
   Point,
   ViewBox,
@@ -21,6 +22,7 @@ export function PlanningSurface({
   activePoolPointIndex,
   deckEdgeConstraints,
   deckPoints,
+  house,
   houseBounds,
   measurements,
   poolEdgeConstraints,
@@ -29,6 +31,7 @@ export function PlanningSurface({
   setDeckEdgeConstraints,
   setDeckPoints,
   setActivePoolPointIndex,
+  setHouse,
   setMeasurements,
   setPoolEdgeConstraints,
   setPoolPoints,
@@ -44,6 +47,7 @@ export function PlanningSurface({
   activePoolPointIndex: number | null
   deckEdgeConstraints: EdgeConstraint[]
   deckPoints: Point[]
+  house: HouseModel
   houseBounds: HouseBounds
   measurements: MeasurementLine[]
   poolEdgeConstraints: EdgeConstraint[]
@@ -52,6 +56,7 @@ export function PlanningSurface({
   setDeckEdgeConstraints: Dispatch<SetStateAction<EdgeConstraint[]>>
   setDeckPoints: Dispatch<SetStateAction<Point[]>>
   setActivePoolPointIndex: (index: number | null) => void
+  setHouse: Dispatch<SetStateAction<HouseModel>>
   setMeasurements: Dispatch<SetStateAction<MeasurementLine[]>>
   setPoolEdgeConstraints: Dispatch<SetStateAction<EdgeConstraint[]>>
   setPoolPoints: Dispatch<SetStateAction<Point[] | null>>
@@ -108,6 +113,7 @@ export function PlanningSurface({
             activePoolPointIndex={activePoolPointIndex}
             deckEdgeConstraints={deckEdgeConstraints}
             deckPoints={deckPoints}
+            house={house}
             houseBounds={houseBounds}
             measurements={measurements}
             poolEdgeConstraints={poolEdgeConstraints}
@@ -116,6 +122,7 @@ export function PlanningSurface({
             setDeckEdgeConstraints={setDeckEdgeConstraints}
             setDeckPoints={setDeckPoints}
             setActivePoolPointIndex={setActivePoolPointIndex}
+            setHouse={setHouse}
             setMeasurements={setMeasurements}
             setPoolEdgeConstraints={setPoolEdgeConstraints}
             setPoolPoints={setPoolPoints}

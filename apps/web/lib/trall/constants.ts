@@ -39,6 +39,7 @@ export const initialPoolPoints: [Point, Point, Point, Point] = [
 
 export const initialHouse: HouseModel = {
   centerX: 456,
+  doorOffsetM: 0,
   topY: 116,
   widthM: 10.5,
   depthM: 6,
