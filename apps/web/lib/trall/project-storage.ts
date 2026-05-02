@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client"
 import type { EdgeConstraint } from "@/lib/trall/edge-model"
+import type { ElevationSettings } from "@/lib/trall/elevation"
 import type {
   HouseModel,
   Material,
@@ -13,6 +14,7 @@ export type PlannerProjectState = {
   deckPoints: Point[]
   deckEdgeConstraints?: EdgeConstraint[]
   measurements?: MeasurementLine[]
+  elevation?: ElevationSettings
   poolPoints?: Point[] | null
   poolEdgeConstraints?: EdgeConstraint[]
   viewBox: ViewBox

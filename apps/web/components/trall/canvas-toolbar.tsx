@@ -15,7 +15,11 @@ import {
 
 import { Button } from "@workspace/ui/components/button"
 import { Separator } from "@workspace/ui/components/separator"
-import type { ActiveTool, Tool } from "@/lib/trall/types"
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@workspace/ui/components/toggle-group"
+import type { ActiveTool, PlannerView, Tool } from "@/lib/trall/types"
 
 export function CanvasToolbar({
   activeTool,
@@ -28,6 +32,8 @@ export function CanvasToolbar({
   onResetView,
   saveStatus,
   setActiveTool,
+  setPlannerView,
+  plannerView,
   zoomPercent,
 }: {
   activeTool: ActiveTool
@@ -40,6 +46,8 @@ export function CanvasToolbar({
   onResetView: () => void
   saveStatus: string
   setActiveTool: (tool: ActiveTool) => void
+  setPlannerView: (view: PlannerView) => void
+  plannerView: PlannerView
   zoomPercent: number
 }) {
   const tools: Tool[][] = [
@@ -89,6 +97,22 @@ export function CanvasToolbar({
 
   return (
     <div className="absolute top-3 right-3 left-3 z-20 flex items-center gap-2 overflow-x-auto rounded-lg border bg-background/90 p-1.5 shadow-sm backdrop-blur">
+      <ToggleGroup
+        aria-label="Planner view"
+        className="shrink-0"
+        size="sm"
+        type="single"
+        value={plannerView}
+        variant="outline"
+        onValueChange={(value) => {
+          if (value === "top" || value === "side") {
+            setPlannerView(value)
+          }
+        }}
+      >
+        <ToggleGroupItem value="top">Top view</ToggleGroupItem>
+        <ToggleGroupItem value="side">Side view</ToggleGroupItem>
+      </ToggleGroup>
       {tools.map((group, groupIndex) => (
         <ToolbarGroup key={groupIndex} separated={groupIndex > 0}>
           {group.map((tool) => (

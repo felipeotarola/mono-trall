@@ -2,15 +2,11 @@
 
 import type { ReactNode } from "react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  Maximize2Icon,
-  Minimize2Icon,
-} from "lucide-react"
+import { Maximize2Icon, Minimize2Icon, PanelRightIcon } from "lucide-react"
 
 import { CalculatorPanel } from "@/components/trall/calculator-panel"
 import { CanvasToolbar } from "@/components/trall/canvas-toolbar"
+import { ElevationView } from "@/components/trall/elevation/elevation-view"
 import { MobileSummary } from "@/components/trall/mobile-summary"
 import { PlanningSurface } from "@/components/trall/planning-surface"
 import {
@@ -25,6 +21,12 @@ import {
 import { formatCurrency } from "@/lib/trall/format"
 import { polygonArea, polygonPerimeter } from "@/lib/trall/geometry"
 import type { EdgeConstraint } from "@/lib/trall/edge-model"
+import {
+  defaultElevationSettings,
+  normalizeElevationSettings,
+  updateElevationSetting,
+  type ElevationField,
+} from "@/lib/trall/elevation"
 import { getHouseBounds } from "@/lib/trall/house"
 import {
   createProject,
@@ -41,6 +43,7 @@ import type {
   MeasurementLine,
   Metric,
   Point,
+  PlannerView,
   Tool,
   ViewBox,
 } from "@/lib/trall/types"
@@ -62,6 +65,7 @@ export function Workspace() {
   const { setOpen, setOpenMobile } = useSidebar()
   const [calculatorOpen, setCalculatorOpen] = useState(true)
   const [activeTool, setActiveTool] = useState<ActiveTool>("select")
+  const [plannerView, setPlannerView] = useState<PlannerView>("top")
   const [viewBox, setViewBox] = useState<ViewBox>(INITIAL_VIEW_BOX)
   const [viewAspectRatio, setViewAspectRatio] = useState(
     INITIAL_VIEW_BOX.width / INITIAL_VIEW_BOX.height
@@ -75,6 +79,9 @@ export function Workspace() {
   const [poolEdgeConstraints, setPoolEdgeConstraints] = useState<
     EdgeConstraint[]
   >([])
+  const [elevationSettings, setElevationSettings] = useState(
+    defaultElevationSettings
+  )
   const [activePointIndex, setActivePointIndex] = useState<number | null>(null)
   const [activePoolPointIndex, setActivePoolPointIndex] = useState<
     number | null
@@ -179,6 +186,9 @@ export function Workspace() {
         setDeckPoints(version.state.deckPoints)
         setDeckEdgeConstraints(version.state.deckEdgeConstraints ?? [])
         setMeasurements(version.state.measurements ?? [])
+        setElevationSettings(
+          normalizeElevationSettings(version.state.elevation)
+        )
         setPoolPoints(version.state.poolPoints ?? null)
         setPoolEdgeConstraints(version.state.poolEdgeConstraints ?? [])
         setViewBox(version.state.viewBox)
@@ -243,6 +253,7 @@ export function Workspace() {
       deckPoints,
       deckEdgeConstraints,
       measurements,
+      elevation: elevationSettings,
       poolPoints,
       poolEdgeConstraints,
       viewBox,
@@ -254,6 +265,7 @@ export function Workspace() {
       calculations.materials,
       deckEdgeConstraints,
       deckPoints,
+      elevationSettings,
       house,
       measurements,
       poolEdgeConstraints,
@@ -336,6 +348,7 @@ export function Workspace() {
   }, [
     deckEdgeConstraints,
     deckPoints,
+    elevationSettings,
     house,
     measurements,
     poolEdgeConstraints,
@@ -349,6 +362,7 @@ export function Workspace() {
     const nextDeckPoints = [...initialDeckPoints]
     const nextDeckEdgeConstraints: EdgeConstraint[] = []
     const nextMeasurements: MeasurementLine[] = []
+    const nextElevationSettings = defaultElevationSettings
     const nextPoolPoints = null
     const nextPoolEdgeConstraints: EdgeConstraint[] = []
     const nextHouseBounds = getHouseBounds(nextHouse)
@@ -363,6 +377,7 @@ export function Workspace() {
       deckPoints: nextDeckPoints,
       deckEdgeConstraints: nextDeckEdgeConstraints,
       measurements: nextMeasurements,
+      elevation: nextElevationSettings,
       poolPoints: nextPoolPoints,
       poolEdgeConstraints: nextPoolEdgeConstraints,
       viewBox: nextViewBox,
@@ -381,6 +396,7 @@ export function Workspace() {
       setDeckPoints(nextDeckPoints)
       setDeckEdgeConstraints(nextDeckEdgeConstraints)
       setMeasurements(nextMeasurements)
+      setElevationSettings(nextElevationSettings)
       setPoolPoints(nextPoolPoints)
       setPoolEdgeConstraints(nextPoolEdgeConstraints)
       setActivePointIndex(null)
@@ -406,6 +422,12 @@ export function Workspace() {
     setPoolPoints((currentPoints) => currentPoints ?? [...initialPoolPoints])
     setActivePointIndex(null)
     setActivePoolPointIndex(0)
+  }
+
+  function handleElevationChange(field: ElevationField, value: number) {
+    setElevationSettings((currentSettings) =>
+      updateElevationSetting(currentSettings, field, value)
+    )
   }
 
   function toggleWorkspacePanels() {
@@ -450,40 +472,50 @@ export function Workspace() {
             onResetView={fitViewBox}
             saveStatus={saveStatus}
             setActiveTool={setActiveTool}
+            setPlannerView={setPlannerView}
+            plannerView={plannerView}
             zoomPercent={zoomPercent}
           />
-          <PlanningSurface
-            activeTool={activeTool}
-            activePointIndex={activePointIndex}
-            activePoolPointIndex={activePoolPointIndex}
-            deckEdgeConstraints={deckEdgeConstraints}
-            deckPoints={deckPoints}
-            house={house}
-            houseBounds={houseBounds}
-            measurements={measurements}
-            poolEdgeConstraints={poolEdgeConstraints}
-            poolPoints={poolPoints}
-            setActivePointIndex={setActivePointIndex}
-            setDeckEdgeConstraints={setDeckEdgeConstraints}
-            setDeckPoints={setDeckPoints}
-            setActivePoolPointIndex={setActivePoolPointIndex}
-            setHouse={setHouse}
-            setMeasurements={setMeasurements}
-            setPoolEdgeConstraints={setPoolEdgeConstraints}
-            setPoolPoints={setPoolPoints}
-            setViewAspectRatio={setViewAspectRatio}
-            setViewBox={setViewBox}
-            supportSegments={calculations.supportLayout.segments}
-            onResetView={fitViewBox}
-            viewBox={viewBox}
-            zoomPercent={zoomPercent}
-          />
+          {plannerView === "top" ? (
+            <PlanningSurface
+              activeTool={activeTool}
+              activePointIndex={activePointIndex}
+              activePoolPointIndex={activePoolPointIndex}
+              deckEdgeConstraints={deckEdgeConstraints}
+              deckPoints={deckPoints}
+              house={house}
+              houseBounds={houseBounds}
+              measurements={measurements}
+              poolEdgeConstraints={poolEdgeConstraints}
+              poolPoints={poolPoints}
+              setActivePointIndex={setActivePointIndex}
+              setDeckEdgeConstraints={setDeckEdgeConstraints}
+              setDeckPoints={setDeckPoints}
+              setActivePoolPointIndex={setActivePoolPointIndex}
+              setHouse={setHouse}
+              setMeasurements={setMeasurements}
+              setPoolEdgeConstraints={setPoolEdgeConstraints}
+              setPoolPoints={setPoolPoints}
+              setViewAspectRatio={setViewAspectRatio}
+              setViewBox={setViewBox}
+              supportSegments={calculations.supportLayout.segments}
+              onResetView={fitViewBox}
+              viewBox={viewBox}
+              zoomPercent={zoomPercent}
+            />
+          ) : (
+            <ElevationView
+              elevation={elevationSettings}
+              hasPool={poolPoints !== null}
+              onElevationChange={handleElevationChange}
+            />
+          )}
         </section>
 
         <RightCalculatorSidebar
           open={calculatorOpen}
-          onClose={() => {
-            setCalculatorOpen(false)
+          onToggle={() => {
+            setCalculatorOpen((currentOpen) => !currentOpen)
             scheduleFitViewBox()
           }}
         >
@@ -495,13 +527,6 @@ export function Workspace() {
             setHouse={setHouse}
           />
         </RightCalculatorSidebar>
-        <CalculatorSidebarToggle
-          open={calculatorOpen}
-          onToggle={() => {
-            setCalculatorOpen((currentOpen) => !currentOpen)
-            scheduleFitViewBox()
-          }}
-        />
 
         <section className="lg:hidden">
           <CalculatorPanel
@@ -527,69 +552,74 @@ export function Workspace() {
 
 function RightCalculatorSidebar({
   children,
-  onClose,
-  open,
-}: {
-  children: ReactNode
-  onClose: () => void
-  open: boolean
-}) {
-  return (
-    <aside
-      aria-hidden={!open}
-      className={
-        open
-          ? "fixed top-[calc(var(--header-height)+var(--spacing)*5)] right-3 bottom-3 z-20 hidden w-[320px] translate-x-0 overflow-hidden rounded-lg border bg-sidebar text-sidebar-foreground shadow-sm transition-transform duration-200 lg:block xl:top-[calc(var(--header-height)+var(--spacing)*6)] xl:right-5 xl:bottom-5 xl:w-[360px]"
-          : "fixed top-[calc(var(--header-height)+var(--spacing)*5)] right-3 bottom-3 z-20 hidden w-[320px] translate-x-[calc(100%+var(--spacing)*6)] overflow-hidden rounded-lg border bg-sidebar text-sidebar-foreground shadow-sm transition-transform duration-200 lg:block xl:top-[calc(var(--header-height)+var(--spacing)*6)] xl:right-5 xl:bottom-5 xl:w-[360px]"
-      }
-    >
-      <div className="flex h-full flex-col">
-        <div className="flex items-start gap-3 border-b px-4 py-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">Project calculator</p>
-            <p className="text-xs text-muted-foreground">
-              Measurements, materials, and quote estimate.
-            </p>
-          </div>
-          <Button
-            aria-label="Close calculator sidebar"
-            className="-me-1 size-8 shrink-0"
-            size="icon"
-            title="Close calculator"
-            variant="ghost"
-            onClick={onClose}
-          >
-            <ChevronRightIcon />
-          </Button>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-3">{children}</div>
-      </div>
-    </aside>
-  )
-}
-
-function CalculatorSidebarToggle({
   onToggle,
   open,
 }: {
+  children: ReactNode
   onToggle: () => void
   open: boolean
 }) {
-  if (open) {
-    return null
-  }
+  return (
+    <>
+      {!open ? (
+        <CalculatorSidebarTrigger
+          ariaLabel="Open calculator sidebar"
+          className="fixed top-[calc((var(--header-height)-var(--spacing)*7)/2)] right-3 z-30 hidden lg:inline-flex xl:right-5"
+          title="Open calculator sidebar"
+          onClick={onToggle}
+        />
+      ) : null}
+      <aside
+        aria-hidden={!open}
+        className={
+          open
+            ? "fixed inset-y-0 right-0 z-20 hidden w-[320px] translate-x-0 border-s bg-sidebar text-sidebar-foreground transition-transform duration-200 lg:flex xl:w-[360px]"
+            : "pointer-events-none fixed inset-y-0 right-0 z-20 hidden w-[320px] translate-x-full border-s bg-sidebar text-sidebar-foreground transition-transform duration-200 lg:flex xl:w-[360px]"
+        }
+      >
+        <div className="flex h-full min-h-0 w-full flex-col">
+          <div className="flex h-(--header-height) shrink-0 items-center gap-3 border-b px-4 lg:px-6">
+            <CalculatorSidebarTrigger
+              ariaLabel="Close calculator sidebar"
+              className="-ms-1"
+              title="Close calculator sidebar"
+              onClick={onToggle}
+            />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold">
+                Project calculator
+              </p>
+            </div>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">{children}</div>
+        </div>
+      </aside>
+    </>
+  )
+}
 
+function CalculatorSidebarTrigger({
+  ariaLabel,
+  className,
+  onClick,
+  title,
+}: {
+  ariaLabel: string
+  className?: string
+  onClick: () => void
+  title: string
+}) {
   return (
     <Button
-      aria-label="Open calculator sidebar"
-      className="fixed top-[calc(var(--header-height)+var(--spacing)*6)] right-3 z-30 hidden h-10 rounded-full border bg-background/95 px-3 shadow-sm backdrop-blur lg:inline-flex xl:right-5"
-      size="sm"
-      title="Open calculator"
-      variant="secondary"
-      onClick={onToggle}
+      aria-label={ariaLabel}
+      className={className}
+      size="icon-sm"
+      title={title}
+      variant="ghost"
+      onClick={onClick}
     >
-      <ChevronLeftIcon />
-      Calculator
+      <PanelRightIcon />
+      <span className="sr-only">{ariaLabel}</span>
     </Button>
   )
 }
