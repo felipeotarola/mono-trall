@@ -277,14 +277,20 @@ export function useDeckEditor({
   }
 
   function removeSelectedEdgeEndPoint() {
-    if (selectedEdgeIndex === null || deckPoints.length <= 3) {
+    if (selectedEdgeIndex === null) {
       return
     }
 
-    const pointIndex = (selectedEdgeIndex + 1) % deckPoints.length
-    setDeckPoints((points) =>
-      points.filter((_, index) => index !== pointIndex)
-    )
+    removeEdgeEndPoint(selectedEdgeIndex)
+  }
+
+  function removeEdgeEndPoint(edgeIndex: number) {
+    if (deckPoints.length <= 3) {
+      return
+    }
+
+    const pointIndex = (edgeIndex + 1) % deckPoints.length
+    setDeckPoints((points) => points.filter((_, index) => index !== pointIndex))
     setActivePointIndex(null)
     setHoveredEdgeIndex(null)
     setSelectedEdgeIndex(null)
@@ -524,7 +530,15 @@ export function useDeckEditor({
   }
 
   function toggleSelectedEdgeLock() {
-    const edge = selectedEdgeIndex !== null ? edges[selectedEdgeIndex] : null
+    if (selectedEdgeIndex === null) {
+      return
+    }
+
+    toggleEdgeLockByIndex(selectedEdgeIndex)
+  }
+
+  function toggleEdgeLockByIndex(edgeIndex: number) {
+    const edge = edges[edgeIndex]
     if (!edge) {
       return
     }
@@ -542,9 +556,16 @@ export function useDeckEditor({
   }
 
   function linkSelectedEdgeToOpposite() {
-    const edge = selectedEdgeIndex !== null ? edges[selectedEdgeIndex] : null
-    const linkedEdgeId =
-      selectedEdgeIndex !== null ? getOppositeEdgeId(edges, selectedEdgeIndex) : null
+    if (selectedEdgeIndex === null) {
+      return
+    }
+
+    linkEdgeToOpposite(selectedEdgeIndex)
+  }
+
+  function linkEdgeToOpposite(edgeIndex: number) {
+    const edge = edges[edgeIndex]
+    const linkedEdgeId = getOppositeEdgeId(edges, edgeIndex)
 
     if (!edge || !linkedEdgeId) {
       return
@@ -564,7 +585,15 @@ export function useDeckEditor({
   }
 
   function addNodeToSelectedEdge() {
-    const edge = selectedEdgeIndex !== null ? edges[selectedEdgeIndex] : null
+    if (selectedEdgeIndex === null) {
+      return
+    }
+
+    addNodeToEdge(selectedEdgeIndex)
+  }
+
+  function addNodeToEdge(edgeIndex: number) {
+    const edge = edges[edgeIndex]
     if (!edge) {
       return
     }
@@ -585,7 +614,15 @@ export function useDeckEditor({
   }
 
   function unlinkSelectedEdge() {
-    const edge = selectedEdgeIndex !== null ? edges[selectedEdgeIndex] : null
+    if (selectedEdgeIndex === null) {
+      return
+    }
+
+    unlinkEdgeByIndex(selectedEdgeIndex)
+  }
+
+  function unlinkEdgeByIndex(edgeIndex: number) {
+    const edge = edges[edgeIndex]
     if (!edge) {
       return
     }
@@ -622,13 +659,18 @@ export function useDeckEditor({
     snapState,
     stopDragging,
     dimensionEditing: {
+      addNodeToEdge,
       addNodeToSelectedEdge,
       cancelEditingDimension,
       commitEditingDimension,
+      linkEdgeToOpposite,
       linkSelectedEdgeToOpposite,
+      removeEdgeEndPoint,
       removeSelectedEdgeEndPoint,
       startEditingDimension,
+      toggleEdgeLockByIndex,
       toggleSelectedEdgeLock,
+      unlinkEdgeByIndex,
       unlinkSelectedEdge,
       updateEditingDimension,
     },

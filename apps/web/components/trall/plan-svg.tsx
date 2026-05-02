@@ -7,7 +7,7 @@ import type {
   PointerEvent as ReactPointerEvent,
   SetStateAction,
 } from "react"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { AngleSnapGuide } from "@/components/trall/svg/angle-snap-guide"
 import { DeckHandle } from "@/components/trall/svg/deck-handle"
@@ -108,9 +108,8 @@ export function PlanSvg({
     id: string
     value: string
   } | null>(null)
-  const [measurementDrag, setMeasurementDrag] = useState<MeasurementDrag | null>(
-    null
-  )
+  const [measurementDrag, setMeasurementDrag] =
+    useState<MeasurementDrag | null>(null)
   const [doorDrag, setDoorDrag] = useState<{
     doorId: string
     pointerStartX: number
@@ -289,7 +288,8 @@ export function PlanSvg({
     event.preventDefault()
     const point = clientPointToSvgPoint(event, svgRef.current)
     const deltaM = (point.x - doorDrag.pointerStartX) / PIXELS_PER_METER
-    const doorWidthM = Math.min(80, houseBounds.widthPx * 0.22) / PIXELS_PER_METER
+    const doorWidthM =
+      Math.min(80, houseBounds.widthPx * 0.22) / PIXELS_PER_METER
     const maxOffsetM = Math.max(0, house.widthM / 2 - doorWidthM / 2)
     const nextOffsetM = clamp(
       doorDrag.startOffsetM + deltaM,
@@ -304,9 +304,7 @@ export function PlanSvg({
           ? nextOffsetM
           : (currentHouse.doorOffsetM ?? 0),
       doors: getHouseDoors(currentHouse).map((door) =>
-        door.id === doorDrag.doorId
-          ? { ...door, offsetM: nextOffsetM }
-          : door
+        door.id === doorDrag.doorId ? { ...door, offsetM: nextOffsetM } : door
       ),
     }))
 
@@ -407,8 +405,7 @@ export function PlanSvg({
     if (drag.type === "create") {
       setMeasurements((current) =>
         current.filter(
-          (line) =>
-            line.id !== drag.id || distance(line.start, line.end) >= 8
+          (line) => line.id !== drag.id || distance(line.start, line.end) >= 8
         )
       )
     }
@@ -594,7 +591,11 @@ function DeckLayer({
   const selectedEdgeAttached = editor.attachedEdgeIndexes.has(selectedEdgeIndex)
   const dimensions = editor.dimensionEditing
   const center = getPointsCenter(deckPoints)
-  const selectedEdge = editor.edges[selectedEdgeIndex]
+  const edgeControls = useEdgeControlHover(editor)
+  const controlsEdge =
+    edgeControls.edgeIndex !== null
+      ? editor.edges[edgeControls.edgeIndex]
+      : null
 
   return (
     <>
@@ -802,12 +803,8 @@ function DeckLayer({
               event.stopPropagation()
               editor.selectEdge(index)
             }}
-            onPointerEnter={() => editor.setHoveredEdgeIndex(index)}
-            onPointerLeave={() =>
-              editor.setHoveredEdgeIndex((currentIndex) =>
-                currentIndex === index ? null : currentIndex
-              )
-            }
+            onPointerEnter={() => edgeControls.show(index)}
+            onPointerLeave={() => edgeControls.hide(index)}
           />
         )
       })}
@@ -841,25 +838,27 @@ function DeckLayer({
         )
       })}
 
-      {selectedEdge ? (
+      {controlsEdge ? (
         <EdgeConstraintControls
-          edge={selectedEdge}
+          edge={controlsEdge}
           point={getDimensionLabelPoint(
-            selectedEdge.start,
-            selectedEdge.end,
+            controlsEdge.start,
+            controlsEdge.end,
             center
           )}
-          onAddNode={dimensions.addNodeToSelectedEdge}
+          onAddNode={() => dimensions.addNodeToEdge(controlsEdge.index)}
           onEdit={() =>
             dimensions.startEditingDimension(
-              selectedEdge.index,
-              selectedEdge.length
+              controlsEdge.index,
+              controlsEdge.length
             )
           }
-          onLink={dimensions.linkSelectedEdgeToOpposite}
-          onLock={dimensions.toggleSelectedEdgeLock}
-          onRemoveNode={dimensions.removeSelectedEdgeEndPoint}
-          onUnlink={dimensions.unlinkSelectedEdge}
+          onLink={() => dimensions.linkEdgeToOpposite(controlsEdge.index)}
+          onLock={() => dimensions.toggleEdgeLockByIndex(controlsEdge.index)}
+          onPointerEnter={() => edgeControls.show(controlsEdge.index)}
+          onPointerLeave={() => edgeControls.hide(controlsEdge.index)}
+          onRemoveNode={() => dimensions.removeEdgeEndPoint(controlsEdge.index)}
+          onUnlink={() => dimensions.unlinkEdgeByIndex(controlsEdge.index)}
         />
       ) : null}
 
@@ -930,8 +929,11 @@ function PoolLayer({
         }
       : null
   const dimensions = editor.dimensionEditing
-  const selectedEdge =
-    editor.selectedEdgeIndex !== null ? editor.edges[editor.selectedEdgeIndex] : null
+  const edgeControls = useEdgeControlHover(editor)
+  const controlsEdge =
+    edgeControls.edgeIndex !== null
+      ? editor.edges[edgeControls.edgeIndex]
+      : null
 
   return (
     <>
@@ -944,9 +946,7 @@ function PoolLayer({
         }
         strokeLinejoin="round"
         strokeWidth="4"
-        onPointerDown={
-          canMovePlane ? editor.handleShapePointerDown : undefined
-        }
+        onPointerDown={canMovePlane ? editor.handleShapePointerDown : undefined}
       />
       <polygon
         points={polygonPoints}
@@ -1003,12 +1003,8 @@ function PoolLayer({
               event.stopPropagation()
               editor.selectEdge(index)
             }}
-            onPointerEnter={() => editor.setHoveredEdgeIndex(index)}
-            onPointerLeave={() =>
-              editor.setHoveredEdgeIndex((currentIndex) =>
-                currentIndex === index ? null : currentIndex
-              )
-            }
+            onPointerEnter={() => edgeControls.show(index)}
+            onPointerLeave={() => edgeControls.hide(index)}
           />
         )
       })}
@@ -1042,25 +1038,27 @@ function PoolLayer({
         )
       })}
 
-      {selectedEdge ? (
+      {controlsEdge ? (
         <EdgeConstraintControls
-          edge={selectedEdge}
+          edge={controlsEdge}
           point={getDimensionLabelPoint(
-            selectedEdge.start,
-            selectedEdge.end,
+            controlsEdge.start,
+            controlsEdge.end,
             center
           )}
-          onAddNode={dimensions.addNodeToSelectedEdge}
+          onAddNode={() => dimensions.addNodeToEdge(controlsEdge.index)}
           onEdit={() =>
             dimensions.startEditingDimension(
-              selectedEdge.index,
-              selectedEdge.length
+              controlsEdge.index,
+              controlsEdge.length
             )
           }
-          onLink={dimensions.linkSelectedEdgeToOpposite}
-          onLock={dimensions.toggleSelectedEdgeLock}
-          onRemoveNode={dimensions.removeSelectedEdgeEndPoint}
-          onUnlink={dimensions.unlinkSelectedEdge}
+          onLink={() => dimensions.linkEdgeToOpposite(controlsEdge.index)}
+          onLock={() => dimensions.toggleEdgeLockByIndex(controlsEdge.index)}
+          onPointerEnter={() => edgeControls.show(controlsEdge.index)}
+          onPointerLeave={() => edgeControls.hide(controlsEdge.index)}
+          onRemoveNode={() => dimensions.removeEdgeEndPoint(controlsEdge.index)}
+          onUnlink={() => dimensions.unlinkEdgeByIndex(controlsEdge.index)}
         />
       ) : null}
 
@@ -1087,12 +1085,54 @@ function PoolLayer({
   )
 }
 
+function useEdgeControlHover(editor: ReturnType<typeof useDeckEditor>) {
+  const [edgeIndex, setEdgeIndex] = useState<number | null>(null)
+  const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  function clearHideTimeout() {
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current)
+      hideTimeoutRef.current = null
+    }
+  }
+
+  function show(nextEdgeIndex: number) {
+    clearHideTimeout()
+    setEdgeIndex(nextEdgeIndex)
+    editor.setHoveredEdgeIndex(nextEdgeIndex)
+  }
+
+  function hide(nextEdgeIndex: number) {
+    clearHideTimeout()
+    hideTimeoutRef.current = setTimeout(() => {
+      setEdgeIndex((currentIndex) =>
+        currentIndex === nextEdgeIndex ? null : currentIndex
+      )
+      editor.setHoveredEdgeIndex((currentIndex) =>
+        currentIndex === nextEdgeIndex ? null : currentIndex
+      )
+    }, 180)
+  }
+
+  return { edgeIndex, hide, show }
+}
+
 function EdgeConstraintControls({
   edge,
   onAddNode,
   onEdit,
   onLink,
   onLock,
+  onPointerEnter,
+  onPointerLeave,
   onRemoveNode,
   onUnlink,
   point,
@@ -1102,6 +1142,8 @@ function EdgeConstraintControls({
   onEdit: () => void
   onLink: () => void
   onLock: () => void
+  onPointerEnter: () => void
+  onPointerLeave: () => void
   onRemoveNode: () => void
   onUnlink: () => void
   point: Point
@@ -1109,35 +1151,42 @@ function EdgeConstraintControls({
   return (
     <foreignObject
       data-interactive="true"
-      x={point.x - 168}
-      y={point.y + 14}
-      width="336"
-      height="34"
+      pointerEvents="auto"
+      x={point.x - 210}
+      y={point.y + 12}
+      width="420"
+      height="48"
     >
-      <div className="flex h-8 items-center justify-center gap-1 rounded-md border bg-background/95 px-1 shadow-sm">
+      <div
+        className="flex h-10 items-center justify-center gap-1 rounded-lg border border-zinc-700 bg-zinc-950 px-2 text-white shadow-lg shadow-black/30"
+        onClick={(event) => event.stopPropagation()}
+        onPointerEnter={onPointerEnter}
+        onPointerLeave={onPointerLeave}
+        onPointerDown={(event) => event.stopPropagation()}
+      >
         <button
-          className="h-6 rounded px-2 text-[11px] font-medium text-foreground hover:bg-muted"
+          className="h-7 rounded-md px-3 text-xs font-semibold text-white hover:bg-white/15 focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none"
           type="button"
           onClick={onEdit}
         >
           Edit
         </button>
         <button
-          className="h-6 rounded px-2 text-[11px] font-medium text-foreground hover:bg-muted"
+          className="h-7 rounded-md px-3 text-xs font-semibold text-white hover:bg-white/15 focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none"
           type="button"
           onClick={onAddNode}
         >
           Add node
         </button>
         <button
-          className="h-6 rounded px-2 text-[11px] font-medium text-foreground hover:bg-muted"
+          className="h-7 rounded-md px-3 text-xs font-semibold text-white hover:bg-white/15 focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none"
           type="button"
           onClick={onRemoveNode}
         >
           Remove node
         </button>
         <button
-          className="h-6 rounded px-2 text-[11px] font-medium text-foreground hover:bg-muted"
+          className="h-7 rounded-md px-3 text-xs font-semibold text-white hover:bg-white/15 focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none"
           type="button"
           onClick={onLock}
         >
@@ -1145,7 +1194,7 @@ function EdgeConstraintControls({
         </button>
         {edge.linkedEdgeId ? (
           <button
-            className="h-6 rounded px-2 text-[11px] font-medium text-foreground hover:bg-muted"
+            className="h-7 rounded-md px-3 text-xs font-semibold text-white hover:bg-white/15 focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none"
             type="button"
             onClick={onUnlink}
           >
@@ -1153,7 +1202,7 @@ function EdgeConstraintControls({
           </button>
         ) : (
           <button
-            className="h-6 rounded px-2 text-[11px] font-medium text-foreground hover:bg-muted"
+            className="h-7 rounded-md px-3 text-xs font-semibold text-white hover:bg-white/15 focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none"
             type="button"
             onClick={onLink}
           >
@@ -1256,7 +1305,7 @@ function MeasurementLayer({
                 <input
                   autoFocus
                   data-interactive="true"
-                  className="h-7 w-20 rounded-md border bg-background px-2 text-center text-sm font-semibold text-foreground shadow-sm outline-none ring-2 ring-fuchsia-500/40"
+                  className="h-7 w-20 rounded-md border bg-background px-2 text-center text-sm font-semibold text-foreground shadow-sm ring-2 ring-fuchsia-500/40 outline-none"
                   inputMode="decimal"
                   value={editingMeasurement.value}
                   onBlur={onCommitMeasurementLength}
@@ -1277,7 +1326,7 @@ function MeasurementLayer({
                 x={labelPoint.x}
                 y={labelPoint.y}
                 textAnchor="middle"
-                className="cursor-text fill-fuchsia-700 text-[15px] font-semibold stroke-transparent dark:fill-fuchsia-300"
+                className="cursor-text fill-fuchsia-700 stroke-transparent text-[15px] font-semibold dark:fill-fuchsia-300"
                 onClick={(event) => {
                   event.preventDefault()
                   event.stopPropagation()
@@ -1311,7 +1360,11 @@ function getPointsCenter(points: Point[]): Point {
   }
 }
 
-function getDimensionLabelPoint(start: Point, end: Point, center: Point): Point {
+function getDimensionLabelPoint(
+  start: Point,
+  end: Point,
+  center: Point
+): Point {
   const midPoint = {
     x: (start.x + end.x) / 2,
     y: (start.y + end.y) / 2,
