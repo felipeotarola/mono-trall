@@ -17,7 +17,9 @@ import type { HouseModel, Material, Metric } from "@/lib/trall/types"
 
 export function MobileSummary({
   calculations,
+  ensureProject,
   house,
+  projectId,
   setHouse,
 }: {
   calculations: {
@@ -27,7 +29,9 @@ export function MobileSummary({
     metrics: Metric[]
     materials: Material[]
   }
+  ensureProject: () => Promise<string>
   house: HouseModel
+  projectId: string | null
   setHouse: Dispatch<SetStateAction<HouseModel>>
 }) {
   return (
@@ -62,7 +66,9 @@ export function MobileSummary({
             <div className="px-4 pb-4">
               <CalculatorPanel
                 calculations={calculations}
+                ensureProject={ensureProject}
                 house={house}
+                projectId={projectId}
                 setHouse={setHouse}
               />
             </div>

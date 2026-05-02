@@ -24,8 +24,58 @@ create index if not exists trall_mono_project_versions_user_id_idx
 create index if not exists trall_mono_project_versions_project_id_idx
   on public.trall_mono_project_versions(project_id);
 
+create table if not exists public.materials (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  category text not null,
+  unit text not null check (unit in ('metre', 'linear_metre', 'square_metre', 'piece', 'box', 'pack')),
+  cost numeric(12, 2) not null default 0 check (cost >= 0),
+  description text,
+  created_by uuid references auth.users(id) on delete cascade,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists materials_created_by_idx
+  on public.materials(created_by);
+
+create index if not exists materials_active_category_name_idx
+  on public.materials(active, category, name);
+
+create table if not exists public.project_materials (
+  project_id uuid not null references public.trall_mono_projects(id) on delete cascade,
+  material_id uuid not null references public.materials(id),
+  quantity numeric(12, 3) not null default 0 check (quantity >= 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (project_id, material_id)
+);
+
+create index if not exists project_materials_material_id_idx
+  on public.project_materials(material_id);
+
+insert into public.materials (id, name, category, unit, cost, description, created_by, active)
+values
+  ('00000000-0000-4000-8000-000000000001', 'Decking boards 28 x 120 mm', 'Decking', 'linear_metre', 39.00, 'Standard pressure-treated deck board.', null, true),
+  ('00000000-0000-4000-8000-000000000002', 'Joists 45 x 145 mm', 'Framing', 'linear_metre', 18.50, 'Structural timber joist for deck framing.', null, true),
+  ('00000000-0000-4000-8000-000000000003', 'Posts 98 x 98 mm', 'Framing', 'metre', 24.00, 'Support post material.', null, true),
+  ('00000000-0000-4000-8000-000000000004', 'Galvanized post anchors', 'Foundation', 'piece', 16.00, 'Post base anchor for concrete or pier fixing.', null, true),
+  ('00000000-0000-4000-8000-000000000005', 'A4 stainless deck screws', 'Fasteners', 'box', 32.00, 'Box of corrosion-resistant deck screws.', null, true),
+  ('00000000-0000-4000-8000-000000000006', 'Joist hangers', 'Fasteners', 'piece', 4.25, 'Galvanized connector for joist support.', null, true)
+on conflict (id) do update
+set
+  name = excluded.name,
+  category = excluded.category,
+  unit = excluded.unit,
+  cost = excluded.cost,
+  description = excluded.description,
+  active = excluded.active;
+
 alter table public.trall_mono_projects enable row level security;
 alter table public.trall_mono_project_versions enable row level security;
+alter table public.materials enable row level security;
+alter table public.project_materials enable row level security;
 
 create policy "Users can select own projects"
   on public.trall_mono_projects
@@ -68,3 +118,87 @@ create policy "Users can delete own project versions"
   on public.trall_mono_project_versions
   for delete
   using (user_id = auth.uid());
+
+create policy "Users can select own or standard materials"
+  on public.materials
+  for select
+  using (created_by = auth.uid() or created_by is null);
+
+create policy "Users can insert own materials"
+  on public.materials
+  for insert
+  with check (created_by = auth.uid());
+
+create policy "Users can update own materials"
+  on public.materials
+  for update
+  using (created_by = auth.uid())
+  with check (created_by = auth.uid());
+
+create policy "Users can delete own materials"
+  on public.materials
+  for delete
+  using (created_by = auth.uid());
+
+create policy "Users can select own project materials"
+  on public.project_materials
+  for select
+  using (
+    exists (
+      select 1
+      from public.trall_mono_projects
+      where trall_mono_projects.id = project_materials.project_id
+        and trall_mono_projects.user_id = auth.uid()
+    )
+  );
+
+create policy "Users can insert own project materials"
+  on public.project_materials
+  for insert
+  with check (
+    exists (
+      select 1
+      from public.trall_mono_projects
+      where trall_mono_projects.id = project_materials.project_id
+        and trall_mono_projects.user_id = auth.uid()
+    )
+    and exists (
+      select 1
+      from public.materials
+      where materials.id = project_materials.material_id
+        and materials.active = true
+        and (materials.created_by = auth.uid() or materials.created_by is null)
+    )
+  );
+
+create policy "Users can update own project materials"
+  on public.project_materials
+  for update
+  using (
+    exists (
+      select 1
+      from public.trall_mono_projects
+      where trall_mono_projects.id = project_materials.project_id
+        and trall_mono_projects.user_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from public.trall_mono_projects
+      where trall_mono_projects.id = project_materials.project_id
+        and trall_mono_projects.user_id = auth.uid()
+    )
+  );
+
+create policy "Users can delete own project materials"
+  on public.project_materials
+  for delete
+  using (
+    exists (
+      select 1
+      from public.trall_mono_projects
+      where trall_mono_projects.id = project_materials.project_id
+        and trall_mono_projects.user_id = auth.uid()
+    )
+  );

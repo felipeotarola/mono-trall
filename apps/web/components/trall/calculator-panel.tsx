@@ -3,6 +3,7 @@
 import type { Dispatch, SetStateAction } from "react"
 import { QuoteIcon } from "lucide-react"
 
+import { MaterialsManager } from "@/components/trall/materials-manager"
 import { Button } from "@workspace/ui/components/button"
 import {
   Card,
@@ -17,7 +18,9 @@ import { clamp } from "@/lib/trall/geometry"
 
 export function CalculatorPanel({
   calculations,
+  ensureProject,
   house,
+  projectId,
   setHouse,
 }: {
   calculations: {
@@ -25,7 +28,9 @@ export function CalculatorPanel({
     metrics: Metric[]
     materials: Material[]
   }
+  ensureProject: () => Promise<string>
   house: HouseModel
+  projectId: string | null
   setHouse: Dispatch<SetStateAction<HouseModel>>
 }) {
   return (
@@ -59,16 +64,7 @@ export function CalculatorPanel({
         </CardContent>
       </Card>
 
-      <Card size="sm">
-        <CardHeader>
-          <CardTitle>Materials</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {calculations.materials.map((material) => (
-            <MaterialRow key={material.label} {...material} />
-          ))}
-        </CardContent>
-      </Card>
+      <MaterialsManager ensureProject={ensureProject} projectId={projectId} />
 
       <HouseDimensionsCard house={house} setHouse={setHouse} />
 
@@ -98,18 +94,6 @@ function MetricRow({ label, value }: Metric) {
   )
 }
 
-function MaterialRow({ label, value, detail }: Material) {
-  return (
-    <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 rounded-lg border bg-muted/25 px-3 py-2">
-      <span className="min-w-0 truncate text-sm font-medium">{label}</span>
-      <span className="text-sm font-semibold">{value}</span>
-      <span className="min-w-0 truncate text-xs text-muted-foreground">
-        {detail}
-      </span>
-    </div>
-  )
-}
-
 function HouseDimensionsCard({
   house,
   setHouse,
@@ -123,8 +107,7 @@ function HouseDimensionsCard({
       return
     }
 
-    const bounds =
-      key === "widthM" ? { min: 2, max: 30 } : { min: 2, max: 20 }
+    const bounds = key === "widthM" ? { min: 2, max: 30 } : { min: 2, max: 20 }
 
     setHouse((current) => ({
       ...current,

@@ -74,9 +74,7 @@ export function Workspace() {
   const latestSaveRequestRef = useRef(0)
 
   const houseBounds = useMemo(() => getHouseBounds(house), [house])
-  const zoomPercent = Math.round(
-    (INITIAL_VIEW_BOX.width / viewBox.width) * 100
-  )
+  const zoomPercent = Math.round((INITIAL_VIEW_BOX.width / viewBox.width) * 100)
   const fitViewBox = useCallback(() => {
     setViewBox(
       getFitViewBox(houseBounds, deckPoints, viewAspectRatioRef.current)
@@ -248,6 +246,25 @@ export function Workspace() {
     [currentProjectId, getPlannerState]
   )
 
+  const ensureCurrentProject = useCallback(async () => {
+    if (currentProjectId) {
+      return currentProjectId
+    }
+
+    setSaveStatus("Saving...")
+    const project = await createProject("Untitled", getPlannerState())
+    hydratingProjectRef.current = true
+    setCurrentProjectId(project.id)
+    setSaveStatus("Saved")
+    window.localStorage.setItem(CURRENT_PROJECT_STORAGE_KEY, project.id)
+    requestAnimationFrame(() => {
+      hydratingProjectRef.current = false
+      autosaveReadyRef.current = true
+    })
+
+    return project.id
+  }, [currentProjectId, getPlannerState])
+
   useEffect(() => {
     if (!autosaveReadyRef.current || hydratingProjectRef.current) {
       return
@@ -337,7 +354,7 @@ export function Workspace() {
       <div
         className={
           calculatorOpen
-            ? "flex flex-1 flex-col gap-3 p-3 pb-24 transition-[padding] duration-200 sm:p-4 lg:pb-4 lg:pr-[348px] xl:p-5 xl:pr-[388px]"
+            ? "flex flex-1 flex-col gap-3 p-3 pb-24 transition-[padding] duration-200 sm:p-4 lg:pr-[348px] lg:pb-4 xl:p-5 xl:pr-[388px]"
             : "flex flex-1 flex-col gap-3 p-3 pb-24 transition-[padding] duration-200 sm:p-4 lg:pb-4 xl:p-5"
         }
       >
@@ -378,7 +395,9 @@ export function Workspace() {
         >
           <CalculatorPanel
             calculations={calculations}
+            ensureProject={ensureCurrentProject}
             house={house}
+            projectId={currentProjectId}
             setHouse={setHouse}
           />
         </RightCalculatorSidebar>
@@ -393,7 +412,9 @@ export function Workspace() {
         <section className="lg:hidden">
           <CalculatorPanel
             calculations={calculations}
+            ensureProject={ensureCurrentProject}
             house={house}
+            projectId={currentProjectId}
             setHouse={setHouse}
           />
         </section>
@@ -401,7 +422,9 @@ export function Workspace() {
 
       <MobileSummary
         calculations={calculations}
+        ensureProject={ensureCurrentProject}
         house={house}
+        projectId={currentProjectId}
         setHouse={setHouse}
       />
     </main>
@@ -422,8 +445,8 @@ function RightCalculatorSidebar({
       aria-hidden={!open}
       className={
         open
-          ? "fixed right-3 top-[calc(var(--header-height)+var(--spacing)*5)] bottom-3 z-20 hidden w-[320px] translate-x-0 overflow-hidden rounded-lg border bg-sidebar text-sidebar-foreground shadow-sm transition-transform duration-200 lg:block xl:right-5 xl:top-[calc(var(--header-height)+var(--spacing)*6)] xl:bottom-5 xl:w-[360px]"
-          : "fixed right-3 top-[calc(var(--header-height)+var(--spacing)*5)] bottom-3 z-20 hidden w-[320px] translate-x-[calc(100%+var(--spacing)*6)] overflow-hidden rounded-lg border bg-sidebar text-sidebar-foreground shadow-sm transition-transform duration-200 lg:block xl:right-5 xl:top-[calc(var(--header-height)+var(--spacing)*6)] xl:bottom-5 xl:w-[360px]"
+          ? "fixed top-[calc(var(--header-height)+var(--spacing)*5)] right-3 bottom-3 z-20 hidden w-[320px] translate-x-0 overflow-hidden rounded-lg border bg-sidebar text-sidebar-foreground shadow-sm transition-transform duration-200 lg:block xl:top-[calc(var(--header-height)+var(--spacing)*6)] xl:right-5 xl:bottom-5 xl:w-[360px]"
+          : "fixed top-[calc(var(--header-height)+var(--spacing)*5)] right-3 bottom-3 z-20 hidden w-[320px] translate-x-[calc(100%+var(--spacing)*6)] overflow-hidden rounded-lg border bg-sidebar text-sidebar-foreground shadow-sm transition-transform duration-200 lg:block xl:top-[calc(var(--header-height)+var(--spacing)*6)] xl:right-5 xl:bottom-5 xl:w-[360px]"
       }
     >
       <div className="flex h-full flex-col">
@@ -465,7 +488,7 @@ function CalculatorSidebarToggle({
   return (
     <Button
       aria-label="Open calculator sidebar"
-      className="fixed right-3 top-[calc(var(--header-height)+var(--spacing)*6)] z-30 hidden h-10 rounded-full border bg-background/95 px-3 shadow-sm backdrop-blur lg:inline-flex xl:right-5"
+      className="fixed top-[calc(var(--header-height)+var(--spacing)*6)] right-3 z-30 hidden h-10 rounded-full border bg-background/95 px-3 shadow-sm backdrop-blur lg:inline-flex xl:right-5"
       size="sm"
       title="Open calculator"
       variant="secondary"
