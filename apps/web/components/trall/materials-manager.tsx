@@ -2,29 +2,18 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
-import {
-  ArchiveIcon,
-  CheckIcon,
-  PencilIcon,
-  PlusIcon,
-  XIcon,
-} from "lucide-react"
+import { ArchiveIcon, PlusIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import {
-  MaterialFields,
   getErrorMessage,
   parseQuantity,
-  toMaterialInput,
-  type MaterialFormState,
 } from "@/components/trall/material-form"
 import {
-  createMaterial,
   listMaterials,
   listProjectMaterials,
   removeProjectMaterial,
   setProjectMaterialQuantity,
-  updateMaterial,
   upsertProjectMaterial,
 } from "@/lib/trall/materials-api"
 import { formatCurrency } from "@/lib/trall/format"
@@ -82,10 +71,6 @@ export function MaterialsManager({
   const [selectedMaterialId, setSelectedMaterialId] = useState("")
   const [selectedQuantity, setSelectedQuantity] = useState("1")
   const [boardGapMm, setBoardGapMm] = useState(5)
-  const [editingMaterialId, setEditingMaterialId] = useState<string | null>(
-    null
-  )
-  const [editingForm, setEditingForm] = useState<MaterialFormState | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -380,87 +365,6 @@ export function MaterialsManager({
     }
   }
 
-  async function handleSaveEditedMaterial(item: ProjectMaterialItem) {
-    if (!projectId || !editingForm) {
-      return
-    }
-
-    const input = toMaterialInput(editingForm)
-    if (!input) {
-      toast.error("Enter a name, category, unit, and valid unit cost.")
-      return
-    }
-
-    setSaving(true)
-    try {
-      if (item.material.created_by === null) {
-        const material = await createMaterial(input)
-        const replacement = await upsertProjectMaterial({
-          materialId: material.id,
-          projectId,
-          quantity: item.quantity,
-        })
-        await removeProjectMaterial({
-          materialId: item.material_id,
-          projectId,
-        })
-
-        setMaterials((current) => [...current, material])
-        setProjectMaterials((current) => [
-          ...current.filter(
-            (projectMaterial) =>
-              projectMaterial.material_id !== item.material_id
-          ),
-          replacement,
-        ])
-        toast.success("Editable material copy created")
-      } else {
-        const material = await updateMaterial(item.material_id, input)
-        setMaterials((current) =>
-          current.map((currentMaterial) =>
-            currentMaterial.id === material.id ? material : currentMaterial
-          )
-        )
-        setProjectMaterials((current) =>
-          current.map((projectMaterial) =>
-            projectMaterial.material_id === material.id
-              ? { ...projectMaterial, material }
-              : projectMaterial
-          )
-        )
-        toast.success("Material updated")
-      }
-
-      cancelEditing()
-    } catch (error) {
-      toast.error(getErrorMessage(error))
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  function startEditingMaterial(item: ProjectMaterialItem) {
-    setEditingMaterialId(item.material_id)
-    setEditingForm({
-      name: item.material.name,
-      category: item.material.category,
-      unit: item.material.unit,
-      cost: String(item.material.cost),
-      thickness_mm: item.material.thickness_mm
-        ? String(item.material.thickness_mm)
-        : "",
-      width_mm: item.material.width_mm ? String(item.material.width_mm) : "",
-      length_mm: item.material.length_mm ? String(item.material.length_mm) : "",
-      image_url: item.material.image_url ?? "",
-      description: item.material.description ?? "",
-    })
-  }
-
-  function cancelEditing() {
-    setEditingMaterialId(null)
-    setEditingForm(null)
-  }
-
   function upsertProjectItem(item: ProjectMaterialItem) {
     setProjectMaterials((current) => {
       const existing = current.some(
@@ -520,14 +424,7 @@ export function MaterialsManager({
                 <ProjectMaterialRow
                   key={item.material_id}
                   calculationRule={calculationRule}
-                  editingForm={
-                    editingMaterialId === item.material_id ? editingForm : null
-                  }
                   item={item}
-                  saving={saving}
-                  onCancelEdit={cancelEditing}
-                  onEdit={() => startEditingMaterial(item)}
-                  onEditFormChange={setEditingForm}
                   onQuantityChange={(quantity) => {
                     if (calculationRule) {
                       return
@@ -547,7 +444,6 @@ export function MaterialsManager({
                     }
                   }}
                   onRemove={() => handleRemoveProjectMaterial(item)}
-                  onSaveEdit={() => handleSaveEditedMaterial(item)}
                 />
               )
             })
@@ -677,28 +573,16 @@ export function MaterialsManager({
 
 function ProjectMaterialRow({
   calculationRule,
-  editingForm,
   item,
-  saving,
-  onCancelEdit,
-  onEdit,
-  onEditFormChange,
   onQuantityChange,
   onQuantityCommit,
   onRemove,
-  onSaveEdit,
 }: {
   calculationRule: CalculatedMaterialRule | null
-  editingForm: MaterialFormState | null
   item: ProjectMaterialItem
-  saving: boolean
-  onCancelEdit: () => void
-  onEdit: () => void
-  onEditFormChange: (form: MaterialFormState | null) => void
   onQuantityChange: (quantity: number) => void
   onQuantityCommit: () => void
   onRemove: () => void
-  onSaveEdit: () => void
 }) {
   const dimensions = getMaterialDimensionsLabel(item.material)
   const calculationLabel =
@@ -710,7 +594,7 @@ function ProjectMaterialRow({
 
   return (
     <div className="space-y-2 rounded-lg border bg-muted/25 px-3 py-2">
-      <div className="grid grid-cols-[minmax(0,1fr)_80px_auto] gap-2">
+      <div className="grid grid-cols-[minmax(0,1fr)_80px_32px] gap-2">
         <div className="grid min-w-0 grid-cols-[40px_minmax(0,1fr)] gap-2">
           <MaterialThumbnail material={item.material} />
           <div className="min-w-0">
@@ -747,19 +631,6 @@ function ProjectMaterialRow({
         />
         <div className="flex items-center justify-end gap-1">
           <Button
-            aria-label="Edit material"
-            size="icon-sm"
-            title={
-              item.material.created_by === null
-                ? "Edit as custom copy"
-                : "Edit material"
-            }
-            variant="ghost"
-            onClick={onEdit}
-          >
-            <PencilIcon />
-          </Button>
-          <Button
             aria-label="Remove material from project"
             size="icon-sm"
             title="Remove"
@@ -770,26 +641,6 @@ function ProjectMaterialRow({
           </Button>
         </div>
       </div>
-      {editingForm ? (
-        <div className="space-y-2 border-t pt-2">
-          {item.material.created_by === null ? (
-            <p className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
-              Standard materials are saved as a custom copy when edited.
-            </p>
-          ) : null}
-          <MaterialFields form={editingForm} onChange={onEditFormChange} />
-          <div className="grid grid-cols-2 gap-2">
-            <Button disabled={saving} onClick={onSaveEdit}>
-              <CheckIcon />
-              Save
-            </Button>
-            <Button variant="outline" onClick={onCancelEdit}>
-              <XIcon />
-              Cancel
-            </Button>
-          </div>
-        </div>
-      ) : null}
     </div>
   )
 }
