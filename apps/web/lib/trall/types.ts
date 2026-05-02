@@ -56,9 +56,15 @@ export type EditableDimension = {
 export type HouseModel = {
   centerX: number
   doorOffsetM?: number
+  doors?: HouseDoor[]
   topY: number
   widthM: number
   depthM: number
+}
+
+export type HouseDoor = {
+  id: string
+  offsetM: number
 }
 
 export type HouseBounds = {

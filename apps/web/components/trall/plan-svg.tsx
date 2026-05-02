@@ -26,13 +26,14 @@ import {
   PIXELS_PER_METER,
 } from "@/lib/trall/constants"
 import { distance, lineAngle } from "@/lib/trall/geometry"
-import { getHouseAttachEdge } from "@/lib/trall/house"
+import { getHouseAttachEdge, getHouseDoors } from "@/lib/trall/house"
 import { clientPointToSvgPoint } from "@/lib/trall/svg"
 import type { SupportSegment } from "@/lib/trall/supports"
 import type { EdgeConstraint, GeometryEdge } from "@/lib/trall/edge-model"
 import type {
   ActiveTool,
   HouseModel,
+  HouseDoor,
   HouseBounds,
   MeasurementLine,
   Point,
@@ -111,9 +112,11 @@ export function PlanSvg({
     null
   )
   const [doorDrag, setDoorDrag] = useState<{
+    doorId: string
     pointerStartX: number
     startOffsetM: number
   } | null>(null)
+  const houseDoors = getHouseDoors(house)
   const pointBounds = getPointBounds(houseBounds)
   const contentBounds = getPlanContentBounds(
     houseBounds,
@@ -255,7 +258,10 @@ export function PlanSvg({
     poolEditor.stopDragging(event)
   }
 
-  function startDoorDrag(event: ReactPointerEvent<SVGRectElement>) {
+  function startDoorDrag(
+    event: ReactPointerEvent<SVGRectElement>,
+    door: HouseDoor
+  ) {
     if (activeTool !== "select" || !svgRef.current) {
       return
     }
@@ -269,8 +275,9 @@ export function PlanSvg({
     setSelectedMeasurementId(null)
     setEditingMeasurement(null)
     setDoorDrag({
+      doorId: door.id,
       pointerStartX: clientPointToSvgPoint(event, svgRef.current).x,
-      startOffsetM: house.doorOffsetM ?? 0,
+      startOffsetM: door.offsetM,
     })
   }
 
@@ -292,7 +299,15 @@ export function PlanSvg({
 
     setHouse((currentHouse) => ({
       ...currentHouse,
-      doorOffsetM: nextOffsetM,
+      doorOffsetM:
+        doorDrag.doorId === "door-1"
+          ? nextOffsetM
+          : (currentHouse.doorOffsetM ?? 0),
+      doors: getHouseDoors(currentHouse).map((door) =>
+        door.id === doorDrag.doorId
+          ? { ...door, offsetM: nextOffsetM }
+          : door
+      ),
     }))
 
     return true
@@ -482,7 +497,7 @@ export function PlanSvg({
       </defs>
 
       <HouseLayer
-        doorOffsetM={house.doorOffsetM ?? 0}
+        doors={houseDoors}
         editingDimension={editor.editingDimension}
         houseBounds={houseBounds}
         onCancelEdit={dimensions.cancelEditingDimension}

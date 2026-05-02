@@ -1,5 +1,5 @@
 import { PIXELS_PER_METER } from "./constants"
-import type { HouseBounds, HouseModel } from "./types"
+import type { HouseBounds, HouseDoor, HouseModel } from "./types"
 
 export function getHouseBounds(house: HouseModel): HouseBounds {
   const widthPx = house.widthM * PIXELS_PER_METER
@@ -26,4 +26,12 @@ export function getHouseAttachEdge(houseBounds: HouseBounds): {
     x1: houseBounds.left,
     x2: houseBounds.right,
   }
+}
+
+export function getHouseDoors(house: HouseModel): HouseDoor[] {
+  if (house.doors && house.doors.length > 0) {
+    return house.doors
+  }
+
+  return [{ id: "door-1", offsetM: house.doorOffsetM ?? 0 }]
 }

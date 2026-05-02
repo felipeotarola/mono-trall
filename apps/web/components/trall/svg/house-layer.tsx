@@ -2,10 +2,14 @@ import type { PointerEvent as ReactPointerEvent } from "react"
 
 import { DimensionLine } from "@/components/trall/svg/dimension-line"
 import { PIXELS_PER_METER } from "@/lib/trall/constants"
-import type { EditableDimension, HouseBounds } from "@/lib/trall/types"
+import type {
+  EditableDimension,
+  HouseBounds,
+  HouseDoor,
+} from "@/lib/trall/types"
 
 export function HouseLayer({
-  doorOffsetM = 0,
+  doors,
   editingDimension,
   houseBounds,
   onCancelEdit,
@@ -13,22 +17,19 @@ export function HouseLayer({
   onDoorPointerDown,
   onEditValueChange,
 }: {
-  doorOffsetM?: number
+  doors: HouseDoor[]
   editingDimension: EditableDimension | null
   houseBounds: HouseBounds
   onCancelEdit: () => void
   onCommitEdit: () => void
-  onDoorPointerDown: (event: ReactPointerEvent<SVGRectElement>) => void
+  onDoorPointerDown: (
+    event: ReactPointerEvent<SVGRectElement>,
+    door: HouseDoor
+  ) => void
   onEditValueChange: (value: string) => void
 }) {
   const doorWidth = Math.min(80, houseBounds.widthPx * 0.22)
   const doorHeight = Math.min(98, houseBounds.depthPx * 0.4)
-  const doorCenterX = clamp(
-    houseBounds.centerX + doorOffsetM * PIXELS_PER_METER,
-    houseBounds.left + doorWidth / 2,
-    houseBounds.right - doorWidth / 2
-  )
-  const doorX = doorCenterX - doorWidth / 2
   const doorY = houseBounds.bottom - doorHeight
   const roofPeakY = houseBounds.top - Math.min(82, houseBounds.widthPx * 0.2)
   const leftWindowX1 = houseBounds.left + houseBounds.widthPx * 0.08
@@ -56,16 +57,28 @@ export function HouseLayer({
         strokeLinejoin="round"
         strokeWidth="5"
       />
-      <rect
-        data-interactive="true"
-        x={doorX}
-        y={doorY}
-        width={doorWidth}
-        height={doorHeight}
-        className="cursor-ew-resize fill-background stroke-slate-500 dark:stroke-slate-400"
-        strokeWidth="3"
-        onPointerDown={onDoorPointerDown}
-      />
+      {doors.map((door) => {
+        const doorCenterX = clamp(
+          houseBounds.centerX + door.offsetM * PIXELS_PER_METER,
+          houseBounds.left + doorWidth / 2,
+          houseBounds.right - doorWidth / 2
+        )
+        const doorX = doorCenterX - doorWidth / 2
+
+        return (
+          <rect
+            key={door.id}
+            data-interactive="true"
+            x={doorX}
+            y={doorY}
+            width={doorWidth}
+            height={doorHeight}
+            className="cursor-ew-resize fill-background stroke-slate-500 dark:stroke-slate-400"
+            strokeWidth="3"
+            onPointerDown={(event) => onDoorPointerDown(event, door)}
+          />
+        )
+      })}
       <path
         d={`M${leftWindowX1} ${upperWindowY} H${leftWindowX2} M${rightWindowX1} ${upperWindowY} H${rightWindowX2} M${leftWindowX1} ${lowerWindowY} H${leftWindowX2} M${rightWindowX1} ${lowerWindowY} H${rightWindowX2}`}
         className="stroke-slate-400 dark:stroke-slate-500"

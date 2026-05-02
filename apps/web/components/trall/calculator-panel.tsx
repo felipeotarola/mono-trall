@@ -17,6 +17,7 @@ import { Input } from "@workspace/ui/components/input"
 import type { HouseModel, Material, Metric } from "@/lib/trall/types"
 import { clamp } from "@/lib/trall/geometry"
 import { formatCurrency } from "@/lib/trall/format"
+import { getHouseDoors } from "@/lib/trall/house"
 import {
   emptyMaterialTotals,
   type ProjectMaterialSummary,
@@ -149,6 +150,28 @@ function HouseDimensionsCard({
       [key]: clamp(numericValue, bounds.min, bounds.max),
     }))
   }
+  const doors = getHouseDoors(house)
+
+  function addDoor() {
+    setHouse((current) => {
+      const currentDoors = getHouseDoors(current)
+      const nextIndex = currentDoors.length + 1
+      const offsetStepM = Math.min(1.2, current.widthM / 6)
+      const rawOffsetM = (nextIndex % 2 === 0 ? 1 : -1) * offsetStepM
+      const maxOffsetM = Math.max(0, current.widthM / 2 - 1)
+
+      return {
+        ...current,
+        doors: [
+          ...currentDoors,
+          {
+            id: `door-${Date.now()}`,
+            offsetM: clamp(rawOffsetM, -maxOffsetM, maxOffsetM),
+          },
+        ],
+      }
+    })
+  }
 
   return (
     <Card size="sm">
@@ -195,6 +218,14 @@ function HouseDimensionsCard({
             <span className="text-xs text-muted-foreground">m</span>
           </div>
         </label>
+        <div className="col-span-2 flex items-center justify-between gap-2 rounded-lg border bg-muted/25 px-2 py-2">
+          <span className="text-xs text-muted-foreground">
+            Doors: {doors.length}
+          </span>
+          <Button size="sm" variant="outline" onClick={addDoor}>
+            Add door
+          </Button>
+        </div>
       </CardContent>
     </Card>
   )
