@@ -133,8 +133,8 @@ export function PlanningSurface({
           Scale 1:100 · 1 grid square = 0.5 m · Cmd/Ctrl snaps angle · Alt
           disables grid · Shift locks axis · Space pans · Zoom {zoomPercent}% ·
           Drag pool body to move it · Click a dimension to edit length ·
-          Double-click an edge to remove it · When edge snaps to house, it
-          becomes attached
+          Double-click an edge to add a node · Select an edge to add/remove
+          nodes · When edge snaps to house, it becomes attached
         </span>
       </div>
     </div>

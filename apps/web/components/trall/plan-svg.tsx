@@ -756,6 +756,7 @@ function DeckLayer({
             selectedEdge.end,
             center
           )}
+          onAddNode={dimensions.addNodeToSelectedEdge}
           onEdit={() =>
             dimensions.startEditingDimension(
               selectedEdge.index,
@@ -764,6 +765,7 @@ function DeckLayer({
           }
           onLink={dimensions.linkSelectedEdgeToOpposite}
           onLock={dimensions.toggleSelectedEdgeLock}
+          onRemoveNode={dimensions.removeSelectedEdgeEndPoint}
           onUnlink={dimensions.unlinkSelectedEdge}
         />
       ) : null}
@@ -946,6 +948,7 @@ function PoolLayer({
             selectedEdge.end,
             center
           )}
+          onAddNode={dimensions.addNodeToSelectedEdge}
           onEdit={() =>
             dimensions.startEditingDimension(
               selectedEdge.index,
@@ -954,6 +957,7 @@ function PoolLayer({
           }
           onLink={dimensions.linkSelectedEdgeToOpposite}
           onLock={dimensions.toggleSelectedEdgeLock}
+          onRemoveNode={dimensions.removeSelectedEdgeEndPoint}
           onUnlink={dimensions.unlinkSelectedEdge}
         />
       ) : null}
@@ -983,25 +987,29 @@ function PoolLayer({
 
 function EdgeConstraintControls({
   edge,
+  onAddNode,
   onEdit,
   onLink,
   onLock,
+  onRemoveNode,
   onUnlink,
   point,
 }: {
   edge: GeometryEdge
+  onAddNode: () => void
   onEdit: () => void
   onLink: () => void
   onLock: () => void
+  onRemoveNode: () => void
   onUnlink: () => void
   point: Point
 }) {
   return (
     <foreignObject
       data-interactive="true"
-      x={point.x - 126}
+      x={point.x - 168}
       y={point.y + 14}
-      width="252"
+      width="336"
       height="34"
     >
       <div className="flex h-8 items-center justify-center gap-1 rounded-md border bg-background/95 px-1 shadow-sm">
@@ -1011,6 +1019,20 @@ function EdgeConstraintControls({
           onClick={onEdit}
         >
           Edit
+        </button>
+        <button
+          className="h-6 rounded px-2 text-[11px] font-medium text-foreground hover:bg-muted"
+          type="button"
+          onClick={onAddNode}
+        >
+          Add node
+        </button>
+        <button
+          className="h-6 rounded px-2 text-[11px] font-medium text-foreground hover:bg-muted"
+          type="button"
+          onClick={onRemoveNode}
+        >
+          Remove node
         </button>
         <button
           className="h-6 rounded px-2 text-[11px] font-medium text-foreground hover:bg-muted"

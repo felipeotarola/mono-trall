@@ -236,18 +236,26 @@ export function useDeckEditor({
     event.preventDefault()
     event.stopPropagation()
 
-    if (deckPoints.length <= 3) {
+    if (!svgRef.current) {
       return
     }
 
     setEditingDimension(null)
-    svgRef.current?.focus()
+    svgRef.current.focus()
 
-    const pointIndex = (edgeIndex + 1) % deckPoints.length
-    setDeckPoints((points) =>
-      points.filter((_, index) => index !== pointIndex)
-    )
-    setActivePointIndex(null)
+    const point = clientPointToSvgPoint(event, svgRef.current)
+    const snapped = applySnap(point, houseBounds, pointBounds, {
+      disableGrid: event.altKey,
+      disableHouse: !snapToHouse,
+    })
+    const insertedIndex = edgeIndex + 1
+
+    setDeckPoints((points) => [
+      ...points.slice(0, insertedIndex),
+      snapped.point,
+      ...points.slice(insertedIndex),
+    ])
+    setActivePointIndex(insertedIndex)
     setHoveredEdgeIndex(null)
     setSelectedEdgeIndex(null)
     setDragStart(null)
@@ -264,6 +272,22 @@ export function useDeckEditor({
     )
     setActivePointIndex(null)
     setHoveredEdgeIndex(null)
+    setDragStart(null)
+    resetTransientState()
+  }
+
+  function removeSelectedEdgeEndPoint() {
+    if (selectedEdgeIndex === null || deckPoints.length <= 3) {
+      return
+    }
+
+    const pointIndex = (selectedEdgeIndex + 1) % deckPoints.length
+    setDeckPoints((points) =>
+      points.filter((_, index) => index !== pointIndex)
+    )
+    setActivePointIndex(null)
+    setHoveredEdgeIndex(null)
+    setSelectedEdgeIndex(null)
     setDragStart(null)
     resetTransientState()
   }
@@ -539,6 +563,27 @@ export function useDeckEditor({
     )
   }
 
+  function addNodeToSelectedEdge() {
+    const edge = selectedEdgeIndex !== null ? edges[selectedEdgeIndex] : null
+    if (!edge) {
+      return
+    }
+
+    const insertedIndex = edge.index + 1
+    setDeckPoints((points) => [
+      ...points.slice(0, insertedIndex),
+      {
+        x: (edge.start.x + edge.end.x) / 2,
+        y: (edge.start.y + edge.end.y) / 2,
+      },
+      ...points.slice(insertedIndex),
+    ])
+    setActivePointIndex(insertedIndex)
+    setHoveredEdgeIndex(null)
+    setSelectedEdgeIndex(null)
+    resetTransientState()
+  }
+
   function unlinkSelectedEdge() {
     const edge = selectedEdgeIndex !== null ? edges[selectedEdgeIndex] : null
     if (!edge) {
@@ -577,9 +622,11 @@ export function useDeckEditor({
     snapState,
     stopDragging,
     dimensionEditing: {
+      addNodeToSelectedEdge,
       cancelEditingDimension,
       commitEditingDimension,
       linkSelectedEdgeToOpposite,
+      removeSelectedEdgeEndPoint,
       startEditingDimension,
       toggleSelectedEdgeLock,
       unlinkSelectedEdge,
