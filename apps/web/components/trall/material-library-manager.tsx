@@ -263,7 +263,7 @@ export function MaterialLibraryManager() {
           <CardContent>
             <div className="overflow-hidden rounded-lg border">
               <div className="grid grid-cols-[minmax(220px,1.5fr)_140px_120px_90px_120px_220px] border-b bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground max-lg:hidden">
-                <span>Name</span>
+                <span>Material</span>
                 <span>Category</span>
                 <span>Dimensions</span>
                 <span>Unit</span>
