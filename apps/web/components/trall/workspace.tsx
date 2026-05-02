@@ -31,6 +31,7 @@ import {
   type PlannerProjectState,
   saveProjectVersion,
 } from "@/lib/trall/project-storage"
+import { getSupportLayout } from "@/lib/trall/supports"
 import type {
   ActiveTool,
   HouseModel,
@@ -183,6 +184,7 @@ export function Workspace() {
       boardRunLm,
       materialPrice,
       priceLabel: formatCurrency(materialPrice),
+      supportLayout: getSupportLayout({ points: deckPoints, spacingM: 0.6 }),
       metrics: [
         { label: "Deck area", value: `${areaM2.toFixed(1)} m²` },
         { label: "Perimeter", value: `${perimeterM.toFixed(1)} m` },
@@ -380,6 +382,7 @@ export function Workspace() {
             setDeckPoints={setDeckPoints}
             setViewAspectRatio={setViewAspectRatio}
             setViewBox={setViewBox}
+            supportSegments={calculations.supportLayout.segments}
             onResetView={fitViewBox}
             viewBox={viewBox}
             zoomPercent={zoomPercent}

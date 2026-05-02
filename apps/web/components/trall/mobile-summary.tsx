@@ -14,6 +14,7 @@ import {
 } from "@workspace/ui/components/sheet"
 import { CalculatorPanel } from "@/components/trall/calculator-panel"
 import type { HouseModel, Material, Metric } from "@/lib/trall/types"
+import type { SupportLayout } from "@/lib/trall/supports"
 
 export function MobileSummary({
   calculations,
@@ -26,6 +27,7 @@ export function MobileSummary({
     areaM2: number
     boardRunLm: number
     priceLabel: string
+    supportLayout: SupportLayout
     metrics: Metric[]
     materials: Material[]
   }

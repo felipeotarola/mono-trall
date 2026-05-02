@@ -40,6 +40,7 @@ import {
   type ProjectMaterialSummary,
   type ProjectMaterialItem,
 } from "@/lib/trall/materials"
+import type { SupportLayout } from "@/lib/trall/supports"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
 import {
@@ -63,11 +64,13 @@ export function MaterialsManager({
   ensureProject,
   onSummaryChange,
   projectId,
+  supportLayout,
 }: {
   deckAreaM2: number
   ensureProject: () => Promise<string>
   onSummaryChange: (summary: ProjectMaterialSummary) => void
   projectId: string | null
+  supportLayout: SupportLayout
 }) {
   const [materials, setMaterials] = useState<MaterialRecord[]>([])
   const [projectMaterials, setProjectMaterials] = useState<
@@ -90,6 +93,26 @@ export function MaterialsManager({
   const selectedMaterial = materials.find(
     (material) => material.id === selectedMaterialId
   )
+  const supportMaterial =
+    materials.find(
+      (material) =>
+        material.unit === "linear_metre" &&
+        material.description?.includes("882204514554")
+    ) ??
+    materials.find(
+      (material) =>
+        material.unit === "linear_metre" &&
+        material.name.toLowerCase().includes("45 x 145")
+    )
+  const projectHasSupportMaterial =
+    supportMaterial !== undefined &&
+    projectMaterials.some(
+      (projectMaterial) => projectMaterial.material_id === supportMaterial.id
+    )
+  const supportCost =
+    supportMaterial && supportLayout.totalLengthM > 0
+      ? supportLayout.totalLengthM * supportMaterial.cost
+      : null
   const suggestedLinearMetres =
     selectedMaterial?.unit === "linear_metre"
       ? getDeckingLinearMetres({
@@ -188,6 +211,34 @@ export function MaterialsManager({
       upsertProjectItem(item)
       setSelectedQuantity("1")
       toast.success("Material added to project")
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleAddSupportMaterial() {
+    if (!supportMaterial) {
+      toast.error("No 45 x 145 support material found in the library.")
+      return
+    }
+
+    if (supportLayout.totalLengthM <= 0) {
+      toast.error("Draw a deck before adding support material.")
+      return
+    }
+
+    setSaving(true)
+    try {
+      const nextProjectId = await ensureProject()
+      const item = await upsertProjectMaterial({
+        materialId: supportMaterial.id,
+        projectId: nextProjectId,
+        quantity: supportLayout.totalLengthM,
+      })
+      upsertProjectItem(item)
+      toast.success("Support material updated")
     } catch (error) {
       toast.error(getErrorMessage(error))
     } finally {
@@ -395,6 +446,45 @@ export function MaterialsManager({
               />
             ))
           )}
+        </div>
+
+        <div className="space-y-2 rounded-lg border p-2">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">
+                Bärlina c/c 600
+              </p>
+              <p className="text-sm font-semibold">
+                {supportLayout.totalLengthM.toFixed(1)} lpm
+              </p>
+            </div>
+            <Badge variant="outline">
+              {supportLayout.segments.length} runs
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            45 x 145 mm support runs at 600 mm centres.
+          </p>
+          {supportMaterial ? (
+            <div className="rounded-lg bg-muted/50 px-2 py-1.5 text-xs text-muted-foreground">
+              {supportMaterial.name} · {formatCurrency(supportMaterial.cost)} /
+              lpm
+              {supportCost !== null ? ` · ${formatCurrency(supportCost)}` : ""}
+            </div>
+          ) : null}
+          <Button
+            className="w-full"
+            disabled={
+              saving || !supportMaterial || supportLayout.totalLengthM <= 0
+            }
+            variant={projectHasSupportMaterial ? "secondary" : "outline"}
+            onClick={handleAddSupportMaterial}
+          >
+            <PlusIcon />
+            {projectHasSupportMaterial
+              ? "Update support material"
+              : "Add support material"}
+          </Button>
         </div>
 
         <div className="space-y-2 rounded-lg border p-2">

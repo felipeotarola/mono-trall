@@ -5,12 +5,8 @@ import { useEffect, useRef } from "react"
 
 import { PlanSvg } from "@/components/trall/plan-svg"
 import { ScaleIndicator } from "@/components/trall/svg/scale-indicator"
-import type {
-  ActiveTool,
-  HouseBounds,
-  Point,
-  ViewBox,
-} from "@/lib/trall/types"
+import type { ActiveTool, HouseBounds, Point, ViewBox } from "@/lib/trall/types"
+import type { SupportSegment } from "@/lib/trall/supports"
 
 export function PlanningSurface({
   activeTool,
@@ -21,6 +17,7 @@ export function PlanningSurface({
   setDeckPoints,
   setViewAspectRatio,
   setViewBox,
+  supportSegments,
   onResetView,
   viewBox,
   zoomPercent,
@@ -33,6 +30,7 @@ export function PlanningSurface({
   setDeckPoints: Dispatch<SetStateAction<Point[]>>
   setViewAspectRatio: (aspectRatio: number) => void
   setViewBox: Dispatch<SetStateAction<ViewBox>>
+  supportSegments: SupportSegment[]
   onResetView: () => void
   viewBox: ViewBox
   zoomPercent: number
@@ -60,18 +58,18 @@ export function PlanningSurface({
   }, [setViewAspectRatio])
 
   return (
-    <div className="relative min-h-[calc(100svh-11rem)] overflow-hidden bg-stone-50 pt-16 dark:bg-zinc-950 md:min-h-[calc(100svh-7rem)]">
+    <div className="relative min-h-[calc(100svh-11rem)] overflow-hidden bg-stone-50 pt-16 md:min-h-[calc(100svh-7rem)] dark:bg-zinc-950">
       <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.48)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.48)_1px,transparent_1px)] bg-[size:32px_32px]" />
       <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.36)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.36)_1px,transparent_1px)] bg-[size:160px_160px]" />
-      <div className="absolute left-0 top-16 h-px w-full bg-blue-500/20" />
-      <div className="absolute left-16 top-0 h-full w-px bg-blue-500/20" />
-      <div className="absolute left-16 top-16 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-600/50" />
+      <div className="absolute top-16 left-0 h-px w-full bg-blue-500/20" />
+      <div className="absolute top-0 left-16 h-full w-px bg-blue-500/20" />
+      <div className="absolute top-16 left-16 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-600/50" />
 
-      <div className="absolute left-4 top-20 hidden rounded-md border bg-background/80 px-2 py-1 text-[11px] font-medium text-muted-foreground backdrop-blur sm:block">
+      <div className="absolute top-20 left-4 hidden rounded-md border bg-background/80 px-2 py-1 text-[11px] font-medium text-muted-foreground backdrop-blur sm:block">
         x 0, y 0
       </div>
 
-      <p className="absolute right-4 top-20 rounded-md border bg-background/85 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur">
+      <p className="absolute top-20 right-4 rounded-md border bg-background/85 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur">
         Drag points to adjust deck shape
       </p>
 
@@ -85,6 +83,7 @@ export function PlanningSurface({
             setActivePointIndex={setActivePointIndex}
             setDeckPoints={setDeckPoints}
             setViewBox={setViewBox}
+            supportSegments={supportSegments}
             onResetView={onResetView}
             viewBox={viewBox}
           />

@@ -21,6 +21,7 @@ import {
   emptyMaterialTotals,
   type ProjectMaterialSummary,
 } from "@/lib/trall/materials"
+import type { SupportLayout } from "@/lib/trall/supports"
 
 export function CalculatorPanel({
   calculations,
@@ -32,6 +33,7 @@ export function CalculatorPanel({
   calculations: {
     areaM2: number
     priceLabel: string
+    supportLayout: SupportLayout
     metrics: Metric[]
     materials: Material[]
   }
@@ -96,6 +98,7 @@ export function CalculatorPanel({
         ensureProject={ensureProject}
         onSummaryChange={handleProjectMaterialSummaryChange}
         projectId={projectId}
+        supportLayout={calculations.supportLayout}
       />
 
       <HouseDimensionsCard house={house} setHouse={setHouse} />

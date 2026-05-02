@@ -21,6 +21,7 @@ import { useDeckEditor } from "@/hooks/trall/use-deck-editor"
 import { initialDeckPoints, PIXELS_PER_METER } from "@/lib/trall/constants"
 import { distance, lineAngle } from "@/lib/trall/geometry"
 import { getHouseAttachEdge } from "@/lib/trall/house"
+import type { SupportSegment } from "@/lib/trall/supports"
 import type { ActiveTool, HouseBounds, Point, ViewBox } from "@/lib/trall/types"
 import { getPlanContentBounds, getPointBounds } from "@/lib/trall/view"
 
@@ -32,6 +33,7 @@ export function PlanSvg({
   setActivePointIndex,
   setDeckPoints,
   setViewBox,
+  supportSegments,
   onResetView,
   viewBox,
 }: {
@@ -42,6 +44,7 @@ export function PlanSvg({
   setActivePointIndex: (index: number | null) => void
   setDeckPoints: Dispatch<SetStateAction<Point[]>>
   setViewBox: Dispatch<SetStateAction<ViewBox>>
+  supportSegments: SupportSegment[]
   onResetView: () => void
   viewBox: ViewBox
 }) {
@@ -160,6 +163,7 @@ export function PlanSvg({
         deckPoints={deckPoints}
         editor={editor}
         houseBounds={houseBounds}
+        supportSegments={supportSegments}
       />
     </svg>
   )
@@ -170,11 +174,13 @@ function DeckLayer({
   deckPoints,
   editor,
   houseBounds,
+  supportSegments,
 }: {
   activePointIndex: number | null
   deckPoints: Point[]
   editor: ReturnType<typeof useDeckEditor>
   houseBounds: HouseBounds
+  supportSegments: SupportSegment[]
 }) {
   const polygonPoints = getPolygonPoints(deckPoints)
   const p1 = deckPoints[0] ?? initialDeckPoints[0]
@@ -241,6 +247,21 @@ function DeckLayer({
           className="stroke-amber-900/20 dark:stroke-amber-100/20"
           strokeWidth="3"
         />
+      </g>
+      <g clipPath="url(#deck-clip)" className="pointer-events-none">
+        {supportSegments.map((segment, index) => (
+          <line
+            key={`support-segment-${index}`}
+            x1={segment.x1}
+            y1={segment.y1}
+            x2={segment.x2}
+            y2={segment.y2}
+            className="stroke-emerald-700/65 dark:stroke-emerald-300/70"
+            strokeDasharray="7 5"
+            strokeLinecap="round"
+            strokeWidth="4"
+          />
+        ))}
       </g>
 
       {editor.attachedEdges.map((edge) => {
