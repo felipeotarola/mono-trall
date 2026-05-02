@@ -166,7 +166,7 @@ function useCompactToolbar() {
     }
 
     const updateCompact = (width: number) => {
-      setCompact(width < 920)
+      setCompact(width < 1120)
     }
 
     updateCompact(parent.getBoundingClientRect().width)
