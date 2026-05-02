@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import {
   CheckIcon,
+  CopyIcon,
   LibraryIcon,
   PencilIcon,
   SearchIcon,
@@ -47,9 +48,17 @@ export function MaterialLibraryManager() {
   const [editingMaterialId, setEditingMaterialId] = useState<string | null>(
     null
   )
+  const [copyingMaterialId, setCopyingMaterialId] = useState<string | null>(
+    null
+  )
   const [query, setQuery] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const formMode = editingMaterialId
+    ? "edit"
+    : copyingMaterialId
+      ? "copy"
+      : "add"
 
   const filteredMaterials = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
@@ -113,7 +122,9 @@ export function MaterialLibraryManager() {
       } else {
         const created = await createMaterial(input)
         setMaterials((current) => [...current, created])
-        toast.success("Material added")
+        toast.success(
+          copyingMaterialId ? "Custom material copy created" : "Material added"
+        )
       }
 
       resetForm()
@@ -149,7 +160,8 @@ export function MaterialLibraryManager() {
   }
 
   function startEditing(material: MaterialRecord) {
-    setEditingMaterialId(material.id)
+    setEditingMaterialId(material.created_by === null ? null : material.id)
+    setCopyingMaterialId(material.created_by === null ? material.id : null)
     setForm({
       name: material.name,
       category: material.category,
@@ -165,6 +177,7 @@ export function MaterialLibraryManager() {
 
   function resetForm() {
     setEditingMaterialId(null)
+    setCopyingMaterialId(null)
     setForm(emptyMaterialForm)
   }
 
@@ -189,10 +202,16 @@ export function MaterialLibraryManager() {
         <Card>
           <CardHeader>
             <CardTitle>
-              {editingMaterialId ? "Edit material" : "Add material"}
+              {formMode === "edit"
+                ? "Edit material"
+                : formMode === "copy"
+                  ? "Copy standard material"
+                  : "Add material"}
             </CardTitle>
             <CardDescription>
-              Custom materials are available in the project calculator.
+              {formMode === "copy"
+                ? "Save this as a custom material before changing shared defaults."
+                : "Custom materials are available in the project calculator."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -204,9 +223,13 @@ export function MaterialLibraryManager() {
                 onClick={handleSaveMaterial}
               >
                 <CheckIcon />
-                {editingMaterialId ? "Save changes" : "Add material"}
+                {formMode === "edit"
+                  ? "Save changes"
+                  : formMode === "copy"
+                    ? "Create custom copy"
+                    : "Add material"}
               </Button>
-              {editingMaterialId ? (
+              {formMode !== "add" ? (
                 <Button variant="outline" onClick={resetForm}>
                   Cancel
                 </Button>
@@ -221,8 +244,8 @@ export function MaterialLibraryManager() {
               <div>
                 <CardTitle>Library overview</CardTitle>
                 <CardDescription>
-                  Standard rows are shared and read-only. Custom rows can be
-                  edited or archived.
+                  Use Copy & edit for shared standard rows. Custom rows can be
+                  edited or archived directly.
                 </CardDescription>
               </div>
               <div className="flex h-9 min-w-0 items-center gap-2 rounded-lg border bg-background px-2 lg:w-80">
@@ -239,7 +262,7 @@ export function MaterialLibraryManager() {
           </CardHeader>
           <CardContent>
             <div className="overflow-hidden rounded-lg border">
-              <div className="grid grid-cols-[minmax(220px,1.5fr)_140px_120px_90px_120px_120px] border-b bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground max-lg:hidden">
+              <div className="grid grid-cols-[minmax(220px,1.5fr)_140px_120px_90px_120px_220px] border-b bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground max-lg:hidden">
                 <span>Name</span>
                 <span>Category</span>
                 <span>Dimensions</span>
@@ -297,7 +320,7 @@ function MaterialOverviewRow({
   const dimensions = getMaterialDimensionsLabel(material)
 
   return (
-    <div className="grid gap-3 px-3 py-3 lg:grid-cols-[minmax(220px,1.5fr)_140px_120px_90px_120px_120px] lg:items-center">
+    <div className="grid gap-3 px-3 py-3 lg:grid-cols-[minmax(220px,1.5fr)_140px_120px_90px_120px_220px] lg:items-center">
       <div className="grid min-w-0 grid-cols-[48px_minmax(0,1fr)] gap-3">
         <MaterialImage material={material} />
         <div className="min-w-0">
@@ -321,26 +344,27 @@ function MaterialOverviewRow({
       <div className="text-sm font-medium">
         {formatCurrency(material.cost)} / {materialUnitLabels[material.unit]}
       </div>
-      <div className="flex justify-end gap-1">
+      <div className="flex flex-wrap justify-end gap-2">
         <Button
           aria-label="Edit material"
-          disabled={isStandard}
-          size="icon-sm"
-          title={isStandard ? "Standard materials are read-only" : "Edit"}
-          variant="ghost"
+          size="sm"
+          title={isStandard ? "Copy and edit as custom material" : "Edit"}
+          variant={isStandard ? "outline" : "secondary"}
           onClick={onEdit}
         >
-          <PencilIcon />
+          {isStandard ? <CopyIcon /> : <PencilIcon />}
+          {isStandard ? "Copy & edit" : "Edit"}
         </Button>
         <Button
           aria-label="Delete material"
           disabled={isStandard}
-          size="icon-sm"
-          title={isStandard ? "Standard materials are read-only" : "Delete"}
+          size="sm"
+          title={isStandard ? "Standard materials cannot be removed" : "Delete"}
           variant="ghost"
           onClick={onDelete}
         >
           <Trash2Icon />
+          Delete
         </Button>
       </div>
     </div>
