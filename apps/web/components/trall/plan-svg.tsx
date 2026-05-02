@@ -953,6 +953,7 @@ function DeckLayer({
           label={`P${index + 1}`}
           selected={index === activePointIndex}
           dragging={editor.dragStart?.pointIndex === index}
+          emphasized={activeTool === "select"}
           snappedToHouse={
             editor.snapState.type === "house" &&
             editor.snapState.pointIndex === index
@@ -1153,6 +1154,7 @@ function PoolLayer({
           label={`W${index + 1}`}
           selected={index === activePointIndex}
           dragging={editor.dragStart?.pointIndex === index}
+          emphasized={canMovePlane}
           variant="pool"
           onPointerDown={(event) => editor.handlePointPointerDown(event, index)}
         />

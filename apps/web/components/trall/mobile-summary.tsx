@@ -21,6 +21,7 @@ export function MobileSummary({
   ensureProject,
   house,
   projectId,
+  projectName,
   setHouse,
 }: {
   calculations: {
@@ -34,6 +35,7 @@ export function MobileSummary({
   ensureProject: () => Promise<string>
   house: HouseModel
   projectId: string | null
+  projectName: string
   setHouse: Dispatch<SetStateAction<HouseModel>>
 }) {
   return (
@@ -71,6 +73,7 @@ export function MobileSummary({
                 ensureProject={ensureProject}
                 house={house}
                 projectId={projectId}
+                projectName={projectName}
                 setHouse={setHouse}
               />
             </div>

@@ -8,11 +8,13 @@ import {
   Loader2Icon,
   PencilIcon,
   RulerIcon,
+  Trash2Icon,
 } from "lucide-react"
 import { toast } from "sonner"
 
 import {
   CURRENT_PROJECT_STORAGE_KEY,
+  deleteProject,
   listProjects,
   updateProjectName,
   type TrallProject,
@@ -25,12 +27,24 @@ import {
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@workspace/ui/components/dialog"
 
 export function ProjectDashboard() {
   const router = useRouter()
   const [projects, setProjects] = useState<TrallProject[]>([])
   const [loading, setLoading] = useState(true)
   const [openingProjectId, setOpeningProjectId] = useState<string | null>(null)
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(
+    null
+  )
   const projectCount = projects.length
   const latestProject = projects[0]
   const lastUpdatedLabel = useMemo(
@@ -107,6 +121,32 @@ export function ProjectDashboard() {
     }
   }
 
+  async function removeProject(project: TrallProject) {
+    setDeletingProjectId(project.id)
+    try {
+      await deleteProject(project.id)
+      setProjects((currentProjects) =>
+        currentProjects.filter(
+          (currentProject) => currentProject.id !== project.id
+        )
+      )
+
+      if (
+        window.localStorage.getItem(CURRENT_PROJECT_STORAGE_KEY) === project.id
+      ) {
+        window.localStorage.removeItem(CURRENT_PROJECT_STORAGE_KEY)
+      }
+
+      toast.success("Project deleted")
+      return true
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return false
+    } finally {
+      setDeletingProjectId(null)
+    }
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -150,6 +190,8 @@ export function ProjectDashboard() {
                   key={project.id}
                   opening={openingProjectId === project.id}
                   project={project}
+                  deleting={deletingProjectId === project.id}
+                  onDelete={() => removeProject(project)}
                   onOpen={() => openProject(project)}
                   onRename={() => renameProject(project)}
                 />
@@ -172,16 +214,29 @@ function DashboardMetric({ label, value }: { label: string; value: string }) {
 }
 
 function ProjectCard({
+  deleting,
+  onDelete,
   onOpen,
   onRename,
   opening,
   project,
 }: {
+  deleting: boolean
+  onDelete: () => Promise<boolean>
   onOpen: () => void
   onRename: () => void
   opening: boolean
   project: TrallProject
 }) {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+
+  async function confirmDelete() {
+    const deleted = await onDelete()
+    if (deleted) {
+      setDeleteDialogOpen(false)
+    }
+  }
+
   return (
     <div className="flex min-h-44 flex-col rounded-lg border bg-background p-4 shadow-sm">
       <div className="flex items-start gap-3">
@@ -203,7 +258,7 @@ function ProjectCard({
       <div className="mt-auto flex gap-2">
         <Button
           className="flex-1"
-          disabled={opening}
+          disabled={opening || deleting}
           variant="secondary"
           onClick={onOpen}
         >
@@ -223,6 +278,58 @@ function ProjectCard({
         >
           <PencilIcon />
         </Button>
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogTrigger asChild>
+            <Button
+              aria-label={`Delete ${project.name}`}
+              disabled={opening || deleting}
+              size="icon"
+              title="Delete project"
+              variant="destructive"
+            >
+              {deleting ? (
+                <Loader2Icon className="animate-spin" />
+              ) : (
+                <Trash2Icon />
+              )}
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete project?</DialogTitle>
+              <DialogDescription>
+                This will permanently delete{" "}
+                <span className="font-medium text-foreground">
+                  {project.name}
+                </span>{" "}
+                and all saved versions for this project.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                disabled={deleting}
+                type="button"
+                variant="outline"
+                onClick={() => setDeleteDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                disabled={deleting}
+                type="button"
+                variant="destructive"
+                onClick={confirmDelete}
+              >
+                {deleting ? (
+                  <Loader2Icon className="animate-spin" />
+                ) : (
+                  <Trash2Icon />
+                )}
+                Delete project
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )

@@ -1,10 +1,12 @@
-import type { ReactNode } from "react"
+"use client"
+
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import {
+  CheckIcon,
+  ChevronDownIcon,
   HandIcon,
-  Maximize2Icon,
-  MinusIcon,
+  MoreHorizontalIcon,
   PencilRulerIcon,
-  PlusIcon,
   PointerIcon,
   RulerIcon,
   SaveIcon,
@@ -13,11 +15,20 @@ import {
 } from "lucide-react"
 
 import { Button } from "@workspace/ui/components/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@workspace/ui/components/dropdown-menu"
 import { Separator } from "@workspace/ui/components/separator"
 import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@workspace/ui/components/toggle-group"
+import { cn } from "@workspace/ui/lib/utils"
 import type { ActiveTool, PlannerView, Tool } from "@/lib/trall/types"
 
 export function CanvasToolbar({
@@ -25,120 +36,271 @@ export function CanvasToolbar({
   extraTool,
   onAddPool,
   onSaveProject,
-  onZoomIn,
-  onZoomOut,
-  onResetView,
   saveStatus,
   setActiveTool,
   setPlannerView,
   plannerView,
-  zoomPercent,
 }: {
   activeTool: ActiveTool
   extraTool: Tool
   onAddPool: () => void
   onSaveProject: () => void
-  onZoomIn: () => void
-  onZoomOut: () => void
-  onResetView: () => void
   saveStatus: string
   setActiveTool: (tool: ActiveTool) => void
   setPlannerView: (view: PlannerView) => void
   plannerView: PlannerView
-  zoomPercent: number
 }) {
-  const tools: Tool[][] = [
-    [
-      {
-        label: "Select",
-        icon: <PointerIcon />,
-        active: activeTool === "select",
-        onClick: () => setActiveTool("select"),
-      },
-      {
-        label: "Draw deck",
-        icon: <PencilRulerIcon />,
-        active: activeTool === "draw",
-        onClick: () => setActiveTool("draw"),
-      },
-      {
-        label: "Add pool",
-        icon: <WavesIcon />,
-        onClick: onAddPool,
-      },
-      {
-        label: "Measure",
-        icon: <RulerIcon />,
-        active: activeTool === "measure",
-        onClick: () => setActiveTool("measure"),
-      },
-      {
-        label: "Pan",
-        icon: <HandIcon />,
-        active: activeTool === "pan",
-        onClick: () => setActiveTool("pan"),
-      },
-    ],
-    [{ label: "Save", icon: <SaveIcon />, onClick: onSaveProject }],
-    [{ label: "Undo", icon: <Undo2Icon /> }],
-    [
-      { label: "Zoom out", icon: <MinusIcon />, onClick: onZoomOut },
-      { label: "Zoom in", icon: <PlusIcon />, onClick: onZoomIn },
-      { label: "Reset view", icon: <Maximize2Icon />, onClick: onResetView },
-    ],
-    [extraTool],
+  const [toolbarRef, compact] = useCompactToolbar()
+  const editingTools: Tool[] = [
+    {
+      label: "Select",
+      icon: <PointerIcon />,
+      active: activeTool === "select",
+      onClick: () => setActiveTool("select"),
+    },
+    {
+      label: "Draw deck",
+      icon: <PencilRulerIcon />,
+      active: activeTool === "draw",
+      onClick: () => setActiveTool("draw"),
+    },
+    {
+      label: "Add pool",
+      icon: <WavesIcon />,
+      onClick: onAddPool,
+    },
+    {
+      label: "Measure",
+      icon: <RulerIcon />,
+      active: activeTool === "measure",
+      onClick: () => setActiveTool("measure"),
+    },
+    {
+      label: "Pan",
+      icon: <HandIcon />,
+      active: activeTool === "pan",
+      onClick: () => setActiveTool("pan"),
+    },
   ]
 
   return (
-    <div className="absolute top-3 right-3 left-3 z-20 flex items-center gap-2 overflow-x-auto rounded-lg border bg-background/90 p-1.5 shadow-sm backdrop-blur">
-      <ToggleGroup
-        aria-label="Planner view"
-        className="shrink-0"
-        size="sm"
-        type="single"
-        value={plannerView}
-        variant="outline"
-        onValueChange={(value) => {
-          if (value === "top" || value === "side") {
-            setPlannerView(value)
-          }
-        }}
-      >
-        <ToggleGroupItem value="top">Top view</ToggleGroupItem>
-        <ToggleGroupItem value="side">Side view</ToggleGroupItem>
-      </ToggleGroup>
-      {tools.map((group, groupIndex) => (
-        <ToolbarGroup key={groupIndex} separated={groupIndex > 0}>
-          {group.map((tool) => (
+    <div
+      ref={toolbarRef}
+      className={cn(
+        "absolute top-3 left-3 z-20 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-2 rounded-xl border border-stone-200 bg-white/92 p-2 shadow-sm backdrop-blur",
+        compact ? "right-auto" : "right-3"
+      )}
+    >
+      <ToolbarGroup compact={compact} label="View">
+        <ToggleGroup
+          aria-label="Planner view"
+          className="shrink-0"
+          size="default"
+          type="single"
+          value={plannerView}
+          variant="outline"
+          onValueChange={(value) => {
+            if (value === "top" || value === "side") {
+              setPlannerView(value)
+            }
+          }}
+        >
+          <ToggleGroupItem className="h-10 px-3" value="top">
+            <span className="sm:hidden">Top</span>
+            <span className="hidden sm:inline">Top view</span>
+          </ToggleGroupItem>
+          <ToggleGroupItem className="h-10 px-3" value="side">
+            <span className="sm:hidden">Side</span>
+            <span className="hidden sm:inline">Side view</span>
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </ToolbarGroup>
+
+      {compact ? (
+        <CompactToolMenu editingTools={editingTools} />
+      ) : (
+        <ToolbarGroup label="Edit">
+          {editingTools.map((tool) => (
             <ToolButton key={tool.label} {...tool} />
           ))}
-          {groupIndex === 1 ? (
-            <ToolbarStatus>{saveStatus}</ToolbarStatus>
-          ) : null}
-          {groupIndex === 3 ? (
-            <ToolbarStatus minWidthClassName="min-w-14">
-              {zoomPercent}%
-            </ToolbarStatus>
-          ) : null}
         </ToolbarGroup>
-      ))}
+      )}
+
+      {compact ? (
+        <CompactProjectActions
+          extraTool={extraTool}
+          onSaveProject={onSaveProject}
+          saveStatus={saveStatus}
+        />
+      ) : (
+        <ToolbarGroup label="Project">
+          <ToolButton
+            icon={<SaveIcon />}
+            label="Save"
+            onClick={onSaveProject}
+          />
+          <ToolButton
+            disabled
+            icon={<Undo2Icon />}
+            label="Undo"
+            title="Undo is not available yet"
+          />
+          <ToolButton {...extraTool} />
+          <ToolbarStatus>{saveStatus}</ToolbarStatus>
+        </ToolbarGroup>
+      )}
     </div>
   )
 }
 
+function useCompactToolbar() {
+  const ref = useRef<HTMLDivElement>(null)
+  const [compact, setCompact] = useState(true)
+
+  useEffect(() => {
+    const toolbar = ref.current
+    const parent = toolbar?.parentElement
+
+    if (!parent) {
+      return
+    }
+
+    const updateCompact = (width: number) => {
+      setCompact(width < 920)
+    }
+
+    updateCompact(parent.getBoundingClientRect().width)
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0]
+      if (entry) {
+        updateCompact(entry.contentRect.width)
+      }
+    })
+
+    observer.observe(parent)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
+
+  return [ref, compact] as const
+}
+
 function ToolbarGroup({
   children,
-  separated,
+  compact = false,
+  label,
 }: {
   children: ReactNode
-  separated: boolean
+  compact?: boolean
+  label: string
 }) {
   return (
-    <div className="flex items-center gap-1">
-      {separated ? (
-        <Separator orientation="vertical" className="mx-1 h-6" />
-      ) : null}
-      {children}
+    <div
+      className={cn(
+        "flex min-h-10 items-center gap-1 rounded-lg border border-stone-200 bg-white/70 px-1.5 py-1",
+        compact && "border-transparent bg-transparent p-0"
+      )}
+    >
+      <span className="hidden px-1 text-[10px] font-semibold tracking-[0.12em] text-stone-500 uppercase lg:inline">
+        {label}
+      </span>
+      <Separator orientation="vertical" className="mx-1 hidden h-6 lg:block" />
+      <div className="flex flex-wrap items-center gap-1">{children}</div>
+    </div>
+  )
+}
+
+function CompactToolMenu({ editingTools }: { editingTools: Tool[] }) {
+  const activeTool = editingTools.find((tool) => tool.active) ?? editingTools[0]
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          aria-label="Choose editing tool"
+          className="h-10 min-w-10 gap-2 px-2.5"
+          size="lg"
+          variant="outline"
+        >
+          {activeTool?.icon}
+          <span className="hidden sm:inline">{activeTool?.label ?? "Tools"}</span>
+          <span className="sm:hidden">Tools</span>
+          <ChevronDownIcon className="size-3.5 text-muted-foreground" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-48">
+        <DropdownMenuLabel>Editing tools</DropdownMenuLabel>
+        {editingTools.map((tool) => (
+          <DropdownMenuItem
+            key={tool.label}
+            className="h-9 gap-2"
+            onSelect={() => tool.onClick?.()}
+          >
+            {tool.icon}
+            <span className="flex-1">{tool.label}</span>
+            {tool.active ? <CheckIcon className="size-4" /> : null}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+function CompactProjectActions({
+  extraTool,
+  onSaveProject,
+  saveStatus,
+}: {
+  extraTool: Tool
+  onSaveProject: () => void
+  saveStatus: string
+}) {
+  return (
+    <div className="ml-auto flex min-h-10 items-center gap-1 rounded-lg border border-stone-200 bg-white/70 px-1.5 py-1">
+      <Button
+        aria-label="Save project"
+        className="h-10 min-w-10 px-2.5"
+        size="lg"
+        title="Save"
+        variant="ghost"
+        onClick={onSaveProject}
+      >
+        <SaveIcon />
+        <span className="hidden sm:inline">Save</span>
+      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            aria-label="More project actions"
+            className="size-10"
+            size="icon-lg"
+            variant="ghost"
+          >
+            <MoreHorizontalIcon />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel>Project actions</DropdownMenuLabel>
+          <DropdownMenuItem disabled className="h-9 gap-2">
+            <Undo2Icon />
+            Undo
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="h-9 gap-2"
+            onSelect={() => extraTool.onClick?.()}
+          >
+            {extraTool.icon}
+            {extraTool.label}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="font-normal text-muted-foreground">
+            Status: {saveStatus}
+          </DropdownMenuLabel>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )
 }
@@ -159,18 +321,26 @@ function ToolbarStatus({
   )
 }
 
-function ToolButton({ label, icon, active, onClick }: Tool) {
+function ToolButton({
+  active,
+  disabled,
+  icon,
+  label,
+  onClick,
+  title,
+}: Tool & { disabled?: boolean; title?: string }) {
   return (
     <Button
       variant={active ? "secondary" : "ghost"}
-      size="sm"
-      className="h-8 min-w-fit gap-1.5 px-2"
+      size="lg"
+      className="h-10 min-w-10 gap-1.5 px-2.5"
       aria-pressed={active}
-      title={label}
+      disabled={disabled}
+      title={title ?? label}
       onClick={onClick}
     >
       {icon}
-      <span>{label}</span>
+      <span className="hidden sm:inline">{label}</span>
     </Button>
   )
 }

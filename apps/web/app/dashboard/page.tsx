@@ -15,7 +15,7 @@ export default function Page() {
     >
       <AppSidebar variant="inset" />
       <SidebarInset>
-        <SiteHeader />
+        <SiteHeader title="Dashboard" />
         <ProjectDashboard />
       </SidebarInset>
     </SidebarProvider>

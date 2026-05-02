@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation"
 import { Maximize2Icon, Minimize2Icon, PanelRightIcon } from "lucide-react"
 
 import { CalculatorPanel } from "@/components/trall/calculator-panel"
+import { MapControlsPanel } from "@/components/trall/canvas/map-controls"
 import { CanvasToolbar } from "@/components/trall/canvas-toolbar"
 import { ElevationView } from "@/components/trall/elevation/elevation-view"
 import { MobileSummary } from "@/components/trall/mobile-summary"
@@ -61,8 +62,13 @@ import { useSidebar } from "@workspace/ui/components/sidebar"
 type SaveStatus = "Unsaved changes" | "Saving..." | "Saved" | "Save failed"
 
 const AUTOSAVE_DELAY_MS = 1200
+const FALLBACK_PROJECT_NAME = "Untitled"
 
-export function Workspace() {
+export function Workspace({
+  onProjectNameChange,
+}: {
+  onProjectNameChange?: (name: string) => void
+}) {
   const { setOpen, setOpenMobile } = useSidebar()
   const searchParams = useSearchParams()
   const requestedProjectId = searchParams.get("projectId")
@@ -91,6 +97,9 @@ export function Workspace() {
   >(null)
   const [house, setHouse] = useState<HouseModel>(initialHouse)
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null)
+  const [currentProjectName, setCurrentProjectName] = useState(
+    FALLBACK_PROJECT_NAME
+  )
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("Unsaved changes")
   const viewBoxRef = useRef(viewBox)
   const viewAspectRatioRef = useRef(viewAspectRatio)
@@ -163,6 +172,8 @@ export function Workspace() {
         }
 
         if (projects.length === 0) {
+          setCurrentProjectName(FALLBACK_PROJECT_NAME)
+          onProjectNameChange?.(FALLBACK_PROJECT_NAME)
           autosaveReadyRef.current = true
           return
         }
@@ -185,6 +196,8 @@ export function Workspace() {
 
         hydratingProjectRef.current = true
         setCurrentProjectId(project.id)
+        setCurrentProjectName(project.name)
+        onProjectNameChange?.(project.name)
         setHouse(version.state.house)
         setDeckPoints(version.state.deckPoints)
         setDeckEdgeConstraints(version.state.deckEdgeConstraints ?? [])
@@ -215,7 +228,7 @@ export function Workspace() {
     return () => {
       cancelled = true
     }
-  }, [requestedProjectId])
+  }, [onProjectNameChange, requestedProjectId])
 
   const calculations = useMemo(() => {
     const areaM2 = polygonArea(deckPoints) / PIXELS_PER_METER ** 2
@@ -287,9 +300,11 @@ export function Workspace() {
         const state = getPlannerState()
 
         if (!currentProjectId) {
-          const project = await createProject("Untitled", state)
+          const project = await createProject(FALLBACK_PROJECT_NAME, state)
           hydratingProjectRef.current = true
           setCurrentProjectId(project.id)
+          setCurrentProjectName(project.name)
+          onProjectNameChange?.(project.name)
           window.localStorage.setItem(CURRENT_PROJECT_STORAGE_KEY, project.id)
           requestAnimationFrame(() => {
             hydratingProjectRef.current = false
@@ -308,7 +323,7 @@ export function Workspace() {
         }
       }
     },
-    [currentProjectId, getPlannerState]
+    [currentProjectId, getPlannerState, onProjectNameChange]
   )
 
   const ensureCurrentProject = useCallback(async () => {
@@ -317,9 +332,14 @@ export function Workspace() {
     }
 
     setSaveStatus("Saving...")
-    const project = await createProject("Untitled", getPlannerState())
+    const project = await createProject(
+      FALLBACK_PROJECT_NAME,
+      getPlannerState()
+    )
     hydratingProjectRef.current = true
     setCurrentProjectId(project.id)
+    setCurrentProjectName(project.name)
+    onProjectNameChange?.(project.name)
     setSaveStatus("Saved")
     window.localStorage.setItem(CURRENT_PROJECT_STORAGE_KEY, project.id)
     requestAnimationFrame(() => {
@@ -328,7 +348,7 @@ export function Workspace() {
     })
 
     return project.id
-  }, [currentProjectId, getPlannerState])
+  }, [currentProjectId, getPlannerState, onProjectNameChange])
 
   useEffect(() => {
     if (!autosaveReadyRef.current || hydratingProjectRef.current) {
@@ -392,7 +412,7 @@ export function Workspace() {
   }
 
   const expandTool: Tool = {
-    label: calculatorOpen ? "Zoom fit" : "Restore panels",
+    label: calculatorOpen ? "Focus canvas" : "Show panels",
     icon: calculatorOpen ? <Maximize2Icon /> : <Minimize2Icon />,
     onClick: toggleWorkspacePanels,
   }
@@ -412,14 +432,10 @@ export function Workspace() {
             extraTool={expandTool}
             onAddPool={handleAddPool}
             onSaveProject={handleSaveProject}
-            onZoomIn={zoomIn}
-            onZoomOut={zoomOut}
-            onResetView={fitViewBox}
             saveStatus={saveStatus}
             setActiveTool={setActiveTool}
             setPlannerView={setPlannerView}
             plannerView={plannerView}
-            zoomPercent={zoomPercent}
           />
           {plannerView === "top" ? (
             <PlanningSurface
@@ -455,6 +471,14 @@ export function Workspace() {
               onElevationChange={handleElevationChange}
             />
           )}
+          <MapControlsPanel
+            activeTool={activeTool}
+            onResetView={fitViewBox}
+            onZoomIn={zoomIn}
+            onZoomOut={zoomOut}
+            setActiveTool={setActiveTool}
+            zoomPercent={zoomPercent}
+          />
         </section>
 
         <RightCalculatorSidebar
@@ -469,6 +493,7 @@ export function Workspace() {
             ensureProject={ensureCurrentProject}
             house={house}
             projectId={currentProjectId}
+            projectName={currentProjectName}
             setHouse={setHouse}
           />
         </RightCalculatorSidebar>
@@ -479,6 +504,7 @@ export function Workspace() {
             ensureProject={ensureCurrentProject}
             house={house}
             projectId={currentProjectId}
+            projectName={currentProjectName}
             setHouse={setHouse}
           />
         </section>
@@ -489,6 +515,7 @@ export function Workspace() {
         ensureProject={ensureCurrentProject}
         house={house}
         projectId={currentProjectId}
+        projectName={currentProjectName}
         setHouse={setHouse}
       />
     </main>

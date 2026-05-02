@@ -8,6 +8,7 @@ export function DeckHandle({
   label,
   selected,
   dragging,
+  emphasized,
   snappedToHouse,
   variant = "deck",
   onPointerDown,
@@ -17,6 +18,7 @@ export function DeckHandle({
   label: string
   selected?: boolean
   dragging?: boolean
+  emphasized?: boolean
   snappedToHouse?: boolean
   variant?: "deck" | "pool"
   onPointerDown: (event: ReactPointerEvent<SVGGElement>) => void
@@ -57,6 +59,16 @@ export function DeckHandle({
               : selectedClassName
           }
           strokeWidth="3"
+        />
+      ) : null}
+      {emphasized && !selected ? (
+        <circle
+          cx={x}
+          cy={y}
+          r="22"
+          className={selectedClassName}
+          opacity="0.72"
+          strokeWidth="2"
         />
       ) : null}
       {snappedToHouse ? (

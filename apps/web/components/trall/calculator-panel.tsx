@@ -29,6 +29,7 @@ export function CalculatorPanel({
   ensureProject,
   house,
   projectId,
+  projectName,
   setHouse,
 }: {
   calculations: {
@@ -41,6 +42,7 @@ export function CalculatorPanel({
   ensureProject: () => Promise<string>
   house: HouseModel
   projectId: string | null
+  projectName: string
   setHouse: Dispatch<SetStateAction<HouseModel>>
 }) {
   const [projectMaterialSummary, setProjectMaterialSummary] =
@@ -100,7 +102,7 @@ export function CalculatorPanel({
       <Card size="sm">
         <CardHeader>
           <CardTitle>Project summary</CardTitle>
-          <CardDescription>Backyard deck extension</CardDescription>
+          <CardDescription>{projectName}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           <MetricRow label="House template" value="Single family house" />

@@ -19,7 +19,7 @@ export default function MaterialsPage() {
     >
       <AppSidebar variant="inset" />
       <SidebarInset>
-        <SiteHeader />
+        <SiteHeader title="Materials" />
         <main className="flex flex-1 flex-col overflow-x-hidden bg-stone-100/60 dark:bg-background">
           <MaterialLibraryManager />
         </main>

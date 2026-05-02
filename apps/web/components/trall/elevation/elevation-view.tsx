@@ -31,7 +31,7 @@ export function ElevationView({
 
   return (
     <div
-      className={`relative min-h-[calc(100svh-11rem)] overflow-hidden pt-16 md:min-h-[calc(100svh-7rem)] ${trallPlanClasses.page}`}
+      className={`relative min-h-[calc(100svh-11rem)] overflow-hidden pt-28 md:min-h-[calc(100svh-7rem)] md:pt-24 2xl:pt-20 ${trallPlanClasses.page}`}
     >
       <div className={`absolute inset-0 ${trallPlanClasses.gridFine}`} />
 

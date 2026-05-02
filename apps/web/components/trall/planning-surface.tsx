@@ -92,7 +92,7 @@ export function PlanningSurface({
 
   return (
     <div
-      className={`relative min-h-[calc(100svh-11rem)] overflow-hidden pt-16 md:min-h-[calc(100svh-7rem)] ${trallPlanClasses.page}`}
+      className={`relative min-h-[calc(100svh-11rem)] overflow-hidden pt-28 md:min-h-[calc(100svh-7rem)] md:pt-24 2xl:pt-20 ${trallPlanClasses.page}`}
     >
       <div className={`absolute inset-0 ${trallPlanClasses.gridFine}`} />
       <div className={`absolute inset-0 ${trallPlanClasses.gridStrong}`} />
@@ -100,14 +100,14 @@ export function PlanningSurface({
       <div className="absolute top-0 left-16 h-full w-px bg-stone-500/20" />
       <div className="absolute top-16 left-16 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-stone-700/55" />
 
-      <div
-        className={`absolute top-20 left-4 hidden text-[11px] font-medium sm:block ${trallPlanClasses.floatingLabel}`}
-      >
+      <div className={`absolute top-28 left-4 hidden text-[11px] font-medium md:top-24 sm:block 2xl:top-20 ${trallPlanClasses.floatingLabel}`}>
         x 0, y 0
       </div>
 
-      <p className={`absolute top-20 right-4 ${trallPlanClasses.floatingLabel}`}>
-        Drag points to adjust deck shape
+      <p className={`absolute top-28 right-4 max-w-[min(24rem,calc(100%-2rem))] md:top-24 2xl:top-20 ${trallPlanClasses.floatingLabel}`}>
+        {activeTool === "select"
+          ? "Select mode: drag highlighted points to adjust the deck shape. Double-click an edge to add a node."
+          : "Drag points to adjust deck shape. Double-click an edge to add a node."}
       </p>
 
       <div className="relative flex h-[calc(100svh-13.5rem)] min-h-[520px] items-stretch justify-center px-3 py-8 md:h-[calc(100svh-10rem)]">

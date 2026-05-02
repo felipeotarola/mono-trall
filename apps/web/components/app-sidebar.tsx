@@ -16,11 +16,8 @@ import {
 } from "@workspace/ui/components/sidebar"
 import {
   CalculatorIcon,
-  FileTextIcon,
-  FolderIcon,
   LayoutDashboardIcon,
   PencilRulerIcon,
-  Settings2Icon,
 } from "lucide-react"
 
 const data = {
@@ -44,7 +41,7 @@ const data = {
       title: "Materials",
       url: "/materials",
       icon: <CalculatorIcon />,
-    }
+    },
   ],
 }
 

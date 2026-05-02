@@ -108,6 +108,21 @@ export async function updateProjectName(projectId: string, name: string) {
   return data
 }
 
+export async function deleteProject(projectId: string) {
+  const supabase = createClient()
+  const userId = await getCurrentUserId()
+
+  const { error } = await supabase
+    .from("trall_mono_projects")
+    .delete()
+    .eq("id", projectId)
+    .eq("user_id", userId)
+
+  if (error) {
+    throw error
+  }
+}
+
 export async function saveProjectVersion(
   projectId: string,
   state: PlannerProjectState
