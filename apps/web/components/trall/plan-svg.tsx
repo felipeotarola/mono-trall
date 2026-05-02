@@ -3,55 +3,26 @@
 import type {
   Dispatch,
   KeyboardEvent as ReactKeyboardEvent,
-  MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
   SetStateAction,
 } from "react"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useRef } from "react"
 
 import { AngleSnapGuide } from "@/components/trall/svg/angle-snap-guide"
 import { DeckHandle } from "@/components/trall/svg/deck-handle"
 import { DeletePointHint } from "@/components/trall/svg/delete-point-hint"
 import { DimensionLine } from "@/components/trall/svg/dimension-line"
 import { EdgeHoverLabel } from "@/components/trall/svg/edge-hover-label"
+import { HouseLayer } from "@/components/trall/svg/house-layer"
 import { ParallelHintLabel } from "@/components/trall/svg/parallel-hint-label"
 import { SnapIndicator } from "@/components/trall/svg/snap-indicator"
-import {
-  initialDeckPoints,
-  PARALLEL_HINT_THRESHOLD_DEG,
-  PIXELS_PER_METER,
-  SNAP_THRESHOLD_PX,
-  ZOOM_STEP,
-} from "@/lib/trall/constants"
-import {
-  clamp,
-  closestSnapAngle,
-  degreesToRadians,
-  distance,
-  edgeAngle,
-  isEdgeAttached,
-  isNearlyParallel,
-  lineAngle,
-  radiansToDegrees,
-} from "@/lib/trall/geometry"
+import { useCanvasViewport } from "@/hooks/trall/use-canvas-viewport"
+import { useDeckEditor } from "@/hooks/trall/use-deck-editor"
+import { initialDeckPoints, PIXELS_PER_METER } from "@/lib/trall/constants"
+import { distance, lineAngle } from "@/lib/trall/geometry"
 import { getHouseAttachEdge } from "@/lib/trall/house"
-import { applySnap } from "@/lib/trall/snap"
-import { clientPointToSvgPoint } from "@/lib/trall/svg"
-import type {
-  ActiveTool,
-  AttachedEdge,
-  EditableDimension,
-  HouseBounds,
-  Point,
-  SnapType,
-  ViewBox,
-} from "@/lib/trall/types"
-import {
-  clampPanViewBox,
-  getPlanContentBounds,
-  getPointBounds,
-  zoomViewBox,
-} from "@/lib/trall/view"
+import type { ActiveTool, HouseBounds, Point, ViewBox } from "@/lib/trall/types"
+import { getPlanContentBounds, getPointBounds } from "@/lib/trall/view"
 
 export function PlanSvg({
   activeTool,
@@ -75,287 +46,38 @@ export function PlanSvg({
   viewBox: ViewBox
 }) {
   const svgRef = useRef<SVGSVGElement>(null)
-  const [snapState, setSnapState] = useState<{
-    pointIndex: number | null
-    type: SnapType
-    point: Point | null
-  }>({ pointIndex: null, type: "none", point: null })
-  const [angleSnapState, setAngleSnapState] = useState<{
-    active: boolean
-    angle: number | null
-    anchor: Point | null
-    point: Point | null
-  }>({ active: false, angle: null, anchor: null, point: null })
-  const [parallelHint, setParallelHint] = useState<{
-    active: boolean
-    start: Point | null
-    end: Point | null
-  }>({ active: false, start: null, end: null })
-  const [dragStart, setDragStart] = useState<{
-    pointIndex: number
-    point: Point
-  } | null>(null)
-  const [panStart, setPanStart] = useState<{
-    pointerId: number
-    clientX: number
-    clientY: number
-    viewBox: ViewBox
-  } | null>(null)
-  const [spacePressed, setSpacePressed] = useState(false)
-  const [hoveredEdgeIndex, setHoveredEdgeIndex] = useState<number | null>(null)
-  const [editingDimension, setEditingDimension] =
-    useState<EditableDimension | null>(null)
-  const cancelDimensionEditRef = useRef(false)
-  const polygonPoints = deckPoints.map((point) => `${point.x},${point.y}`).join(" ")
-  const p1 = deckPoints[0] ?? initialDeckPoints[0]
-  const p2 = deckPoints[1] ?? initialDeckPoints[1]
-  const p3 = deckPoints[2] ?? initialDeckPoints[2]
-  const previousPoint =
-    deckPoints[deckPoints.length - 2] ?? initialDeckPoints[2]
-  const lastPoint =
-    deckPoints[deckPoints.length - 1] ?? initialDeckPoints[3]
-  const selectedEdgeIndex = activePointIndex ?? 0
-  const selectedEdgeStart = deckPoints[selectedEdgeIndex] ?? p1
-  const selectedEdgeEnd =
-    deckPoints[(selectedEdgeIndex + 1) % deckPoints.length] ?? p2
-  const hoveredEdgeStart =
-    hoveredEdgeIndex !== null ? deckPoints[hoveredEdgeIndex] : null
-  const hoveredEdgeEnd =
-    hoveredEdgeIndex !== null
-      ? deckPoints[(hoveredEdgeIndex + 1) % deckPoints.length]
-      : null
-  const hoveredEdgeLabelPoint =
-    hoveredEdgeStart && hoveredEdgeEnd
-      ? {
-          x: (hoveredEdgeStart.x + hoveredEdgeEnd.x) / 2,
-          y: (hoveredEdgeStart.y + hoveredEdgeEnd.y) / 2,
-        }
-      : null
-  const activePoint =
-    activePointIndex !== null ? deckPoints[activePointIndex] : null
-  const bottomEdgeIndex = Math.max(deckPoints.length - 2, 0)
-  const houseAttachEdge = getHouseAttachEdge(houseBounds)
-  const attachedEdges = useMemo(
-    (): AttachedEdge[] =>
-      deckPoints.map((point, edgeIndex) => {
-        const nextPoint = deckPoints[(edgeIndex + 1) % deckPoints.length]
-
-        return {
-          edgeIndex,
-          attached: nextPoint
-            ? isEdgeAttached(point, nextPoint, houseAttachEdge.y)
-            : false,
-        }
-      }),
-    [deckPoints, houseAttachEdge.y]
-  )
-  const attachedEdgeIndexes = useMemo(
-    () =>
-      new Set(
-        attachedEdges
-          .filter((edge) => edge.attached)
-          .map((edge) => edge.edgeIndex)
-      ),
-    [attachedEdges]
-  )
-  const attachedEdgeForActivePoint =
-    dragStart !== null
-      ? attachedEdges.find((edge) => {
-          if (!edge.attached) {
-            return false
-          }
-
-          const nextIndex = (edge.edgeIndex + 1) % deckPoints.length
-          return (
-            edge.edgeIndex === dragStart.pointIndex ||
-            nextIndex === dragStart.pointIndex
-          )
-        })
-      : null
-  const selectedEdgeAttached = attachedEdgeIndexes.has(selectedEdgeIndex)
-  const doorWidth = Math.min(80, houseBounds.widthPx * 0.22)
-  const doorHeight = Math.min(98, houseBounds.depthPx * 0.4)
-  const doorX = houseBounds.centerX - doorWidth / 2
-  const doorY = houseBounds.bottom - doorHeight
-  const roofPeakY = houseBounds.top - Math.min(82, houseBounds.widthPx * 0.2)
-  const leftWindowX1 = houseBounds.left + houseBounds.widthPx * 0.08
-  const leftWindowX2 = houseBounds.left + houseBounds.widthPx * 0.24
-  const rightWindowX1 = houseBounds.right - houseBounds.widthPx * 0.24
-  const rightWindowX2 = houseBounds.right - houseBounds.widthPx * 0.08
-  const upperWindowY = houseBounds.top + houseBounds.depthPx * 0.25
-  const lowerWindowY = houseBounds.top + houseBounds.depthPx * 0.55
   const pointBounds = getPointBounds(houseBounds)
   const contentBounds = getPlanContentBounds(houseBounds, deckPoints)
-  const canPan = activeTool === "pan" || spacePressed
-  const svgCursorClass = panStart
+  const editor = useDeckEditor({
+    activePointIndex,
+    deckPoints,
+    houseBounds,
+    pointBounds,
+    setActivePointIndex,
+    setDeckPoints,
+    svgRef,
+  })
+  const viewport = useCanvasViewport({
+    contentBounds,
+    onResetView,
+    setViewBox,
+    svgRef,
+    viewBox,
+  })
+  const canPan = activeTool === "pan" || viewport.spacePressed
+  const svgCursorClass = viewport.panActive
     ? "cursor-grabbing"
     : canPan
       ? "cursor-grab"
       : ""
-
-  useEffect(() => {
-    function handleWindowKeyDown(event: KeyboardEvent) {
-      if (event.code !== "Space" || isTypingTarget(event.target)) {
-        return
-      }
-
-      event.preventDefault()
-      setSpacePressed(true)
-    }
-
-    function handleWindowKeyUp(event: KeyboardEvent) {
-      if (event.code === "Space") {
-        setSpacePressed(false)
-      }
-    }
-
-    window.addEventListener("keydown", handleWindowKeyDown)
-    window.addEventListener("keyup", handleWindowKeyUp)
-
-    return () => {
-      window.removeEventListener("keydown", handleWindowKeyDown)
-      window.removeEventListener("keyup", handleWindowKeyUp)
-    }
-  }, [])
-
-  useEffect(() => {
-    const svg = svgRef.current
-    if (!svg) {
-      return
-    }
-
-    function handleWheel(event: WheelEvent) {
-      if (!svg || (!event.ctrlKey && !event.metaKey)) {
-        return
-      }
-
-      event.preventDefault()
-      const center = clientPointToSvgPoint(event, svg)
-      const factor = event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP
-
-      setViewBox((currentViewBox) => zoomViewBox(currentViewBox, factor, center))
-    }
-
-    svg.addEventListener("wheel", handleWheel, { passive: false })
-
-    return () => svg.removeEventListener("wheel", handleWheel)
-  }, [setViewBox])
-
-  function handleCanvasPointerDown(event: ReactPointerEvent<SVGSVGElement>) {
-    if (!svgRef.current || !canPan || isInteractiveTarget(event.target)) {
-      return
-    }
-
-    event.preventDefault()
-    setEditingDimension(null)
-    svgRef.current.focus()
-    const captured = setPointerCaptureIfPossible(svgRef.current, event.pointerId)
-    if (!captured && !event.isTrusted) {
-      return
-    }
-
-    setPanStart({
-      pointerId: event.pointerId,
-      clientX: event.clientX,
-      clientY: event.clientY,
-      viewBox,
-    })
-  }
-
-  function handlePointerDown(
-    event: ReactPointerEvent<SVGGElement>,
-    index: number
-  ) {
-    event.preventDefault()
-    event.stopPropagation()
-    setEditingDimension(null)
-    svgRef.current?.focus()
-    if (svgRef.current) {
-      const captured = setPointerCaptureIfPossible(svgRef.current, event.pointerId)
-      if (!captured && !event.isTrusted) {
-        return
-      }
-    }
-
-    const point = deckPoints[index] ?? initialDeckPoints[0]
-    setActivePointIndex(index)
-    setHoveredEdgeIndex(null)
-    setDragStart({ pointIndex: index, point })
-    setSnapState({ pointIndex: index, type: "none", point: null })
-    setAngleSnapState({ active: false, angle: null, anchor: null, point: null })
-    setParallelHint({ active: false, start: null, end: null })
-  }
-
-  function insertPointAfterEdge(edgeIndex: number, point: Point) {
-    const insertedIndex = edgeIndex + 1
-    setDeckPoints((points) => [
-      ...points.slice(0, insertedIndex),
-      point,
-      ...points.slice(insertedIndex),
-    ])
-    setActivePointIndex(insertedIndex)
-    setHoveredEdgeIndex(null)
-    setSnapState({ pointIndex: insertedIndex, type: "none", point: null })
-  }
-
-  function handleEdgeDoubleClick(
-    event: ReactMouseEvent<SVGLineElement>,
-    edgeIndex: number
-  ) {
-    if (!svgRef.current) {
-      return
-    }
-
-    event.preventDefault()
-    event.stopPropagation()
-    setEditingDimension(null)
-    svgRef.current.focus()
-
-    const point = clientPointToSvgPoint(event, svgRef.current)
-    const snapped = applySnap(point, houseBounds, pointBounds, {
-      disableGrid: event.altKey,
-    })
-    insertPointAfterEdge(edgeIndex, snapped.point)
-  }
-
-  function removeActivePoint() {
-    if (activePointIndex === null || deckPoints.length <= 3) {
-      return
-    }
-
-    setDeckPoints((points) =>
-      points.filter((_, index) => index !== activePointIndex)
-    )
-    setActivePointIndex(null)
-    setHoveredEdgeIndex(null)
-    setDragStart(null)
-    setSnapState({ pointIndex: null, type: "none", point: null })
-    setAngleSnapState({ active: false, angle: null, anchor: null, point: null })
-    setParallelHint({ active: false, start: null, end: null })
-  }
+  const dimensions = editor.dimensionEditing
 
   function handleKeyDown(event: ReactKeyboardEvent<SVGSVGElement>) {
-    if (editingDimension) {
+    if (!editor.editingDimension && viewport.handleKeyDown(event)) {
       return
     }
 
-    if (event.key === "+" || event.key === "=") {
-      event.preventDefault()
-      setViewBox((currentViewBox) => zoomViewBox(currentViewBox, ZOOM_STEP))
-      return
-    }
-
-    if (event.key === "-") {
-      event.preventDefault()
-      setViewBox((currentViewBox) =>
-        zoomViewBox(currentViewBox, 1 / ZOOM_STEP)
-      )
-      return
-    }
-
-    if (event.key === "0") {
-      event.preventDefault()
-      onResetView()
+    if (editor.editingDimension) {
       return
     }
 
@@ -368,223 +90,29 @@ export function PlanSvg({
     }
 
     event.preventDefault()
-    removeActivePoint()
+    editor.removeActivePoint()
+  }
+
+  function handlePointerDown(event: ReactPointerEvent<SVGSVGElement>) {
+    if (viewport.startPointer(event, canPan)) {
+      return
+    }
   }
 
   function handlePointerMove(event: ReactPointerEvent<SVGSVGElement>) {
-    if (panStart && svgRef.current) {
-      const svg = svgRef.current
-      const scaleX = panStart.viewBox.width / svg.clientWidth
-      const scaleY = panStart.viewBox.height / svg.clientHeight
-      const dxSvg = (event.clientX - panStart.clientX) * scaleX
-      const dySvg = (event.clientY - panStart.clientY) * scaleY
-
-      setViewBox(
-        clampPanViewBox(
-          {
-            ...panStart.viewBox,
-            x: panStart.viewBox.x - dxSvg,
-            y: panStart.viewBox.y - dySvg,
-          },
-          contentBounds
-        )
-      )
+    if (viewport.movePointer(event)) {
       return
     }
 
-    if (!dragStart || !svgRef.current) {
-      return
-    }
-
-    let point = clientPointToSvgPoint(event, svgRef.current)
-
-    if (event.shiftKey) {
-      const dx = point.x - dragStart.point.x
-      const dy = point.y - dragStart.point.y
-      point =
-        Math.abs(dx) > Math.abs(dy)
-          ? { ...point, y: dragStart.point.y }
-          : { ...point, x: dragStart.point.x }
-    }
-
-    let angleSnapType: SnapType = "none"
-    let angleGuide = {
-      active: false,
-      angle: null as number | null,
-      anchor: null as Point | null,
-      point: null as Point | null,
-    }
-
-    if (event.metaKey || event.ctrlKey) {
-      const anchor =
-        deckPoints[
-          (dragStart.pointIndex - 1 + deckPoints.length) % deckPoints.length
-        ]
-
-      if (anchor) {
-        const activeDistance = distance(anchor, point)
-        const rawAngle = radiansToDegrees(
-          Math.atan2(point.y - anchor.y, point.x - anchor.x)
-        )
-        const snapAngle = closestSnapAngle(rawAngle)
-
-        if (activeDistance > 0 && snapAngle.snapped) {
-          const snappedRad = degreesToRadians(snapAngle.angle)
-          point = {
-            x: anchor.x + Math.cos(snappedRad) * activeDistance,
-            y: anchor.y + Math.sin(snappedRad) * activeDistance,
-          }
-          angleSnapType = "angle"
-          angleGuide = {
-            active: true,
-            angle: snapAngle.angle,
-            anchor,
-            point,
-          }
-        }
-      }
-    }
-
-    const snapped = applySnap(point, houseBounds, pointBounds, {
-      disableGrid: event.altKey,
-      preferredSnapType: angleSnapType,
-    })
-    const shouldKeepAttached =
-      Boolean(attachedEdgeForActivePoint) &&
-      Math.abs(point.y - houseAttachEdge.y) <= SNAP_THRESHOLD_PX
-    const snappedPoint = shouldKeepAttached
-      ? { ...snapped.point, y: houseAttachEdge.y }
-      : snapped.point
-    const referenceEdgeStart = deckPoints[0]
-    const referenceEdgeEnd = deckPoints[1]
-    const activeEdgeStart =
-      deckPoints[
-        (dragStart.pointIndex - 1 + deckPoints.length) % deckPoints.length
-      ]
-    const activeEdgeEnd = snappedPoint
-    const showParallelHint =
-      dragStart.pointIndex !== 1 &&
-      Boolean(referenceEdgeStart && referenceEdgeEnd && activeEdgeStart) &&
-      isNearlyParallel(
-        edgeAngle(
-          referenceEdgeStart ?? initialDeckPoints[0],
-          referenceEdgeEnd ?? initialDeckPoints[1]
-        ),
-        edgeAngle(activeEdgeStart ?? initialDeckPoints[0], activeEdgeEnd),
-        PARALLEL_HINT_THRESHOLD_DEG
-      )
-
-    setDeckPoints((currentPoints) =>
-      currentPoints.map((currentPoint, index) =>
-        index === dragStart.pointIndex ? snappedPoint : currentPoint
-      )
-    )
-    setSnapState({
-      pointIndex: dragStart.pointIndex,
-      type: shouldKeepAttached ? "house" : snapped.snapType,
-      point: snappedPoint,
-    })
-    setAngleSnapState(
-      angleGuide.active
-        ? { ...angleGuide, point: snappedPoint }
-        : { active: false, angle: null, anchor: null, point: null }
-    )
-    setParallelHint({
-      active: showParallelHint,
-      start: activeEdgeStart ?? null,
-      end: showParallelHint ? snappedPoint : null,
-    })
+    editor.handlePointerMove(event)
   }
 
-  function stopDragging(event: ReactPointerEvent<SVGSVGElement>) {
-    if (svgRef.current?.hasPointerCapture(event.pointerId)) {
-      svgRef.current.releasePointerCapture(event.pointerId)
-    }
-    if (panStart?.pointerId === event.pointerId) {
-      setPanStart(null)
-      return
-    }
-    setDragStart(null)
-    setSnapState({ pointIndex: null, type: "none", point: null })
-    setAngleSnapState({ active: false, angle: null, anchor: null, point: null })
-    setParallelHint({ active: false, start: null, end: null })
-  }
-
-  function startEditingDimension(edgeIndex: number, valueMeters: number) {
-    cancelDimensionEditRef.current = false
-    setEditingDimension({
-      edgeIndex,
-      value: valueMeters.toFixed(1),
-    })
-    setHoveredEdgeIndex(null)
-    setDragStart(null)
-    setSnapState({ pointIndex: null, type: "none", point: null })
-    setAngleSnapState({ active: false, angle: null, anchor: null, point: null })
-    setParallelHint({ active: false, start: null, end: null })
-  }
-
-  function updateEditingDimension(value: string) {
-    setEditingDimension((current) =>
-      current ? { ...current, value } : current
-    )
-  }
-
-  function cancelEditingDimension() {
-    cancelDimensionEditRef.current = true
-    setEditingDimension(null)
-  }
-
-  function commitEditingDimension() {
-    if (cancelDimensionEditRef.current) {
-      cancelDimensionEditRef.current = false
+  function handlePointerEnd(event: ReactPointerEvent<SVGSVGElement>) {
+    if (viewport.stopPointer(event)) {
       return
     }
 
-    if (!editingDimension) {
-      return
-    }
-
-    const newLengthMeters = Number.parseFloat(
-      editingDimension.value.replace(",", ".")
-    )
-    if (!Number.isFinite(newLengthMeters) || newLengthMeters <= 0) {
-      setEditingDimension(null)
-      return
-    }
-
-    const clampedMeters = clamp(newLengthMeters, 0.5, 100)
-    const edgeIndex = editingDimension.edgeIndex
-    const nextIndex = edgeIndex + 1
-    const startPoint = deckPoints[edgeIndex]
-    const endPoint = deckPoints[nextIndex]
-
-    if (!startPoint || !endPoint) {
-      setEditingDimension(null)
-      return
-    }
-
-    const currentLength = distance(startPoint, endPoint)
-    if (currentLength === 0) {
-      setEditingDimension(null)
-      return
-    }
-
-    const newLengthPx = clampedMeters * PIXELS_PER_METER
-    const newPoint = {
-      x:
-        startPoint.x +
-        ((endPoint.x - startPoint.x) / currentLength) * newLengthPx,
-      y:
-        startPoint.y +
-        ((endPoint.y - startPoint.y) / currentLength) * newLengthPx,
-    }
-    const snapped = applySnap(newPoint, houseBounds, pointBounds)
-
-    setDeckPoints((points) =>
-      points.map((point, index) => (index === nextIndex ? snapped.point : point))
-    )
-    setActivePointIndex(nextIndex)
-    setEditingDimension(null)
+    editor.stopDragging(event)
   }
 
   return (
@@ -592,18 +120,18 @@ export function PlanSvg({
       ref={svgRef}
       tabIndex={0}
       viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
-      className={`h-full w-full touch-none select-none outline-none drop-shadow-sm ${svgCursorClass}`}
+      className={`h-full w-full touch-none drop-shadow-sm outline-none select-none ${svgCursorClass}`}
       onKeyDown={handleKeyDown}
-      onPointerCancel={stopDragging}
-      onPointerDown={handleCanvasPointerDown}
+      onPointerCancel={handlePointerEnd}
+      onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
-      onPointerUp={stopDragging}
+      onPointerUp={handlePointerEnd}
       role="img"
       aria-label="Deck plan with house outline, deck polygon, dimensions, and draggable corner handles"
     >
       <defs>
         <clipPath id="deck-clip">
-          <polygon points={polygonPoints} />
+          <polygon points={getPolygonPoints(deckPoints)} />
         </clipPath>
         <pattern
           id="deck-board-lines"
@@ -620,79 +148,70 @@ export function PlanSvg({
         </pattern>
       </defs>
 
-      <rect
-        x={houseBounds.left}
-        y={houseBounds.top}
-        width={houseBounds.widthPx}
-        height={houseBounds.depthPx}
-        rx="6"
-        className="fill-slate-100 stroke-slate-700 dark:fill-slate-900 dark:stroke-slate-300"
-        strokeWidth="5"
+      <HouseLayer
+        editingDimension={editor.editingDimension}
+        houseBounds={houseBounds}
+        onCancelEdit={dimensions.cancelEditingDimension}
+        onCommitEdit={dimensions.commitEditingDimension}
+        onEditValueChange={dimensions.updateEditingDimension}
       />
-      <path
-        d={`M${houseBounds.left} ${houseBounds.top} L${houseBounds.centerX} ${roofPeakY} L${houseBounds.right} ${houseBounds.top}`}
-        className="fill-none stroke-slate-700 dark:stroke-slate-300"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="5"
+      <DeckLayer
+        activePointIndex={activePointIndex}
+        deckPoints={deckPoints}
+        editor={editor}
+        houseBounds={houseBounds}
       />
-      <rect
-        x={doorX}
-        y={doorY}
-        width={doorWidth}
-        height={doorHeight}
-        className="fill-background stroke-slate-500 dark:stroke-slate-400"
-        strokeWidth="3"
-      />
-      <path
-        d={`M${leftWindowX1} ${upperWindowY} H${leftWindowX2} M${rightWindowX1} ${upperWindowY} H${rightWindowX2} M${leftWindowX1} ${lowerWindowY} H${leftWindowX2} M${rightWindowX1} ${lowerWindowY} H${rightWindowX2}`}
-        className="stroke-slate-400 dark:stroke-slate-500"
-        strokeLinecap="round"
-        strokeWidth="5"
-      />
-      <text
-        x={houseBounds.centerX}
-        y={houseBounds.top + houseBounds.depthPx * 0.46}
-        textAnchor="middle"
-        className="fill-slate-700 text-[22px] font-medium dark:fill-slate-200"
-      >
-        House
-      </text>
-      <DimensionLine
-        edgeIndex={-1}
-        x1={houseBounds.left}
-        y1={houseBounds.bottom + 20}
-        x2={houseBounds.right}
-        y2={houseBounds.bottom + 20}
-        valueMeters={houseBounds.widthPx / PIXELS_PER_METER}
-        labelX={houseBounds.centerX}
-        labelY={houseBounds.bottom + 50}
-        rotate={0}
-        editingDimension={editingDimension}
-        onCancelEdit={cancelEditingDimension}
-        onCommitEdit={commitEditingDimension}
-        onEditValueChange={updateEditingDimension}
-        onStartEdit={() => undefined}
-        readonly
-      />
-      <DimensionLine
-        edgeIndex={-2}
-        x1={houseBounds.right + 20}
-        y1={houseBounds.top}
-        x2={houseBounds.right + 20}
-        y2={houseBounds.bottom}
-        valueMeters={houseBounds.depthPx / PIXELS_PER_METER}
-        labelX={houseBounds.right + 54}
-        labelY={houseBounds.top + houseBounds.depthPx / 2}
-        rotate={90}
-        editingDimension={editingDimension}
-        onCancelEdit={cancelEditingDimension}
-        onCommitEdit={commitEditingDimension}
-        onEditValueChange={updateEditingDimension}
-        onStartEdit={() => undefined}
-        readonly
-      />
-      {snapState.type === "house" ? (
+    </svg>
+  )
+}
+
+function DeckLayer({
+  activePointIndex,
+  deckPoints,
+  editor,
+  houseBounds,
+}: {
+  activePointIndex: number | null
+  deckPoints: Point[]
+  editor: ReturnType<typeof useDeckEditor>
+  houseBounds: HouseBounds
+}) {
+  const polygonPoints = getPolygonPoints(deckPoints)
+  const p1 = deckPoints[0] ?? initialDeckPoints[0]
+  const p2 = deckPoints[1] ?? initialDeckPoints[1]
+  const p3 = deckPoints[2] ?? initialDeckPoints[2]
+  const previousPoint =
+    deckPoints[deckPoints.length - 2] ?? initialDeckPoints[2]
+  const lastPoint = deckPoints[deckPoints.length - 1] ?? initialDeckPoints[3]
+  const selectedEdgeIndex = activePointIndex ?? 0
+  const selectedEdgeStart = deckPoints[selectedEdgeIndex] ?? p1
+  const selectedEdgeEnd =
+    deckPoints[(selectedEdgeIndex + 1) % deckPoints.length] ?? p2
+  const hoveredEdgeStart =
+    editor.hoveredEdgeIndex !== null
+      ? deckPoints[editor.hoveredEdgeIndex]
+      : null
+  const hoveredEdgeEnd =
+    editor.hoveredEdgeIndex !== null
+      ? deckPoints[(editor.hoveredEdgeIndex + 1) % deckPoints.length]
+      : null
+  const hoveredEdgeLabelPoint =
+    hoveredEdgeStart && hoveredEdgeEnd
+      ? {
+          x: (hoveredEdgeStart.x + hoveredEdgeEnd.x) / 2,
+          y: (hoveredEdgeStart.y + hoveredEdgeEnd.y) / 2,
+        }
+      : null
+  const activePoint =
+    activePointIndex !== null ? deckPoints[activePointIndex] : null
+  const bottomEdgeIndex = Math.max(deckPoints.length - 2, 0)
+  const houseAttachEdge = getHouseAttachEdge(houseBounds)
+  const selectedEdgeAttached = editor.attachedEdgeIndexes.has(selectedEdgeIndex)
+  const dimensions = editor.dimensionEditing
+
+  return (
+    <>
+      {editor.snapState.type === "house" ? (
         <line
           x1={houseAttachEdge.x1}
           y1={houseAttachEdge.y}
@@ -723,7 +242,8 @@ export function PlanSvg({
           strokeWidth="3"
         />
       </g>
-      {attachedEdges.map((edge) => {
+
+      {editor.attachedEdges.map((edge) => {
         if (!edge.attached) {
           return null
         }
@@ -740,7 +260,10 @@ export function PlanSvg({
         }
 
         return (
-          <g key={`attached-edge-${edge.edgeIndex}`} className="pointer-events-none">
+          <g
+            key={`attached-edge-${edge.edgeIndex}`}
+            className="pointer-events-none"
+          >
             <line
               x1={start.x}
               y1={houseAttachEdge.y}
@@ -770,9 +293,14 @@ export function PlanSvg({
           </g>
         )
       })}
+
       <path
         d={`M${selectedEdgeStart.x} ${selectedEdgeStart.y} L${selectedEdgeEnd.x} ${selectedEdgeEnd.y}`}
-        className={selectedEdgeAttached ? "stroke-stone-700 dark:stroke-stone-200" : "stroke-orange-500"}
+        className={
+          selectedEdgeAttached
+            ? "stroke-stone-700 dark:stroke-stone-200"
+            : "stroke-orange-500"
+        }
         strokeLinecap="round"
         strokeWidth={selectedEdgeAttached ? "11" : "9"}
       />
@@ -786,7 +314,12 @@ export function PlanSvg({
         strokeLinecap="round"
         strokeWidth="3"
       />
-      {parallelHint.active && p1 && p2 && parallelHint.start && parallelHint.end ? (
+
+      {editor.parallelHint.active &&
+      p1 &&
+      p2 &&
+      editor.parallelHint.start &&
+      editor.parallelHint.end ? (
         <g className="pointer-events-none">
           <line
             x1={p1.x}
@@ -799,10 +332,10 @@ export function PlanSvg({
             opacity="0.32"
           />
           <line
-            x1={parallelHint.start.x}
-            y1={parallelHint.start.y}
-            x2={parallelHint.end.x}
-            y2={parallelHint.end.y}
+            x1={editor.parallelHint.start.x}
+            y1={editor.parallelHint.start.y}
+            x2={editor.parallelHint.end.x}
+            y2={editor.parallelHint.end.y}
             className="stroke-violet-500"
             strokeLinecap="round"
             strokeWidth="7"
@@ -810,22 +343,24 @@ export function PlanSvg({
           />
           <ParallelHintLabel
             point={{
-              x: (parallelHint.start.x + parallelHint.end.x) / 2,
-              y: (parallelHint.start.y + parallelHint.end.y) / 2,
+              x: (editor.parallelHint.start.x + editor.parallelHint.end.x) / 2,
+              y: (editor.parallelHint.start.y + editor.parallelHint.end.y) / 2,
             }}
           />
         </g>
       ) : null}
-      {angleSnapState.active &&
-      angleSnapState.anchor &&
-      angleSnapState.point &&
-      angleSnapState.angle !== null ? (
+
+      {editor.angleSnapState.active &&
+      editor.angleSnapState.anchor &&
+      editor.angleSnapState.point &&
+      editor.angleSnapState.angle !== null ? (
         <AngleSnapGuide
-          anchor={angleSnapState.anchor}
-          angle={angleSnapState.angle}
-          point={angleSnapState.point}
+          anchor={editor.angleSnapState.anchor}
+          angle={editor.angleSnapState.angle}
+          point={editor.angleSnapState.point}
         />
       ) : null}
+
       {hoveredEdgeStart && hoveredEdgeEnd ? (
         <line
           x1={hoveredEdgeStart.x}
@@ -838,6 +373,7 @@ export function PlanSvg({
           opacity="0.7"
         />
       ) : null}
+
       {deckPoints.map((point, index) => {
         const nextPoint = deckPoints[(index + 1) % deckPoints.length]
         if (!nextPoint) {
@@ -856,16 +392,19 @@ export function PlanSvg({
             className="cursor-copy stroke-transparent"
             strokeWidth="30"
             pointerEvents="stroke"
-            onDoubleClick={(event) => handleEdgeDoubleClick(event, index)}
-            onPointerEnter={() => setHoveredEdgeIndex(index)}
+            onDoubleClick={(event) =>
+              editor.handleEdgeDoubleClick(event, index)
+            }
+            onPointerEnter={() => editor.setHoveredEdgeIndex(index)}
             onPointerLeave={() =>
-              setHoveredEdgeIndex((currentIndex) =>
+              editor.setHoveredEdgeIndex((currentIndex) =>
                 currentIndex === index ? null : currentIndex
               )
             }
           />
         )
       })}
+
       {hoveredEdgeLabelPoint ? (
         <EdgeHoverLabel point={hoveredEdgeLabelPoint} />
       ) : null}
@@ -880,11 +419,11 @@ export function PlanSvg({
         labelX={(p1.x + p2.x) / 2}
         labelY={(p1.y + p2.y) / 2 - 44}
         rotate={lineAngle(p1, p2)}
-        editingDimension={editingDimension}
-        onCancelEdit={cancelEditingDimension}
-        onCommitEdit={commitEditingDimension}
-        onEditValueChange={updateEditingDimension}
-        onStartEdit={startEditingDimension}
+        editingDimension={editor.editingDimension}
+        onCancelEdit={dimensions.cancelEditingDimension}
+        onCommitEdit={dimensions.commitEditingDimension}
+        onEditValueChange={dimensions.updateEditingDimension}
+        onStartEdit={dimensions.startEditingDimension}
       />
       <DimensionLine
         edgeIndex={1}
@@ -896,11 +435,11 @@ export function PlanSvg({
         labelX={(p2.x + p3.x) / 2 + 55}
         labelY={(p2.y + p3.y) / 2}
         rotate={lineAngle(p2, p3)}
-        editingDimension={editingDimension}
-        onCancelEdit={cancelEditingDimension}
-        onCommitEdit={commitEditingDimension}
-        onEditValueChange={updateEditingDimension}
-        onStartEdit={startEditingDimension}
+        editingDimension={editor.editingDimension}
+        onCancelEdit={dimensions.cancelEditingDimension}
+        onCommitEdit={dimensions.commitEditingDimension}
+        onEditValueChange={dimensions.updateEditingDimension}
+        onStartEdit={dimensions.startEditingDimension}
       />
       <DimensionLine
         edgeIndex={bottomEdgeIndex}
@@ -912,11 +451,11 @@ export function PlanSvg({
         labelX={(lastPoint.x + previousPoint.x) / 2}
         labelY={(lastPoint.y + previousPoint.y) / 2 + 58}
         rotate={lineAngle(lastPoint, previousPoint)}
-        editingDimension={editingDimension}
-        onCancelEdit={cancelEditingDimension}
-        onCommitEdit={commitEditingDimension}
-        onEditValueChange={updateEditingDimension}
-        onStartEdit={startEditingDimension}
+        editingDimension={editor.editingDimension}
+        onCancelEdit={dimensions.cancelEditingDimension}
+        onCommitEdit={dimensions.commitEditingDimension}
+        onEditValueChange={dimensions.updateEditingDimension}
+        onStartEdit={dimensions.startEditingDimension}
       />
 
       {deckPoints.map((point, index) => (
@@ -926,48 +465,28 @@ export function PlanSvg({
           y={point.y}
           label={`P${index + 1}`}
           selected={index === activePointIndex}
-          dragging={dragStart?.pointIndex === index}
+          dragging={editor.dragStart?.pointIndex === index}
           snappedToHouse={
-            snapState.type === "house" && snapState.pointIndex === index
+            editor.snapState.type === "house" &&
+            editor.snapState.pointIndex === index
           }
-          onPointerDown={(event) => handlePointerDown(event, index)}
+          onPointerDown={(event) => editor.handlePointPointerDown(event, index)}
         />
       ))}
-      {snapState.point ? (
-        <SnapIndicator point={snapState.point} type={snapState.type} />
+
+      {editor.snapState.point ? (
+        <SnapIndicator
+          point={editor.snapState.point}
+          type={editor.snapState.type}
+        />
       ) : null}
       {activePoint && deckPoints.length > 3 ? (
         <DeletePointHint point={activePoint} />
       ) : null}
-    </svg>
+    </>
   )
 }
 
-function isInteractiveTarget(target: EventTarget | null): boolean {
-  return (
-    target instanceof Element &&
-    Boolean(target.closest("[data-interactive='true']"))
-  )
-}
-
-function isTypingTarget(target: EventTarget | null): boolean {
-  return (
-    target instanceof HTMLElement &&
-    (target.tagName === "INPUT" ||
-      target.tagName === "TEXTAREA" ||
-      target.isContentEditable)
-  )
-}
-
-function setPointerCaptureIfPossible(
-  element: SVGSVGElement,
-  pointerId: number
-): boolean {
-  try {
-    element.setPointerCapture(pointerId)
-    return true
-  } catch {
-    // Synthetic pointer events used by tests may not have an active browser pointer.
-    return false
-  }
+function getPolygonPoints(points: Point[]): string {
+  return points.map((point) => `${point.x},${point.y}`).join(" ")
 }

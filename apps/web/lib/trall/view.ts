@@ -5,15 +5,12 @@ import type {
   PointBounds,
   ViewBox,
 } from "./types"
-import {
-  MAX_ZOOM_VIEWBOX_WIDTH,
-  MIN_ZOOM_VIEWBOX_WIDTH,
-} from "./constants"
+import { MAX_ZOOM_VIEWBOX_WIDTH, MIN_ZOOM_VIEWBOX_WIDTH } from "./constants"
 
 const CONTENT_PADDING = 160
 const MIN_VIEW_BOX_WIDTH = 900
 const MIN_VIEW_BOX_HEIGHT = 650
-const PAN_PADDING = 500
+const PAN_PADDING = 120
 
 export function getPointBounds(houseBounds: HouseBounds): PointBounds {
   return {
@@ -84,19 +81,23 @@ export function clampPanViewBox(
   viewBox: ViewBox,
   contentBounds: PlanContentBounds
 ): ViewBox {
+  const minX = contentBounds.left - PAN_PADDING
+  const maxX = contentBounds.right + PAN_PADDING
+  const minY = contentBounds.top - PAN_PADDING
+  const maxY = contentBounds.bottom + PAN_PADDING
+
   return {
     ...viewBox,
-    x: clampViewBoxAxis(
-      viewBox.x,
-      contentBounds.left - PAN_PADDING,
-      contentBounds.right + PAN_PADDING
-    ),
-    y: clampViewBoxAxis(
-      viewBox.y,
-      contentBounds.top - PAN_PADDING,
-      contentBounds.bottom + PAN_PADDING
-    ),
+    x: clampViewBoxStart(viewBox.x, viewBox.width, minX, maxX),
+    y: clampViewBoxStart(viewBox.y, viewBox.height, minY, maxY),
   }
+}
+
+export function clampViewBoxToContent(
+  viewBox: ViewBox,
+  contentBounds: PlanContentBounds
+): ViewBox {
+  return clampPanViewBox(viewBox, contentBounds)
 }
 
 export function zoomViewBox(
@@ -124,4 +125,17 @@ export function zoomViewBox(
 
 function clampViewBoxAxis(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
+}
+
+function clampViewBoxStart(
+  value: number,
+  size: number,
+  min: number,
+  max: number
+): number {
+  if (size >= max - min) {
+    return min - (size - (max - min)) / 2
+  }
+
+  return clampViewBoxAxis(value, min, max - size)
 }

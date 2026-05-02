@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import {
   FilePlusIcon,
   HandIcon,
@@ -79,27 +80,55 @@ export function CanvasToolbar({
   ]
 
   return (
-    <div className="absolute left-3 right-3 top-3 z-20 flex items-center gap-2 overflow-x-auto rounded-lg border bg-background/90 p-1.5 shadow-sm backdrop-blur">
+    <div className="absolute top-3 right-3 left-3 z-20 flex items-center gap-2 overflow-x-auto rounded-lg border bg-background/90 p-1.5 shadow-sm backdrop-blur">
       {tools.map((group, groupIndex) => (
-        <div key={groupIndex} className="flex items-center gap-1">
-          {groupIndex > 0 ? (
-            <Separator orientation="vertical" className="mx-1 h-6" />
-          ) : null}
+        <ToolbarGroup key={groupIndex} separated={groupIndex > 0}>
           {group.map((tool) => (
             <ToolButton key={tool.label} {...tool} />
           ))}
           {groupIndex === 1 ? (
-            <div className="flex h-8 min-w-24 items-center justify-center rounded-md px-2 text-xs font-medium text-muted-foreground">
-              {saveStatus}
-            </div>
+            <ToolbarStatus>{saveStatus}</ToolbarStatus>
           ) : null}
           {groupIndex === 3 ? (
-            <div className="flex h-8 min-w-14 items-center justify-center rounded-md px-2 text-xs font-medium text-muted-foreground">
+            <ToolbarStatus minWidthClassName="min-w-14">
               {zoomPercent}%
-            </div>
+            </ToolbarStatus>
           ) : null}
-        </div>
+        </ToolbarGroup>
       ))}
+    </div>
+  )
+}
+
+function ToolbarGroup({
+  children,
+  separated,
+}: {
+  children: ReactNode
+  separated: boolean
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      {separated ? (
+        <Separator orientation="vertical" className="mx-1 h-6" />
+      ) : null}
+      {children}
+    </div>
+  )
+}
+
+function ToolbarStatus({
+  children,
+  minWidthClassName = "min-w-24",
+}: {
+  children: ReactNode
+  minWidthClassName?: string
+}) {
+  return (
+    <div
+      className={`flex h-8 ${minWidthClassName} items-center justify-center rounded-md px-2 text-xs font-medium text-muted-foreground`}
+    >
+      {children}
     </div>
   )
 }

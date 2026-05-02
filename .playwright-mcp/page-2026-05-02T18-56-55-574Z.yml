@@ -1,0 +1,200 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "TrallAI" [ref=e9] [cursor=pointer]:
+            - /url: "#"
+            - img [ref=e10]
+            - generic [ref=e17]: TrallAI
+      - generic [ref=e20]:
+        - list [ref=e21]:
+          - listitem [ref=e22]:
+            - button "Quick Create" [ref=e23]:
+              - img [ref=e24]
+              - generic [ref=e26]: Quick Create
+        - list [ref=e27]:
+          - listitem [ref=e28]:
+            - button "Workspace" [ref=e29]:
+              - img [ref=e30]
+              - generic [ref=e35]: Workspace
+          - listitem [ref=e36]:
+            - button "Projects" [ref=e37]:
+              - img [ref=e38]
+              - generic [ref=e40]: Projects
+          - listitem [ref=e41]:
+            - button "Deck planner" [ref=e42]:
+              - img [ref=e43]
+              - generic [ref=e50]: Deck planner
+          - listitem [ref=e51]:
+            - button "Materials" [ref=e52]:
+              - img [ref=e53]
+              - generic [ref=e55]: Materials
+          - listitem [ref=e56]:
+            - button "Quotes" [ref=e57]:
+              - img [ref=e58]
+              - generic [ref=e61]: Quotes
+          - listitem [ref=e62]:
+            - button "Settings" [ref=e63]:
+              - img [ref=e64]
+              - generic [ref=e67]: Settings
+      - list [ref=e69]:
+        - listitem [ref=e70]:
+          - button "T TrallAI planner@trall.ai" [ref=e71]:
+            - generic [ref=e73]: T
+            - generic [ref=e74]:
+              - generic [ref=e75]: TrallAI
+              - generic [ref=e76]: planner@trall.ai
+            - img [ref=e77]
+    - main [ref=e81]:
+      - generic [ref=e83]:
+        - button "Toggle Sidebar" [ref=e84]:
+          - img
+          - generic [ref=e85]: Toggle Sidebar
+        - heading "Backyard deck extension" [level=1] [ref=e86]
+      - main [ref=e87]:
+        - generic [ref=e88]:
+          - generic [ref=e89]:
+            - generic [ref=e90]:
+              - generic [ref=e91]:
+                - button "Select" [pressed] [ref=e92]:
+                  - img
+                  - generic [ref=e93]: Select
+                - button "Draw deck" [ref=e94]:
+                  - img
+                  - generic [ref=e95]: Draw deck
+                - button "Measure" [ref=e96]:
+                  - img
+                  - generic [ref=e97]: Measure
+                - button "Pan" [ref=e98]:
+                  - img
+                  - generic [ref=e99]: Pan
+              - generic [ref=e100]:
+                - button "New project" [ref=e101]:
+                  - img
+                  - generic [ref=e102]: New project
+                - button "Save" [ref=e103]:
+                  - img
+                  - generic [ref=e104]: Save
+                - generic [ref=e105]: Unsaved changes
+              - button "Undo" [ref=e107]:
+                - img
+                - generic [ref=e108]: Undo
+              - generic [ref=e109]:
+                - button "Zoom out" [ref=e110]:
+                  - img
+                  - generic [ref=e111]: Zoom out
+                - button "Zoom in" [ref=e112]:
+                  - img
+                  - generic [ref=e113]: Zoom in
+                - button "Reset view" [ref=e114]:
+                  - img
+                  - generic [ref=e115]: Reset view
+                - generic [ref=e116]: 100%
+              - button "Zoom fit" [ref=e118]:
+                - img
+                - generic [ref=e119]: Zoom fit
+            - generic [ref=e120]:
+              - generic [ref=e126]: x 0, y 0
+              - paragraph [ref=e127]: Drag points to adjust deck shape
+              - img "Deck plan with house outline, deck polygon, dimensions, and draggable corner handles" [ref=e130]:
+                - generic [ref=e135]: House
+                - generic [ref=e139]: 10.5 m
+                - generic [ref=e143]: 6.0 m
+                - generic [ref=e154]: 12.4 m
+                - generic [ref=e159]: 5.1 m
+                - generic [ref=e164]: 14.2 m
+                - generic [ref=e165]:
+                  - generic: P1
+                - generic [ref=e169]:
+                  - generic: P2
+                - generic [ref=e173]:
+                  - generic: P3
+                - generic [ref=e177]:
+                  - generic: P4
+              - generic:
+                - generic:
+                  - generic: 2 m
+                - generic: Scale 1:100 · 1 grid square = 0.5 m · Cmd/Ctrl snaps angle · Alt disables grid · Shift locks axis · Space pans · Zoom 100% · Click a dimension to edit length · When edge snaps to house, it becomes attached
+          - complementary [ref=e181]:
+            - generic [ref=e182]:
+              - generic [ref=e183]:
+                - generic [ref=e184]:
+                  - paragraph [ref=e185]: Project calculator
+                  - paragraph [ref=e186]: Measurements, materials, and quote estimate.
+                - button "Close calculator sidebar" [ref=e187]:
+                  - img
+              - generic [ref=e189]:
+                - generic [ref=e191]:
+                  - generic [ref=e192]:
+                    - paragraph [ref=e193]: Estimated material price
+                    - paragraph [ref=e194]: 25 782 kr
+                    - paragraph [ref=e195]: Includes 10% waste factor
+                  - button "Create quote" [ref=e196]:
+                    - img
+                    - text: Create quote
+                - generic [ref=e197]:
+                  - generic [ref=e199]: Measurements
+                  - generic [ref=e200]:
+                    - generic [ref=e201]:
+                      - generic [ref=e202]: Deck area
+                      - generic [ref=e203]: 72.1 m²
+                    - generic [ref=e204]:
+                      - generic [ref=e205]: Perimeter
+                      - generic [ref=e206]: 37.7 m
+                    - generic [ref=e207]:
+                      - generic [ref=e208]: Board run
+                      - generic [ref=e209]: 601 lm
+                    - generic [ref=e210]:
+                      - generic [ref=e211]: Waste factor
+                      - generic [ref=e212]: 10%
+                - generic [ref=e213]:
+                  - generic [ref=e215]: Materials
+                  - generic [ref=e216]:
+                    - generic [ref=e217]:
+                      - generic [ref=e218]: Decking boards
+                      - generic [ref=e219]: 601 lm
+                      - generic [ref=e220]: 28 × 120 mm
+                    - generic [ref=e221]:
+                      - generic [ref=e222]: Joists
+                      - generic [ref=e223]: 94 lm
+                      - generic [ref=e224]: 45 × 145 mm
+                    - generic [ref=e225]:
+                      - generic [ref=e226]: Post anchors
+                      - generic [ref=e227]: 12 pcs
+                      - generic [ref=e228]: Galvanized
+                    - generic [ref=e229]:
+                      - generic [ref=e230]: Deck screws
+                      - generic [ref=e231]: 1,250 pcs
+                      - generic [ref=e232]: A4 stainless
+                - generic [ref=e233]:
+                  - generic [ref=e234]:
+                    - generic [ref=e235]: House dimensions
+                    - generic [ref=e236]: Set house size first, then snap deck points to the wall.
+                  - generic [ref=e237]:
+                    - generic [ref=e238]:
+                      - text: Width
+                      - generic [ref=e239]:
+                        - spinbutton "Width m" [ref=e240]: "10.5"
+                        - generic [ref=e241]: m
+                    - generic [ref=e242]:
+                      - text: Depth
+                      - generic [ref=e243]:
+                        - spinbutton "Depth m" [ref=e244]: "6"
+                        - generic [ref=e245]: m
+                - generic [ref=e246]:
+                  - generic [ref=e247]:
+                    - generic [ref=e248]: Project summary
+                    - generic [ref=e249]: Backyard deck extension
+                  - generic [ref=e250]:
+                    - generic [ref=e251]:
+                      - generic [ref=e252]: House template
+                      - generic [ref=e253]: Single family house
+                    - generic [ref=e254]:
+                      - generic [ref=e255]: Deck type
+                      - generic [ref=e256]: Attached angled edge
+                    - generic [ref=e257]:
+                      - generic [ref=e258]: Last saved
+                      - generic [ref=e259]: Mock draft · 2 min ago
+  - button "Open Next.js Dev Tools" [ref=e265] [cursor=pointer]:
+    - img [ref=e266]
