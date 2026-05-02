@@ -2,6 +2,8 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import {
+  getCalculatedMaterialRule,
+  getCalculatedProjectMaterialQuantity,
   getProjectMaterialLineTotal,
   getProjectMaterialTotals,
   getDeckingLinearMetres,
@@ -107,6 +109,43 @@ test("calculates decking linear metres from board width", () => {
       length_mm: 5100,
     }),
     "34 x 170 x 5100 mm"
+  )
+})
+
+test("calculates project material quantities from deck geometry", () => {
+  const decking = makeProjectMaterial("decking", "linear_metre", 1, 57.5)
+  decking.material.name = "Beijerbygg Trall 34 x 170 mm"
+  decking.material.category = "Decking"
+  decking.material.width_mm = 170
+
+  const support = makeProjectMaterial("support", "linear_metre", 1, 53)
+  support.material.name = "Beijerbygg Byggregel 45 x 145 mm"
+  support.material.category = "Framing"
+  support.material.description = "Beijer article 882204514554."
+  support.material.width_mm = 145
+
+  const screws = makeProjectMaterial("screws", "box", 2, 32)
+
+  assert.equal(getCalculatedMaterialRule(decking.material), "decking_area")
+  assert.equal(getCalculatedMaterialRule(support.material), "support_cc600")
+  assert.equal(getCalculatedMaterialRule(screws.material), null)
+  assert.equal(
+    getCalculatedProjectMaterialQuantity({
+      areaM2: 24,
+      boardGapMm: 5,
+      material: decking.material,
+      supportLinearMetres: 18,
+    }),
+    150.9
+  )
+  assert.equal(
+    getCalculatedProjectMaterialQuantity({
+      areaM2: 24,
+      boardGapMm: 5,
+      material: support.material,
+      supportLinearMetres: 18.04,
+    }),
+    18
   )
 })
 

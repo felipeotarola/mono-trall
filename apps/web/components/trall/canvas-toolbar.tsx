@@ -10,6 +10,7 @@ import {
   RulerIcon,
   SaveIcon,
   Undo2Icon,
+  WavesIcon,
 } from "lucide-react"
 
 import { Button } from "@workspace/ui/components/button"
@@ -19,6 +20,7 @@ import type { ActiveTool, Tool } from "@/lib/trall/types"
 export function CanvasToolbar({
   activeTool,
   extraTool,
+  onAddPool,
   onNewProject,
   onSaveProject,
   onZoomIn,
@@ -30,6 +32,7 @@ export function CanvasToolbar({
 }: {
   activeTool: ActiveTool
   extraTool: Tool
+  onAddPool: () => void
   onNewProject: () => void
   onSaveProject: () => void
   onZoomIn: () => void
@@ -52,6 +55,11 @@ export function CanvasToolbar({
         icon: <PencilRulerIcon />,
         active: activeTool === "draw",
         onClick: () => setActiveTool("draw"),
+      },
+      {
+        label: "Add pool",
+        icon: <WavesIcon />,
+        onClick: onAddPool,
       },
       {
         label: "Measure",

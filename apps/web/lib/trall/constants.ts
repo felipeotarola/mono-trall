@@ -30,6 +30,13 @@ export const initialDeckPoints: [Point, Point, Point, Point] = [
   { x: 175, y: 602 },
 ]
 
+export const initialPoolPoints: [Point, Point, Point, Point] = [
+  { x: 360, y: 430 },
+  { x: 520, y: 430 },
+  { x: 520, y: 510 },
+  { x: 360, y: 510 },
+]
+
 export const initialHouse: HouseModel = {
   centerX: 456,
   topY: 116,

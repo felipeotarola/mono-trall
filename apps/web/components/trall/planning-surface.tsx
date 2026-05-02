@@ -11,10 +11,14 @@ import type { SupportSegment } from "@/lib/trall/supports"
 export function PlanningSurface({
   activeTool,
   activePointIndex,
+  activePoolPointIndex,
   deckPoints,
   houseBounds,
+  poolPoints,
   setActivePointIndex,
   setDeckPoints,
+  setActivePoolPointIndex,
+  setPoolPoints,
   setViewAspectRatio,
   setViewBox,
   supportSegments,
@@ -24,10 +28,14 @@ export function PlanningSurface({
 }: {
   activeTool: ActiveTool
   activePointIndex: number | null
+  activePoolPointIndex: number | null
   deckPoints: Point[]
   houseBounds: HouseBounds
+  poolPoints: Point[] | null
   setActivePointIndex: (index: number | null) => void
   setDeckPoints: Dispatch<SetStateAction<Point[]>>
+  setActivePoolPointIndex: (index: number | null) => void
+  setPoolPoints: Dispatch<SetStateAction<Point[] | null>>
   setViewAspectRatio: (aspectRatio: number) => void
   setViewBox: Dispatch<SetStateAction<ViewBox>>
   supportSegments: SupportSegment[]
@@ -78,10 +86,14 @@ export function PlanningSurface({
           <PlanSvg
             activeTool={activeTool}
             activePointIndex={activePointIndex}
+            activePoolPointIndex={activePoolPointIndex}
             deckPoints={deckPoints}
             houseBounds={houseBounds}
+            poolPoints={poolPoints}
             setActivePointIndex={setActivePointIndex}
             setDeckPoints={setDeckPoints}
+            setActivePoolPointIndex={setActivePoolPointIndex}
+            setPoolPoints={setPoolPoints}
             setViewBox={setViewBox}
             supportSegments={supportSegments}
             onResetView={onResetView}
@@ -95,8 +107,8 @@ export function PlanningSurface({
         <span>
           Scale 1:100 · 1 grid square = 0.5 m · Cmd/Ctrl snaps angle · Alt
           disables grid · Shift locks axis · Space pans · Zoom {zoomPercent}% ·
-          Click a dimension to edit length · When edge snaps to house, it
-          becomes attached
+          Click a dimension to edit length · Double-click an edge to remove it
+          · When edge snaps to house, it becomes attached
         </span>
       </div>
     </div>

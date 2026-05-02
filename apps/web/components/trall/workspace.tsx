@@ -18,6 +18,7 @@ import {
   INITIAL_VIEW_BOX,
   initialDeckPoints,
   initialHouse,
+  initialPoolPoints,
   PIXELS_PER_METER,
   ZOOM_STEP,
 } from "@/lib/trall/constants"
@@ -64,7 +65,11 @@ export function Workspace() {
     INITIAL_VIEW_BOX.width / INITIAL_VIEW_BOX.height
   )
   const [deckPoints, setDeckPoints] = useState<Point[]>(initialDeckPoints)
+  const [poolPoints, setPoolPoints] = useState<Point[] | null>(null)
   const [activePointIndex, setActivePointIndex] = useState<number | null>(null)
+  const [activePoolPointIndex, setActivePoolPointIndex] = useState<
+    number | null
+  >(null)
   const [house, setHouse] = useState<HouseModel>(initialHouse)
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("Unsaved changes")
@@ -78,9 +83,14 @@ export function Workspace() {
   const zoomPercent = Math.round((INITIAL_VIEW_BOX.width / viewBox.width) * 100)
   const fitViewBox = useCallback(() => {
     setViewBox(
-      getFitViewBox(houseBounds, deckPoints, viewAspectRatioRef.current)
+      getFitViewBox(
+        houseBounds,
+        deckPoints,
+        poolPoints ?? [],
+        viewAspectRatioRef.current
+      )
     )
-  }, [deckPoints, houseBounds])
+  }, [deckPoints, houseBounds, poolPoints])
   const zoomIn = useCallback(() => {
     setViewBox((currentViewBox) => zoomViewBox(currentViewBox, ZOOM_STEP))
   }, [])
@@ -102,17 +112,26 @@ export function Workspace() {
   }, [viewAspectRatio])
 
   useEffect(() => {
-    const contentBounds = getPlanContentBounds(houseBounds, deckPoints)
+    const contentBounds = getPlanContentBounds(
+      houseBounds,
+      deckPoints,
+      poolPoints ?? []
+    )
     if (!isContentInsideViewBox(contentBounds, viewBoxRef.current)) {
       const frameId = requestAnimationFrame(() => {
         setViewBox(
-          getFitViewBox(houseBounds, deckPoints, viewAspectRatioRef.current)
+          getFitViewBox(
+            houseBounds,
+            deckPoints,
+            poolPoints ?? [],
+            viewAspectRatioRef.current
+          )
         )
       })
 
       return () => cancelAnimationFrame(frameId)
     }
-  }, [deckPoints, houseBounds])
+  }, [deckPoints, houseBounds, poolPoints])
 
   useEffect(() => {
     let cancelled = false
@@ -149,6 +168,7 @@ export function Workspace() {
         setCurrentProjectId(project.id)
         setHouse(version.state.house)
         setDeckPoints(version.state.deckPoints)
+        setPoolPoints(version.state.poolPoints ?? null)
         setViewBox(version.state.viewBox)
         setSaveStatus("Saved")
         window.localStorage.setItem(CURRENT_PROJECT_STORAGE_KEY, project.id)
@@ -173,7 +193,11 @@ export function Workspace() {
   }, [])
 
   const calculations = useMemo(() => {
-    const areaM2 = polygonArea(deckPoints) / PIXELS_PER_METER ** 2
+    const grossAreaM2 = polygonArea(deckPoints) / PIXELS_PER_METER ** 2
+    const poolAreaM2 = poolPoints
+      ? polygonArea(poolPoints) / PIXELS_PER_METER ** 2
+      : 0
+    const areaM2 = Math.max(0, grossAreaM2 - poolAreaM2)
     const perimeterM = polygonPerimeter(deckPoints) / PIXELS_PER_METER
     const boardRunLm = areaM2 / 0.12
     const materialPrice = boardRunLm * 39 * 1.1
@@ -184,9 +208,21 @@ export function Workspace() {
       boardRunLm,
       materialPrice,
       priceLabel: formatCurrency(materialPrice),
-      supportLayout: getSupportLayout({ points: deckPoints, spacingM: 0.6 }),
+      supportLayout: getSupportLayout({
+        holes: poolPoints ? [poolPoints] : [],
+        points: deckPoints,
+        spacingM: 0.6,
+      }),
       metrics: [
         { label: "Deck area", value: `${areaM2.toFixed(1)} m²` },
+        ...(poolPoints
+          ? [
+              {
+                label: "Pool cutout",
+                value: `${poolAreaM2.toFixed(1)} m²`,
+              },
+            ]
+          : []),
         { label: "Perimeter", value: `${perimeterM.toFixed(1)} m` },
         { label: "Board run", value: `${Math.round(boardRunLm)} lm` },
         { label: "Waste factor", value: "10%" },
@@ -200,18 +236,19 @@ export function Workspace() {
         ...baseMaterials,
       ] satisfies Material[],
     }
-  }, [deckPoints])
+  }, [deckPoints, poolPoints])
 
   const getPlannerState = useCallback(
     (): PlannerProjectState => ({
       house,
       deckPoints,
+      poolPoints,
       viewBox,
       materials: {
         items: calculations.materials,
       },
     }),
-    [calculations.materials, deckPoints, house, viewBox]
+    [calculations.materials, deckPoints, house, poolPoints, viewBox]
   )
 
   const savePlannerState = useCallback(
@@ -285,20 +322,23 @@ export function Workspace() {
       cancelAnimationFrame(frameId)
       window.clearTimeout(timeoutId)
     }
-  }, [deckPoints, house, savePlannerState, viewBox])
+  }, [deckPoints, house, poolPoints, savePlannerState, viewBox])
 
   async function handleNewProject() {
     const nextHouse = initialHouse
     const nextDeckPoints = [...initialDeckPoints]
+    const nextPoolPoints = null
     const nextHouseBounds = getHouseBounds(nextHouse)
     const nextViewBox = getFitViewBox(
       nextHouseBounds,
       nextDeckPoints,
+      [],
       viewAspectRatioRef.current
     )
     const state: PlannerProjectState = {
       house: nextHouse,
       deckPoints: nextDeckPoints,
+      poolPoints: nextPoolPoints,
       viewBox: nextViewBox,
       materials: {
         items: calculations.materials,
@@ -313,6 +353,9 @@ export function Workspace() {
       setCurrentProjectId(project.id)
       setHouse(nextHouse)
       setDeckPoints(nextDeckPoints)
+      setPoolPoints(nextPoolPoints)
+      setActivePointIndex(null)
+      setActivePoolPointIndex(null)
       setViewBox(nextViewBox)
       setSaveStatus("Saved")
       window.localStorage.setItem(CURRENT_PROJECT_STORAGE_KEY, project.id)
@@ -328,6 +371,12 @@ export function Workspace() {
 
   async function handleSaveProject() {
     await savePlannerState({ source: "manual" })
+  }
+
+  function handleAddPool() {
+    setPoolPoints((currentPoints) => currentPoints ?? [...initialPoolPoints])
+    setActivePointIndex(null)
+    setActivePoolPointIndex(0)
   }
 
   function toggleWorkspacePanels() {
@@ -364,6 +413,7 @@ export function Workspace() {
           <CanvasToolbar
             activeTool={activeTool}
             extraTool={expandTool}
+            onAddPool={handleAddPool}
             onNewProject={handleNewProject}
             onSaveProject={handleSaveProject}
             onZoomIn={zoomIn}
@@ -376,10 +426,14 @@ export function Workspace() {
           <PlanningSurface
             activeTool={activeTool}
             activePointIndex={activePointIndex}
+            activePoolPointIndex={activePoolPointIndex}
             deckPoints={deckPoints}
             houseBounds={houseBounds}
+            poolPoints={poolPoints}
             setActivePointIndex={setActivePointIndex}
             setDeckPoints={setDeckPoints}
+            setActivePoolPointIndex={setActivePoolPointIndex}
+            setPoolPoints={setPoolPoints}
             setViewAspectRatio={setViewAspectRatio}
             setViewBox={setViewBox}
             supportSegments={calculations.supportLayout.segments}

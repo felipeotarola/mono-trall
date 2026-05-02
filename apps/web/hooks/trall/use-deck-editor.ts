@@ -44,6 +44,7 @@ export function useDeckEditor({
   pointBounds,
   setActivePointIndex,
   setDeckPoints,
+  snapToHouse = true,
   svgRef,
 }: {
   activePointIndex: number | null
@@ -52,6 +53,7 @@ export function useDeckEditor({
   pointBounds: PointBounds
   setActivePointIndex: (index: number | null) => void
   setDeckPoints: Dispatch<SetStateAction<Point[]>>
+  snapToHouse?: boolean
   svgRef: RefObject<SVGSVGElement | null>
 }) {
   const [snapState, setSnapState] = useState<{
@@ -82,17 +84,19 @@ export function useDeckEditor({
 
   const attachedEdges = useMemo(
     (): AttachedEdge[] =>
-      deckPoints.map((point, edgeIndex) => {
-        const nextPoint = deckPoints[(edgeIndex + 1) % deckPoints.length]
+      snapToHouse
+        ? deckPoints.map((point, edgeIndex) => {
+            const nextPoint = deckPoints[(edgeIndex + 1) % deckPoints.length]
 
-        return {
-          edgeIndex,
-          attached: nextPoint
-            ? isEdgeAttached(point, nextPoint, houseAttachEdge.y)
-            : false,
-        }
-      }),
-    [deckPoints, houseAttachEdge.y]
+            return {
+              edgeIndex,
+              attached: nextPoint
+                ? isEdgeAttached(point, nextPoint, houseAttachEdge.y)
+                : false,
+            }
+          })
+        : [],
+    [deckPoints, houseAttachEdge.y, snapToHouse]
   )
 
   const attachedEdgeIndexes = useMemo(
@@ -153,36 +157,28 @@ export function useDeckEditor({
     setParallelHint({ active: false, start: null, end: null })
   }
 
-  function insertPointAfterEdge(edgeIndex: number, point: Point) {
-    const insertedIndex = edgeIndex + 1
-    setDeckPoints((points) => [
-      ...points.slice(0, insertedIndex),
-      point,
-      ...points.slice(insertedIndex),
-    ])
-    setActivePointIndex(insertedIndex)
-    setHoveredEdgeIndex(null)
-    setSnapState({ pointIndex: insertedIndex, type: "none", point: null })
-  }
-
   function handleEdgeDoubleClick(
     event: ReactMouseEvent<SVGLineElement>,
     edgeIndex: number
   ) {
-    if (!svgRef.current) {
+    event.preventDefault()
+    event.stopPropagation()
+
+    if (deckPoints.length <= 3) {
       return
     }
 
-    event.preventDefault()
-    event.stopPropagation()
     setEditingDimension(null)
-    svgRef.current.focus()
+    svgRef.current?.focus()
 
-    const point = clientPointToSvgPoint(event, svgRef.current)
-    const snapped = applySnap(point, houseBounds, pointBounds, {
-      disableGrid: event.altKey,
-    })
-    insertPointAfterEdge(edgeIndex, snapped.point)
+    const pointIndex = (edgeIndex + 1) % deckPoints.length
+    setDeckPoints((points) =>
+      points.filter((_, index) => index !== pointIndex)
+    )
+    setActivePointIndex(null)
+    setHoveredEdgeIndex(null)
+    setDragStart(null)
+    resetTransientState()
   }
 
   function removeActivePoint() {
@@ -255,9 +251,11 @@ export function useDeckEditor({
 
     const snapped = applySnap(point, houseBounds, pointBounds, {
       disableGrid: event.altKey,
+      disableHouse: !snapToHouse,
       preferredSnapType: angleSnapType,
     })
     const shouldKeepAttached =
+      snapToHouse &&
       Boolean(attachedEdgeForActivePoint) &&
       Math.abs(point.y - houseAttachEdge.y) <= SNAP_THRESHOLD_PX
     const snappedPoint = shouldKeepAttached
@@ -356,7 +354,7 @@ export function useDeckEditor({
 
     const clampedMeters = clamp(newLengthMeters, 0.5, 100)
     const edgeIndex = editingDimension.edgeIndex
-    const nextIndex = edgeIndex + 1
+    const nextIndex = (edgeIndex + 1) % deckPoints.length
     const startPoint = deckPoints[edgeIndex]
     const endPoint = deckPoints[nextIndex]
 
@@ -380,7 +378,9 @@ export function useDeckEditor({
         startPoint.y +
         ((endPoint.y - startPoint.y) / currentLength) * newLengthPx,
     }
-    const snapped = applySnap(newPoint, houseBounds, pointBounds)
+    const snapped = applySnap(newPoint, houseBounds, pointBounds, {
+      disableHouse: !snapToHouse,
+    })
 
     setDeckPoints((points) =>
       points.map((point, index) =>

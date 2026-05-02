@@ -4,6 +4,7 @@ import type { HouseModel, Material, Point, ViewBox } from "@/lib/trall/types"
 export type PlannerProjectState = {
   house: HouseModel
   deckPoints: Point[]
+  poolPoints?: Point[] | null
   viewBox: ViewBox
   materials: {
     items: Material[]

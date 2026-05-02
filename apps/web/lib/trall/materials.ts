@@ -60,6 +60,8 @@ export type ProjectMaterialSummary = MaterialTotals & {
   itemCount: number
 }
 
+export type CalculatedMaterialRule = "decking_area" | "support_cc600"
+
 export const emptyMaterialTotals: MaterialTotals = {
   totalCost: 0,
   totalQuantity: 0,
@@ -173,6 +175,76 @@ export function getProjectMaterialLineTotal(item: ProjectMaterialItem) {
   return roundCurrency(item.quantity * item.material.cost)
 }
 
+export function getCalculatedMaterialRule(
+  material: Pick<
+    MaterialRecord,
+    "category" | "description" | "name" | "unit" | "width_mm"
+  >
+): CalculatedMaterialRule | null {
+  if (material.unit !== "linear_metre") {
+    return null
+  }
+
+  const text = normalizeSearchText(
+    material.category,
+    material.description,
+    material.name
+  )
+
+  if (
+    text.includes("882204514554") ||
+    text.includes("barlina") ||
+    text.includes("bärlina") ||
+    (text.includes("framing") &&
+      (text.includes("45 x 145") || text.includes("45x145"))) ||
+    text.includes("byggregel") ||
+    text.includes("joist")
+  ) {
+    return "support_cc600"
+  }
+
+  if (
+    material.width_mm &&
+    material.width_mm > 0 &&
+    (text.includes("decking") || text.includes("deck board") || text.includes("trall"))
+  ) {
+    return "decking_area"
+  }
+
+  return null
+}
+
+export function getCalculatedProjectMaterialQuantity({
+  areaM2,
+  boardGapMm,
+  material,
+  supportLinearMetres,
+}: {
+  areaM2: number
+  boardGapMm: number
+  material: Pick<
+    MaterialRecord,
+    "category" | "description" | "name" | "unit" | "width_mm"
+  >
+  supportLinearMetres: number
+}) {
+  const rule = getCalculatedMaterialRule(material)
+
+  if (rule === "support_cc600") {
+    return roundQuantity(Math.max(0, supportLinearMetres))
+  }
+
+  if (rule === "decking_area") {
+    return getDeckingLinearMetres({
+      areaM2,
+      gapMm: boardGapMm,
+      widthMm: material.width_mm,
+    })
+  }
+
+  return null
+}
+
 export function getDeckingLinearMetres({
   areaM2,
   gapMm = 0,
@@ -280,6 +352,13 @@ function normalizeOptionalUrl(value: string | null | undefined) {
   }
 
   return trimmedValue
+}
+
+function normalizeSearchText(...values: Array<string | null | undefined>) {
+  return values
+    .filter((value): value is string => typeof value === "string")
+    .join(" ")
+    .toLowerCase()
 }
 
 function parseOptionalDimension(value: unknown) {

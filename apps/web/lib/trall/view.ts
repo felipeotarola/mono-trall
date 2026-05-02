@@ -23,10 +23,12 @@ export function getPointBounds(houseBounds: HouseBounds): PointBounds {
 
 export function getPlanContentBounds(
   houseBounds: HouseBounds,
-  deckPoints: Point[]
+  deckPoints: Point[],
+  poolPoints: Point[] = []
 ): PlanContentBounds {
-  const deckXs = deckPoints.map((point) => point.x)
-  const deckYs = deckPoints.map((point) => point.y)
+  const planPoints = [...deckPoints, ...poolPoints]
+  const deckXs = planPoints.map((point) => point.x)
+  const deckYs = planPoints.map((point) => point.y)
 
   return {
     left: Math.min(houseBounds.left, ...deckXs) - CONTENT_PADDING,
@@ -39,21 +41,29 @@ export function getPlanContentBounds(
 export function getFitViewBox(
   houseBounds: HouseBounds,
   deckPoints: Point[],
+  poolPointsOrTargetAspectRatio: Point[] | number = [],
   targetAspectRatio?: number
 ): ViewBox {
-  const bounds = getPlanContentBounds(houseBounds, deckPoints)
+  const poolPoints = Array.isArray(poolPointsOrTargetAspectRatio)
+    ? poolPointsOrTargetAspectRatio
+    : []
+  const aspectRatio =
+    typeof poolPointsOrTargetAspectRatio === "number"
+      ? poolPointsOrTargetAspectRatio
+      : targetAspectRatio
+  const bounds = getPlanContentBounds(houseBounds, deckPoints, poolPoints)
   const contentWidth = bounds.right - bounds.left
   const contentHeight = bounds.bottom - bounds.top
   let width = Math.max(contentWidth, MIN_VIEW_BOX_WIDTH)
   let height = Math.max(contentHeight, MIN_VIEW_BOX_HEIGHT)
 
-  if (targetAspectRatio && Number.isFinite(targetAspectRatio)) {
+  if (aspectRatio && Number.isFinite(aspectRatio)) {
     const currentAspectRatio = width / height
 
-    if (currentAspectRatio < targetAspectRatio) {
-      width = height * targetAspectRatio
+    if (currentAspectRatio < aspectRatio) {
+      width = height * aspectRatio
     } else {
-      height = width / targetAspectRatio
+      height = width / aspectRatio
     }
   }
 

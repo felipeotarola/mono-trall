@@ -6,7 +6,7 @@ export function EdgeHoverLabel({ point }: { point: Point }) {
       <rect
         x={point.x + 16}
         y={point.y - 46}
-        width="166"
+        width="178"
         height="28"
         rx="7"
         className="fill-background/95 stroke-border"
@@ -16,7 +16,7 @@ export function EdgeHoverLabel({ point }: { point: Point }) {
         y={point.y - 27}
         className="fill-muted-foreground text-[13px] font-medium"
       >
-        Double-click to add point
+        Double-click to delete edge
       </text>
     </g>
   )

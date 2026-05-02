@@ -18,7 +18,11 @@ import { ParallelHintLabel } from "@/components/trall/svg/parallel-hint-label"
 import { SnapIndicator } from "@/components/trall/svg/snap-indicator"
 import { useCanvasViewport } from "@/hooks/trall/use-canvas-viewport"
 import { useDeckEditor } from "@/hooks/trall/use-deck-editor"
-import { initialDeckPoints, PIXELS_PER_METER } from "@/lib/trall/constants"
+import {
+  initialDeckPoints,
+  initialPoolPoints,
+  PIXELS_PER_METER,
+} from "@/lib/trall/constants"
 import { distance, lineAngle } from "@/lib/trall/geometry"
 import { getHouseAttachEdge } from "@/lib/trall/house"
 import type { SupportSegment } from "@/lib/trall/supports"
@@ -28,10 +32,14 @@ import { getPlanContentBounds, getPointBounds } from "@/lib/trall/view"
 export function PlanSvg({
   activeTool,
   activePointIndex,
+  activePoolPointIndex = null,
   deckPoints,
   houseBounds,
+  poolPoints = null,
   setActivePointIndex,
   setDeckPoints,
+  setActivePoolPointIndex = noopSetActivePointIndex,
+  setPoolPoints = noopSetPoolPoints,
   setViewBox,
   supportSegments,
   onResetView,
@@ -39,10 +47,14 @@ export function PlanSvg({
 }: {
   activeTool: ActiveTool
   activePointIndex: number | null
+  activePoolPointIndex?: number | null
   deckPoints: Point[]
   houseBounds: HouseBounds
+  poolPoints?: Point[] | null
   setActivePointIndex: (index: number | null) => void
   setDeckPoints: Dispatch<SetStateAction<Point[]>>
+  setActivePoolPointIndex?: (index: number | null) => void
+  setPoolPoints?: Dispatch<SetStateAction<Point[] | null>>
   setViewBox: Dispatch<SetStateAction<ViewBox>>
   supportSegments: SupportSegment[]
   onResetView: () => void
@@ -50,14 +62,45 @@ export function PlanSvg({
 }) {
   const svgRef = useRef<SVGSVGElement>(null)
   const pointBounds = getPointBounds(houseBounds)
-  const contentBounds = getPlanContentBounds(houseBounds, deckPoints)
+  const contentBounds = getPlanContentBounds(
+    houseBounds,
+    deckPoints,
+    poolPoints ?? []
+  )
   const editor = useDeckEditor({
     activePointIndex,
     deckPoints,
     houseBounds,
     pointBounds,
-    setActivePointIndex,
+    setActivePointIndex: (index) => {
+      setActivePointIndex(index)
+      if (index !== null) {
+        setActivePoolPointIndex(null)
+      }
+    },
     setDeckPoints,
+    svgRef,
+  })
+  const poolEditor = useDeckEditor({
+    activePointIndex: activePoolPointIndex,
+    deckPoints: poolPoints ?? initialPoolPoints,
+    houseBounds,
+    pointBounds,
+    setActivePointIndex: (index) => {
+      setActivePoolPointIndex(index)
+      if (index !== null) {
+        setActivePointIndex(null)
+      }
+    },
+    setDeckPoints: (nextPoints) => {
+      setPoolPoints((currentPoints) => {
+        const sourcePoints = currentPoints ?? initialPoolPoints
+        return typeof nextPoints === "function"
+          ? nextPoints(sourcePoints)
+          : nextPoints
+      })
+    },
+    snapToHouse: false,
     svgRef,
   })
   const viewport = useCanvasViewport({
@@ -85,6 +128,16 @@ export function PlanSvg({
     }
 
     if (event.key !== "Backspace" && event.key !== "Delete") {
+      return
+    }
+
+    if (activePoolPointIndex !== null) {
+      if (!poolPoints || poolPoints.length <= 3) {
+        return
+      }
+
+      event.preventDefault()
+      poolEditor.removeActivePoint()
       return
     }
 
@@ -160,9 +213,12 @@ export function PlanSvg({
       />
       <DeckLayer
         activePointIndex={activePointIndex}
+        activePoolPointIndex={activePoolPointIndex}
         deckPoints={deckPoints}
         editor={editor}
         houseBounds={houseBounds}
+        poolEditor={poolEditor}
+        poolPoints={poolPoints}
         supportSegments={supportSegments}
       />
     </svg>
@@ -171,15 +227,21 @@ export function PlanSvg({
 
 function DeckLayer({
   activePointIndex,
+  activePoolPointIndex,
   deckPoints,
   editor,
   houseBounds,
+  poolEditor,
+  poolPoints,
   supportSegments,
 }: {
   activePointIndex: number | null
+  activePoolPointIndex: number | null
   deckPoints: Point[]
   editor: ReturnType<typeof useDeckEditor>
   houseBounds: HouseBounds
+  poolEditor: ReturnType<typeof useDeckEditor>
+  poolPoints: Point[] | null
   supportSegments: SupportSegment[]
 }) {
   const polygonPoints = getPolygonPoints(deckPoints)
@@ -410,7 +472,7 @@ function DeckLayer({
             y2={nextPoint.y}
             data-edge-index={index}
             data-interactive="true"
-            className="cursor-copy stroke-transparent"
+            className="cursor-pointer stroke-transparent"
             strokeWidth="30"
             pointerEvents="stroke"
             onDoubleClick={(event) =>
@@ -504,6 +566,166 @@ function DeckLayer({
       {activePoint && deckPoints.length > 3 ? (
         <DeletePointHint point={activePoint} />
       ) : null}
+
+      {poolPoints ? (
+        <PoolLayer
+          activePointIndex={activePoolPointIndex}
+          editor={poolEditor}
+          points={poolPoints}
+        />
+      ) : null}
+    </>
+  )
+}
+
+function PoolLayer({
+  activePointIndex,
+  editor,
+  points,
+}: {
+  activePointIndex: number | null
+  editor: ReturnType<typeof useDeckEditor>
+  points: Point[]
+}) {
+  const polygonPoints = getPolygonPoints(points)
+  const center = getPointsCenter(points)
+  const activePoint =
+    activePointIndex !== null ? points[activePointIndex] : null
+  const hoveredEdgeStart =
+    editor.hoveredEdgeIndex !== null ? points[editor.hoveredEdgeIndex] : null
+  const hoveredEdgeEnd =
+    editor.hoveredEdgeIndex !== null
+      ? points[(editor.hoveredEdgeIndex + 1) % points.length]
+      : null
+  const hoveredEdgeLabelPoint =
+    hoveredEdgeStart && hoveredEdgeEnd
+      ? {
+          x: (hoveredEdgeStart.x + hoveredEdgeEnd.x) / 2,
+          y: (hoveredEdgeStart.y + hoveredEdgeEnd.y) / 2,
+        }
+      : null
+  const dimensions = editor.dimensionEditing
+
+  return (
+    <>
+      <polygon
+        points={polygonPoints}
+        className="fill-cyan-300/72 stroke-cyan-900 dark:fill-cyan-400/40 dark:stroke-cyan-200"
+        strokeLinejoin="round"
+        strokeWidth="4"
+      />
+      <polygon
+        points={polygonPoints}
+        className="fill-transparent stroke-cyan-50/60 dark:stroke-cyan-950/30"
+        strokeDasharray="10 8"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <text
+        x={center.x}
+        y={center.y + 5}
+        textAnchor="middle"
+        className="pointer-events-none fill-cyan-950 text-[18px] font-semibold dark:fill-cyan-50"
+      >
+        Pool
+      </text>
+
+      {hoveredEdgeStart && hoveredEdgeEnd ? (
+        <line
+          x1={hoveredEdgeStart.x}
+          y1={hoveredEdgeStart.y}
+          x2={hoveredEdgeEnd.x}
+          y2={hoveredEdgeEnd.y}
+          className="pointer-events-none stroke-cyan-500"
+          strokeLinecap="round"
+          strokeWidth="6"
+          opacity="0.75"
+        />
+      ) : null}
+
+      {points.map((point, index) => {
+        const nextPoint = points[(index + 1) % points.length]
+        if (!nextPoint) {
+          return null
+        }
+
+        return (
+          <line
+            key={`pool-edge-hit-${index}`}
+            x1={point.x}
+            y1={point.y}
+            x2={nextPoint.x}
+            y2={nextPoint.y}
+            data-edge-index={index}
+            data-interactive="true"
+            className="cursor-pointer stroke-transparent"
+            strokeWidth="26"
+            pointerEvents="stroke"
+            onDoubleClick={(event) =>
+              editor.handleEdgeDoubleClick(event, index)
+            }
+            onPointerEnter={() => editor.setHoveredEdgeIndex(index)}
+            onPointerLeave={() =>
+              editor.setHoveredEdgeIndex((currentIndex) =>
+                currentIndex === index ? null : currentIndex
+              )
+            }
+          />
+        )
+      })}
+
+      {hoveredEdgeLabelPoint ? (
+        <EdgeHoverLabel point={hoveredEdgeLabelPoint} />
+      ) : null}
+
+      {points.map((point, index) => {
+        const nextPoint = points[(index + 1) % points.length]
+        if (!nextPoint) {
+          return null
+        }
+
+        const labelPoint = getDimensionLabelPoint(point, nextPoint, center)
+
+        return (
+          <DimensionLine
+            key={`pool-dimension-${index}`}
+            edgeIndex={index}
+            x1={point.x}
+            y1={point.y}
+            x2={nextPoint.x}
+            y2={nextPoint.y}
+            valueMeters={distance(point, nextPoint) / PIXELS_PER_METER}
+            labelX={labelPoint.x}
+            labelY={labelPoint.y}
+            rotate={lineAngle(point, nextPoint)}
+            editingDimension={editor.editingDimension}
+            onCancelEdit={dimensions.cancelEditingDimension}
+            onCommitEdit={dimensions.commitEditingDimension}
+            onEditValueChange={dimensions.updateEditingDimension}
+            onStartEdit={dimensions.startEditingDimension}
+          />
+        )
+      })}
+
+      {points.map((point, index) => (
+        <DeckHandle
+          key={`pool-point-${index}`}
+          x={point.x}
+          y={point.y}
+          label={`W${index + 1}`}
+          selected={index === activePointIndex}
+          dragging={editor.dragStart?.pointIndex === index}
+          variant="pool"
+          onPointerDown={(event) => editor.handlePointPointerDown(event, index)}
+        />
+      ))}
+
+      {editor.snapState.point ? (
+        <SnapIndicator point={editor.snapState.point} type="grid" />
+      ) : null}
+      {activePoint && points.length > 3 ? (
+        <DeletePointHint point={activePoint} />
+      ) : null}
     </>
   )
 }
@@ -511,3 +733,34 @@ function DeckLayer({
 function getPolygonPoints(points: Point[]): string {
   return points.map((point) => `${point.x},${point.y}`).join(" ")
 }
+
+function getPointsCenter(points: Point[]): Point {
+  const total = points.reduce(
+    (sum, point) => ({ x: sum.x + point.x, y: sum.y + point.y }),
+    { x: 0, y: 0 }
+  )
+
+  return {
+    x: total.x / points.length,
+    y: total.y / points.length,
+  }
+}
+
+function getDimensionLabelPoint(start: Point, end: Point, center: Point): Point {
+  const midPoint = {
+    x: (start.x + end.x) / 2,
+    y: (start.y + end.y) / 2,
+  }
+  const dx = midPoint.x - center.x
+  const dy = midPoint.y - center.y
+  const length = Math.hypot(dx, dy) || 1
+
+  return {
+    x: midPoint.x + (dx / length) * 34,
+    y: midPoint.y + (dy / length) * 34,
+  }
+}
+
+function noopSetActivePointIndex() {}
+
+function noopSetPoolPoints() {}

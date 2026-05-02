@@ -29,6 +29,8 @@ import {
 } from "@/lib/trall/materials-api"
 import { formatCurrency } from "@/lib/trall/format"
 import {
+  getCalculatedMaterialRule,
+  getCalculatedProjectMaterialQuantity,
   getDeckingLinearMetres,
   getMaterialDimensionsLabel,
   getPiecesForLinearMetres,
@@ -36,6 +38,7 @@ import {
   getProjectMaterialTotals,
   materialUnitLabels,
   materialUnits,
+  type CalculatedMaterialRule,
   type MaterialRecord,
   type ProjectMaterialSummary,
   type ProjectMaterialItem,
@@ -86,13 +89,35 @@ export function MaterialsManager({
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
+  const calculatedProjectMaterials = useMemo(
+    () =>
+      projectMaterials.map((item) => {
+        const quantity = getCalculatedProjectMaterialQuantity({
+          areaM2: deckAreaM2,
+          boardGapMm,
+          material: item.material,
+          supportLinearMetres: supportLayout.totalLengthM,
+        })
+
+        return quantity === null ? item : { ...item, quantity }
+      }),
+    [boardGapMm, deckAreaM2, projectMaterials, supportLayout.totalLengthM]
+  )
   const totals = useMemo(
-    () => getProjectMaterialTotals(projectMaterials),
-    [projectMaterials]
+    () => getProjectMaterialTotals(calculatedProjectMaterials),
+    [calculatedProjectMaterials]
   )
   const selectedMaterial = materials.find(
     (material) => material.id === selectedMaterialId
   )
+  const selectedCalculatedQuantity = selectedMaterial
+    ? getCalculatedProjectMaterialQuantity({
+        areaM2: deckAreaM2,
+        boardGapMm,
+        material: selectedMaterial,
+        supportLinearMetres: supportLayout.totalLengthM,
+      })
+    : null
   const supportMaterial =
     materials.find(
       (material) =>
@@ -132,9 +157,72 @@ export function MaterialsManager({
   useEffect(() => {
     onSummaryChange({
       ...totals,
-      itemCount: projectMaterials.length,
+      itemCount: calculatedProjectMaterials.length,
     })
-  }, [onSummaryChange, projectMaterials.length, totals])
+  }, [calculatedProjectMaterials.length, onSummaryChange, totals])
+
+  useEffect(() => {
+    if (!projectId) {
+      return
+    }
+
+    const updates = projectMaterials
+      .map((item) => ({
+        item,
+        quantity: getCalculatedProjectMaterialQuantity({
+          areaM2: deckAreaM2,
+          boardGapMm,
+          material: item.material,
+          supportLinearMetres: supportLayout.totalLengthM,
+        }),
+      }))
+      .filter(
+        (
+          update
+        ): update is {
+          item: ProjectMaterialItem
+          quantity: number
+        } =>
+          update.quantity !== null &&
+          Math.abs(update.item.quantity - update.quantity) >= 0.05
+      )
+
+    if (updates.length === 0) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void Promise.all(
+        updates.map(({ item, quantity }) =>
+          setProjectMaterialQuantity({
+            materialId: item.material_id,
+            projectId,
+            quantity,
+          })
+        )
+      )
+        .then((updatedItems) => {
+          setProjectMaterials((current) =>
+            current.map((currentItem) => {
+              const updated = updatedItems.find(
+                (item) => item.material_id === currentItem.material_id
+              )
+
+              return updated ?? currentItem
+            })
+          )
+        })
+        .catch((error) => toast.error(getErrorMessage(error)))
+    }, 650)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [
+    boardGapMm,
+    deckAreaM2,
+    projectId,
+    projectMaterials,
+    supportLayout.totalLengthM,
+  ])
 
   useEffect(() => {
     let cancelled = false
@@ -194,7 +282,8 @@ export function MaterialsManager({
       return
     }
 
-    const quantity = parseQuantity(selectedQuantity)
+    const quantity =
+      selectedCalculatedQuantity ?? parseQuantity(selectedQuantity)
     if (quantity === null) {
       toast.error("Enter a valid quantity.")
       return
@@ -210,7 +299,11 @@ export function MaterialsManager({
       })
       upsertProjectItem(item)
       setSelectedQuantity("1")
-      toast.success("Material added to project")
+      toast.success(
+        selectedCalculatedQuantity === null
+          ? "Material added to project"
+          : "Calculated material added to project"
+      )
     } catch (error) {
       toast.error(getErrorMessage(error))
     } finally {
@@ -415,36 +508,49 @@ export function MaterialsManager({
         </div>
 
         <div className="space-y-2">
-          {projectMaterials.length === 0 ? (
+          {calculatedProjectMaterials.length === 0 ? (
             <p className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
               No materials assigned to this project yet.
             </p>
           ) : (
-            projectMaterials.map((item) => (
-              <ProjectMaterialRow
-                key={item.material_id}
-                editingForm={
-                  editingMaterialId === item.material_id ? editingForm : null
-                }
-                item={item}
-                saving={saving}
-                onCancelEdit={cancelEditing}
-                onEdit={() => startEditingMaterial(item)}
-                onEditFormChange={setEditingForm}
-                onQuantityChange={(quantity) =>
-                  setProjectMaterials((current) =>
-                    current.map((projectMaterial) =>
-                      projectMaterial.material_id === item.material_id
-                        ? { ...projectMaterial, quantity }
-                        : projectMaterial
+            calculatedProjectMaterials.map((item) => {
+              const calculationRule = getCalculatedMaterialRule(item.material)
+
+              return (
+                <ProjectMaterialRow
+                  key={item.material_id}
+                  calculationRule={calculationRule}
+                  editingForm={
+                    editingMaterialId === item.material_id ? editingForm : null
+                  }
+                  item={item}
+                  saving={saving}
+                  onCancelEdit={cancelEditing}
+                  onEdit={() => startEditingMaterial(item)}
+                  onEditFormChange={setEditingForm}
+                  onQuantityChange={(quantity) => {
+                    if (calculationRule) {
+                      return
+                    }
+
+                    setProjectMaterials((current) =>
+                      current.map((projectMaterial) =>
+                        projectMaterial.material_id === item.material_id
+                          ? { ...projectMaterial, quantity }
+                          : projectMaterial
+                      )
                     )
-                  )
-                }
-                onQuantityCommit={() => handleQuantityCommit(item)}
-                onRemove={() => handleRemoveProjectMaterial(item)}
-                onSaveEdit={() => handleSaveEditedMaterial(item)}
-              />
-            ))
+                  }}
+                  onQuantityCommit={() => {
+                    if (!calculationRule) {
+                      handleQuantityCommit(item)
+                    }
+                  }}
+                  onRemove={() => handleRemoveProjectMaterial(item)}
+                  onSaveEdit={() => handleSaveEditedMaterial(item)}
+                />
+              )
+            })
           )}
         </div>
 
@@ -533,11 +639,12 @@ export function MaterialsManager({
             </Select>
             <Input
               aria-label="Quantity"
+              disabled={selectedCalculatedQuantity !== null}
               inputMode="decimal"
               min={0}
               step={0.1}
               type="number"
-              value={selectedQuantity}
+              value={selectedCalculatedQuantity ?? selectedQuantity}
               onChange={(event) => setSelectedQuantity(event.target.value)}
             />
           </div>
@@ -569,6 +676,7 @@ export function MaterialsManager({
 }
 
 function ProjectMaterialRow({
+  calculationRule,
   editingForm,
   item,
   saving,
@@ -580,6 +688,7 @@ function ProjectMaterialRow({
   onRemove,
   onSaveEdit,
 }: {
+  calculationRule: CalculatedMaterialRule | null
   editingForm: MaterialFormState | null
   item: ProjectMaterialItem
   saving: boolean
@@ -592,6 +701,12 @@ function ProjectMaterialRow({
   onSaveEdit: () => void
 }) {
   const dimensions = getMaterialDimensionsLabel(item.material)
+  const calculationLabel =
+    calculationRule === "decking_area"
+      ? "Calculated from deck edges"
+      : calculationRule === "support_cc600"
+        ? "Calculated from c/c 600 support runs"
+        : null
 
   return (
     <div className="space-y-2 rounded-lg border bg-muted/25 px-3 py-2">
@@ -610,10 +725,16 @@ function ProjectMaterialRow({
                 {dimensions}
               </p>
             ) : null}
+            {calculationLabel ? (
+              <p className="truncate text-xs text-muted-foreground">
+                {calculationLabel}
+              </p>
+            ) : null}
           </div>
         </div>
         <Input
           aria-label={`${item.material.name} quantity`}
+          disabled={calculationRule !== null}
           inputMode="decimal"
           min={0}
           step={0.1}

@@ -45,7 +45,11 @@ export function applySnap(
   point: Point,
   houseBounds: HouseBounds,
   pointBounds: PointBounds,
-  options: { disableGrid?: boolean; preferredSnapType?: SnapType } = {}
+  options: {
+    disableGrid?: boolean
+    disableHouse?: boolean
+    preferredSnapType?: SnapType
+  } = {}
 ): {
   point: Point
   snapType: SnapType
@@ -57,7 +61,9 @@ export function applySnap(
   const gridPoint = options.disableGrid
     ? clampedPoint
     : snapPointToGrid(clampedPoint)
-  const houseSnap = snapPointToHouseAttachEdge(gridPoint, houseBounds)
+  const houseSnap = options.disableHouse
+    ? { point: gridPoint, snapped: false }
+    : snapPointToHouseAttachEdge(gridPoint, houseBounds)
   const finalPoint = {
     x: clamp(houseSnap.point.x, pointBounds.minX, pointBounds.maxX),
     y: clamp(houseSnap.point.y, pointBounds.minY, pointBounds.maxY),

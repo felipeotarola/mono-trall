@@ -16,9 +16,11 @@ export type SupportLayout = {
 }
 
 export function getSupportLayout({
+  holes = [],
   points,
   spacingM = 0.6,
 }: {
+  holes?: Point[][]
   points: Point[]
   spacingM?: number
 }): SupportLayout {
@@ -32,16 +34,10 @@ export function getSupportLayout({
   const segments: SupportSegment[] = []
 
   for (let x = minX + spacingPx / 2; x < maxX; x += spacingPx) {
-    const intersections = getVerticalIntersections(points, x)
+    const deckIntervals = getVerticalIntervals(points, x)
+    const holeIntervals = holes.flatMap((hole) => getVerticalIntervals(hole, x))
 
-    for (let index = 0; index < intersections.length - 1; index += 2) {
-      const y1 = intersections[index]
-      const y2 = intersections[index + 1]
-
-      if (y1 === undefined || y2 === undefined || y2 <= y1) {
-        continue
-      }
-
+    for (const [y1, y2] of subtractIntervals(deckIntervals, holeIntervals)) {
       segments.push({
         x1: x,
         y1,
@@ -59,6 +55,24 @@ export function getSupportLayout({
     ),
     segments,
   }
+}
+
+function getVerticalIntervals(points: Point[], x: number) {
+  const intersections = getVerticalIntersections(points, x)
+  const intervals: Array<[number, number]> = []
+
+  for (let index = 0; index < intersections.length - 1; index += 2) {
+    const y1 = intersections[index]
+    const y2 = intersections[index + 1]
+
+    if (y1 === undefined || y2 === undefined || y2 <= y1) {
+      continue
+    }
+
+    intervals.push([y1, y2])
+  }
+
+  return intervals
 }
 
 function getVerticalIntersections(points: Point[], x: number) {
@@ -81,6 +95,37 @@ function getVerticalIntersections(points: Point[], x: number) {
   })
 
   return intersections.sort((a, b) => a - b)
+}
+
+function subtractIntervals(
+  intervals: Array<[number, number]>,
+  subtractingIntervals: Array<[number, number]>
+) {
+  return subtractingIntervals
+    .sort((a, b) => a[0] - b[0])
+    .reduce<Array<[number, number]>>(
+      (remainingIntervals, [subtractStart, subtractEnd]) =>
+        remainingIntervals.flatMap(([start, end]) => {
+          if (subtractEnd <= start || subtractStart >= end) {
+            return [[start, end]]
+          }
+
+          const nextIntervals: Array<[number, number]> = []
+          const beforeEnd = Math.min(subtractStart, end)
+          const afterStart = Math.max(subtractEnd, start)
+
+          if (beforeEnd > start) {
+            nextIntervals.push([start, beforeEnd])
+          }
+
+          if (end > afterStart) {
+            nextIntervals.push([afterStart, end])
+          }
+
+          return nextIntervals
+        }),
+      intervals
+    )
 }
 
 function roundQuantity(value: number) {
