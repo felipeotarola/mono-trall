@@ -10,6 +10,7 @@ import type {
 import { useMemo, useRef, useState } from "react"
 
 import {
+  GRID_SIZE_PX,
   initialDeckPoints,
   PARALLEL_HINT_THRESHOLD_DEG,
   PIXELS_PER_METER,
@@ -75,6 +76,10 @@ export function useDeckEditor({
   const [dragStart, setDragStart] = useState<{
     pointIndex: number
     point: Point
+  } | null>(null)
+  const [shapeDragStart, setShapeDragStart] = useState<{
+    point: Point
+    points: Point[]
   } | null>(null)
   const [hoveredEdgeIndex, setHoveredEdgeIndex] = useState<number | null>(null)
   const [editingDimension, setEditingDimension] =
@@ -157,6 +162,35 @@ export function useDeckEditor({
     setParallelHint({ active: false, start: null, end: null })
   }
 
+  function handleShapePointerDown(event: ReactPointerEvent<SVGPolygonElement>) {
+    event.preventDefault()
+    event.stopPropagation()
+    setEditingDimension(null)
+    svgRef.current?.focus()
+    if (svgRef.current) {
+      const captured = setPointerCaptureIfPossible(
+        svgRef.current,
+        event.pointerId
+      )
+      if (!captured && !event.isTrusted) {
+        return
+      }
+    }
+
+    if (!svgRef.current) {
+      return
+    }
+
+    setActivePointIndex(null)
+    setHoveredEdgeIndex(null)
+    setDragStart(null)
+    setShapeDragStart({
+      point: clientPointToSvgPoint(event, svgRef.current),
+      points: deckPoints,
+    })
+    resetTransientState()
+  }
+
   function handleEdgeDoubleClick(
     event: ReactMouseEvent<SVGLineElement>,
     edgeIndex: number
@@ -196,6 +230,44 @@ export function useDeckEditor({
   }
 
   function handlePointerMove(event: ReactPointerEvent<SVGSVGElement>) {
+    if (shapeDragStart && svgRef.current) {
+      let point = clientPointToSvgPoint(event, svgRef.current)
+
+      if (event.shiftKey) {
+        const dx = point.x - shapeDragStart.point.x
+        const dy = point.y - shapeDragStart.point.y
+        point =
+          Math.abs(dx) > Math.abs(dy)
+            ? { ...point, y: shapeDragStart.point.y }
+            : { ...point, x: shapeDragStart.point.x }
+      }
+
+      const rawDelta = {
+        x: point.x - shapeDragStart.point.x,
+        y: point.y - shapeDragStart.point.y,
+      }
+      const snappedDelta = event.altKey
+        ? rawDelta
+        : {
+            x: snapDelta(rawDelta.x),
+            y: snapDelta(rawDelta.y),
+          }
+      const delta = clampShapeDelta(
+        shapeDragStart.points,
+        snappedDelta,
+        pointBounds
+      )
+
+      setDeckPoints(
+        shapeDragStart.points.map((startPoint) => ({
+          x: startPoint.x + delta.x,
+          y: startPoint.y + delta.y,
+        }))
+      )
+
+      return true
+    }
+
     if (!dragStart || !svgRef.current) {
       return false
     }
@@ -309,6 +381,7 @@ export function useDeckEditor({
       svgRef.current.releasePointerCapture(event.pointerId)
     }
     setDragStart(null)
+    setShapeDragStart(null)
     resetTransientState()
   }
 
@@ -400,6 +473,7 @@ export function useDeckEditor({
     handleEdgeDoubleClick,
     handlePointPointerDown,
     handlePointerMove,
+    handleShapePointerDown,
     hoveredEdgeIndex,
     parallelHint,
     removeActivePoint,
@@ -412,6 +486,26 @@ export function useDeckEditor({
       startEditingDimension,
       updateEditingDimension,
     },
+  }
+}
+
+function snapDelta(value: number) {
+  return Math.round(value / GRID_SIZE_PX) * GRID_SIZE_PX
+}
+
+function clampShapeDelta(
+  points: Point[],
+  delta: Point,
+  pointBounds: PointBounds
+): Point {
+  const minX = Math.min(...points.map((point) => point.x))
+  const maxX = Math.max(...points.map((point) => point.x))
+  const minY = Math.min(...points.map((point) => point.y))
+  const maxY = Math.max(...points.map((point) => point.y))
+
+  return {
+    x: clamp(delta.x, pointBounds.minX - minX, pointBounds.maxX - maxX),
+    y: clamp(delta.y, pointBounds.minY - minY, pointBounds.maxY - maxY),
   }
 }
 

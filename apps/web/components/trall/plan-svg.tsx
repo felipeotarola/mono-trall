@@ -160,7 +160,11 @@ export function PlanSvg({
       return
     }
 
-    editor.handlePointerMove(event)
+    if (editor.handlePointerMove(event)) {
+      return
+    }
+
+    poolEditor.handlePointerMove(event)
   }
 
   function handlePointerEnd(event: ReactPointerEvent<SVGSVGElement>) {
@@ -169,6 +173,7 @@ export function PlanSvg({
     }
 
     editor.stopDragging(event)
+    poolEditor.stopDragging(event)
   }
 
   return (
@@ -610,9 +615,10 @@ function PoolLayer({
     <>
       <polygon
         points={polygonPoints}
-        className="fill-cyan-300/72 stroke-cyan-900 dark:fill-cyan-400/40 dark:stroke-cyan-200"
+        className="cursor-grab fill-cyan-300/72 stroke-cyan-900 active:cursor-grabbing dark:fill-cyan-400/40 dark:stroke-cyan-200"
         strokeLinejoin="round"
         strokeWidth="4"
+        onPointerDown={editor.handleShapePointerDown}
       />
       <polygon
         points={polygonPoints}
