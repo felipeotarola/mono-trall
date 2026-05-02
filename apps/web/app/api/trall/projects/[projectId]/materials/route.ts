@@ -59,7 +59,9 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json(data)
+  return NextResponse.json(
+    data.filter((item) => item.material.created_by === auth.userId)
+  )
 }
 
 export async function POST(request: Request, context: RouteContext) {
@@ -184,7 +186,7 @@ async function assertMaterialVisible(materialId: string, userId: string) {
     .select("id")
     .eq("id", materialId)
     .eq("active", true)
-    .or(`created_by.is.null,created_by.eq.${userId}`)
+    .eq("created_by", userId)
     .single<{ id: string }>()
 
   if (error) {

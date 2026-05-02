@@ -31,15 +31,9 @@ const data = {
   },
   navMain: [
     {
-      title: "Workspace",
+      title: "Dashboard",
       url: "/dashboard",
       icon: <LayoutDashboardIcon />,
-    },
-
-    {
-      title: "Projects",
-      url: "#",
-      icon: <FolderIcon />,
     },
     {
       title: "Deck planner",
@@ -50,17 +44,7 @@ const data = {
       title: "Materials",
       url: "/materials",
       icon: <CalculatorIcon />,
-    },
-    {
-      title: "Quotes",
-      url: "#",
-      icon: <FileTextIcon />,
-    },
-    {
-      title: "Settings",
-      url: "#",
-      icon: <Settings2Icon />,
-    },
+    }
   ],
 }
 

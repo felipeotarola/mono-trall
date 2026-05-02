@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import {
   CheckIcon,
-  CopyIcon,
   LibraryIcon,
+  MoreHorizontalIcon,
   PencilIcon,
   SearchIcon,
   Trash2Icon,
@@ -31,7 +31,6 @@ import {
   materialUnitLabels,
   type MaterialRecord,
 } from "@/lib/trall/materials"
-import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
 import {
   Card,
@@ -40,6 +39,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@workspace/ui/components/dropdown-menu"
 import { Input } from "@workspace/ui/components/input"
 
 export function MaterialLibraryManager() {
@@ -48,17 +54,10 @@ export function MaterialLibraryManager() {
   const [editingMaterialId, setEditingMaterialId] = useState<string | null>(
     null
   )
-  const [copyingMaterialId, setCopyingMaterialId] = useState<string | null>(
-    null
-  )
   const [query, setQuery] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const formMode = editingMaterialId
-    ? "edit"
-    : copyingMaterialId
-      ? "copy"
-      : "add"
+  const formMode = editingMaterialId ? "edit" : "add"
 
   const filteredMaterials = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
@@ -82,10 +81,7 @@ export function MaterialLibraryManager() {
     )
   }, [materials, query])
 
-  const customCount = materials.filter(
-    (material) => material.created_by !== null
-  ).length
-  const standardCount = materials.length - customCount
+  const materialCount = materials.length
 
   useEffect(() => {
     void refreshMaterials()
@@ -122,9 +118,7 @@ export function MaterialLibraryManager() {
       } else {
         const created = await createMaterial(input)
         setMaterials((current) => [...current, created])
-        toast.success(
-          copyingMaterialId ? "Custom material copy created" : "Material added"
-        )
+        toast.success("Material added")
       }
 
       resetForm()
@@ -160,8 +154,7 @@ export function MaterialLibraryManager() {
   }
 
   function startEditing(material: MaterialRecord) {
-    setEditingMaterialId(material.created_by === null ? null : material.id)
-    setCopyingMaterialId(material.created_by === null ? material.id : null)
+    setEditingMaterialId(material.id)
     setForm({
       name: material.name,
       category: material.category,
@@ -177,7 +170,6 @@ export function MaterialLibraryManager() {
 
   function resetForm() {
     setEditingMaterialId(null)
-    setCopyingMaterialId(null)
     setForm(emptyMaterialForm)
   }
 
@@ -192,9 +184,8 @@ export function MaterialLibraryManager() {
             Maintain reusable deck-building materials for all projects.
           </p>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex">
-          <OverviewMetric label="Standard" value={standardCount} />
-          <OverviewMetric label="Custom" value={customCount} />
+        <div className="grid grid-cols-1 gap-2 sm:flex">
+          <OverviewMetric label="Materials" value={materialCount} />
         </div>
       </div>
 
@@ -202,16 +193,11 @@ export function MaterialLibraryManager() {
         <Card>
           <CardHeader>
             <CardTitle>
-              {formMode === "edit"
-                ? "Edit material"
-                : formMode === "copy"
-                  ? "Copy standard material"
-                  : "Add material"}
+              {formMode === "edit" ? "Edit material" : "Add material"}
             </CardTitle>
             <CardDescription>
-              {formMode === "copy"
-                ? "Save this as a custom material before changing shared defaults."
-                : "Custom materials are available in the project calculator."}
+              Materials connected to your account are available in the project
+              calculator.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -223,11 +209,7 @@ export function MaterialLibraryManager() {
                 onClick={handleSaveMaterial}
               >
                 <CheckIcon />
-                {formMode === "edit"
-                  ? "Save changes"
-                  : formMode === "copy"
-                    ? "Create custom copy"
-                    : "Add material"}
+                {formMode === "edit" ? "Save changes" : "Add material"}
               </Button>
               {formMode !== "add" ? (
                 <Button variant="outline" onClick={resetForm}>
@@ -244,8 +226,7 @@ export function MaterialLibraryManager() {
               <div>
                 <CardTitle>Library overview</CardTitle>
                 <CardDescription>
-                  Use Copy & edit for shared standard rows. Custom rows can be
-                  edited or archived directly.
+                  Edit or delete materials connected to your account.
                 </CardDescription>
               </div>
               <div className="flex h-9 min-w-0 items-center gap-2 rounded-lg border bg-background px-2 lg:w-80">
@@ -261,34 +242,37 @@ export function MaterialLibraryManager() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="overflow-hidden rounded-lg border">
-              <div className="grid grid-cols-[minmax(220px,1.5fr)_140px_120px_90px_120px_220px] border-b bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground max-lg:hidden">
-                <span>Material</span>
-                <span>Category</span>
-                <span>Dimensions</span>
-                <span>Unit</span>
-                <span>Cost</span>
-                <span className="text-right">Actions</span>
-              </div>
-              <div className="divide-y">
-                {loading ? (
-                  <p className="p-4 text-sm text-muted-foreground">
-                    Loading materials...
-                  </p>
-                ) : filteredMaterials.length === 0 ? (
-                  <p className="p-4 text-sm text-muted-foreground">
-                    No materials match this search.
-                  </p>
-                ) : (
-                  filteredMaterials.map((material) => (
-                    <MaterialOverviewRow
-                      key={material.id}
-                      material={material}
-                      onDelete={() => handleDeleteMaterial(material)}
-                      onEdit={() => startEditing(material)}
-                    />
-                  ))
-                )}
+            <div className="overflow-x-auto rounded-lg border">
+              <div className="min-w-[960px]">
+                <div className="grid grid-cols-[72px_minmax(220px,1.5fr)_140px_120px_90px_120px_88px] gap-3 border-b bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground">
+                  <span>Image</span>
+                  <span>Material</span>
+                  <span>Category</span>
+                  <span>Dimensions</span>
+                  <span>Unit</span>
+                  <span>Cost</span>
+                  <span className="text-right">Actions</span>
+                </div>
+                <div className="divide-y">
+                  {loading ? (
+                    <p className="p-4 text-sm text-muted-foreground">
+                      Loading materials...
+                    </p>
+                  ) : filteredMaterials.length === 0 ? (
+                    <p className="p-4 text-sm text-muted-foreground">
+                      No materials match this search.
+                    </p>
+                  ) : (
+                    filteredMaterials.map((material) => (
+                      <MaterialOverviewRow
+                        key={material.id}
+                        material={material}
+                        onDelete={() => handleDeleteMaterial(material)}
+                        onEdit={() => startEditing(material)}
+                      />
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           </CardContent>
@@ -316,25 +300,21 @@ function MaterialOverviewRow({
   onDelete: () => void
   onEdit: () => void
 }) {
-  const isStandard = material.created_by === null
   const dimensions = getMaterialDimensionsLabel(material)
 
   return (
-    <div className="grid gap-3 px-3 py-3 lg:grid-cols-[minmax(220px,1.5fr)_140px_120px_90px_120px_220px] lg:items-center">
-      <div className="grid min-w-0 grid-cols-[48px_minmax(0,1fr)] gap-3">
-        <MaterialImage material={material} />
-        <div className="min-w-0">
-          <div className="flex min-w-0 items-center gap-2">
-            <LibraryIcon className="size-4 shrink-0 text-muted-foreground" />
-            <span className="truncate font-medium">{material.name}</span>
-            {isStandard ? <Badge variant="secondary">Standard</Badge> : null}
-          </div>
-          {material.description ? (
-            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-              {material.description}
-            </p>
-          ) : null}
+    <div className="grid grid-cols-[72px_minmax(220px,1.5fr)_140px_120px_90px_120px_88px] items-center gap-3 px-3 py-3">
+      <MaterialImage material={material} />
+      <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-2">
+          <LibraryIcon className="size-4 shrink-0 text-muted-foreground" />
+          <span className="truncate font-medium">{material.name}</span>
         </div>
+        {material.description ? (
+          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+            {material.description}
+          </p>
+        ) : null}
       </div>
       <div className="text-sm text-muted-foreground">{material.category}</div>
       <div className="text-sm text-muted-foreground">
@@ -344,28 +324,29 @@ function MaterialOverviewRow({
       <div className="text-sm font-medium">
         {formatCurrency(material.cost)} / {materialUnitLabels[material.unit]}
       </div>
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button
-          aria-label="Edit material"
-          size="sm"
-          title={isStandard ? "Copy and edit as custom material" : "Edit"}
-          variant={isStandard ? "outline" : "secondary"}
-          onClick={onEdit}
-        >
-          {isStandard ? <CopyIcon /> : <PencilIcon />}
-          {isStandard ? "Copy & edit" : "Edit"}
-        </Button>
-        <Button
-          aria-label="Delete material"
-          disabled={isStandard}
-          size="sm"
-          title={isStandard ? "Standard materials cannot be removed" : "Delete"}
-          variant="ghost"
-          onClick={onDelete}
-        >
-          <Trash2Icon />
-          Delete
-        </Button>
+      <div className="flex justify-end">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              aria-label={`Open actions for ${material.name}`}
+              size="icon-sm"
+              variant="ghost"
+            >
+              <MoreHorizontalIcon />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuItem onSelect={onEdit}>
+              <PencilIcon />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={onDelete} variant="destructive">
+              <Trash2Icon />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   )

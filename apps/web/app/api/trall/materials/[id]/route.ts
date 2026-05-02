@@ -123,7 +123,7 @@ async function getEditableMaterial(id: string, userId: string) {
   if (data.created_by !== userId) {
     return {
       response: NextResponse.json(
-        { error: "Only custom materials can be changed" },
+        { error: "Only user materials can be changed" },
         { status: 403 }
       ),
     }

@@ -71,29 +71,6 @@ create table if not exists public.project_materials (
 create index if not exists project_materials_material_id_idx
   on public.project_materials(material_id);
 
-insert into public.materials (id, name, category, unit, cost, thickness_mm, width_mm, length_mm, image_url, description, created_by, active)
-values
-  ('00000000-0000-4000-8000-000000000001', 'Decking boards 28 x 120 mm', 'Decking', 'linear_metre', 39.00, 28, 120, null, null, 'Standard pressure-treated deck board.', null, true),
-  ('00000000-0000-4000-8000-000000000002', 'Joists 45 x 145 mm', 'Framing', 'linear_metre', 18.50, 45, 145, null, null, 'Structural timber joist for deck framing.', null, true),
-  ('00000000-0000-4000-8000-000000000003', 'Posts 98 x 98 mm', 'Framing', 'metre', 24.00, 98, 98, null, null, 'Support post material.', null, true),
-  ('00000000-0000-4000-8000-000000000004', 'Galvanized post anchors', 'Foundation', 'piece', 16.00, null, null, null, null, 'Post base anchor for concrete or pier fixing.', null, true),
-  ('00000000-0000-4000-8000-000000000005', 'A4 stainless deck screws', 'Fasteners', 'box', 32.00, null, null, null, null, 'Box of corrosion-resistant deck screws.', null, true),
-  ('00000000-0000-4000-8000-000000000006', 'Joist hangers', 'Fasteners', 'piece', 4.25, null, null, null, null, 'Galvanized connector for joist support.', null, true),
-  ('00000000-0000-4000-8000-000000000007', 'Beijerbygg Trall 34 x 170 mm XL Premium+ NTR/AB G4-2', 'Decking', 'linear_metre', 57.50, 34, 170, 5100, 'https://media-prod.beijerflow.com/media/derivates/8/001/205/062/Trall_34x145_130121_101605_0084_1536px.jpg', 'Pressure-treated premium deck board priced per löpmeter. Beijer article 880703417051.', null, true),
-  ('00000000-0000-4000-8000-000000000008', 'Beijerbygg Byggregel 45 x 145 mm C24 NTR/A RAW', 'Framing', 'linear_metre', 53.00, 45, 145, 5400, 'https://media-prod.beijerflow.com/media/derivates/8/001/192/677/IMP_45x145_130121_100615_0072_1536px.jpg', 'Pressure-treated C24 construction timber for ground and freshwater contact. Beijer article 882204514554.', null, true)
-on conflict (id) do update
-set
-  name = excluded.name,
-  category = excluded.category,
-  unit = excluded.unit,
-  cost = excluded.cost,
-  thickness_mm = excluded.thickness_mm,
-  width_mm = excluded.width_mm,
-  length_mm = excluded.length_mm,
-  image_url = excluded.image_url,
-  description = excluded.description,
-  active = excluded.active;
-
 alter table public.trall_mono_projects enable row level security;
 alter table public.trall_mono_project_versions enable row level security;
 alter table public.materials enable row level security;
@@ -141,10 +118,10 @@ create policy "Users can delete own project versions"
   for delete
   using (user_id = auth.uid());
 
-create policy "Users can select own or standard materials"
+create policy "Users can select own materials"
   on public.materials
   for select
-  using (created_by = auth.uid() or created_by is null);
+  using (created_by = auth.uid());
 
 create policy "Users can insert own materials"
   on public.materials
@@ -189,7 +166,7 @@ create policy "Users can insert own project materials"
       from public.materials
       where materials.id = project_materials.material_id
         and materials.active = true
-        and (materials.created_by = auth.uid() or materials.created_by is null)
+        and materials.created_by = auth.uid()
     )
   );
 

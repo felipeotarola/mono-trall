@@ -20,7 +20,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("materials")
     .select("*")
-    .or(`created_by.is.null,created_by.eq.${user.id}`)
+    .eq("created_by", user.id)
     .eq("active", true)
     .order("category", { ascending: true })
     .order("name", { ascending: true })

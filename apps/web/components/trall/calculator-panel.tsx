@@ -73,13 +73,6 @@ export function CalculatorPanel({
                 : "Add project materials before creating a quote"}
             </p>
           </div>
-          <Button
-            className="w-full bg-white text-zinc-950 hover:bg-white/90 disabled:bg-white/70"
-            disabled={!hasProjectMaterials}
-          >
-            <QuoteIcon />
-            Create quote
-          </Button>
         </CardContent>
       </Card>
 
