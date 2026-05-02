@@ -2,19 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
-import { ArchiveIcon, CheckIcon, PlusIcon } from "lucide-react"
+import { ArchiveIcon, PlusIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import {
-  MaterialFields,
-  emptyMaterialForm,
   getErrorMessage,
   parseQuantity,
-  toMaterialInput,
-  type MaterialFormState,
 } from "@/components/trall/material-form"
 import {
-  createAndAddProjectMaterial,
   listMaterials,
   listProjectMaterials,
   removeProjectMaterial,
@@ -31,6 +26,7 @@ import {
   materialUnitLabels,
   materialUnits,
   type MaterialRecord,
+  type ProjectMaterialSummary,
   type ProjectMaterialItem,
 } from "@/lib/trall/materials"
 import { Badge } from "@workspace/ui/components/badge"
@@ -54,21 +50,21 @@ import {
 export function MaterialsManager({
   deckAreaM2,
   ensureProject,
+  onSummaryChange,
   projectId,
 }: {
   deckAreaM2: number
   ensureProject: () => Promise<string>
+  onSummaryChange: (summary: ProjectMaterialSummary) => void
   projectId: string | null
 }) {
   const [materials, setMaterials] = useState<MaterialRecord[]>([])
   const [projectMaterials, setProjectMaterials] = useState<
     ProjectMaterialItem[]
   >([])
-  const [projectForm, setProjectForm] =
-    useState<MaterialFormState>(emptyMaterialForm)
   const [selectedMaterialId, setSelectedMaterialId] = useState("")
   const [selectedQuantity, setSelectedQuantity] = useState("1")
-  const [newMaterialQuantity, setNewMaterialQuantity] = useState("1")
+  const [boardGapMm, setBoardGapMm] = useState(5)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -83,6 +79,7 @@ export function MaterialsManager({
     selectedMaterial?.unit === "linear_metre"
       ? getDeckingLinearMetres({
           areaM2: deckAreaM2,
+          gapMm: boardGapMm,
           widthMm: selectedMaterial.width_mm,
         })
       : null
@@ -93,6 +90,13 @@ export function MaterialsManager({
           linearMetres: suggestedLinearMetres,
         })
       : null
+
+  useEffect(() => {
+    onSummaryChange({
+      ...totals,
+      itemCount: projectMaterials.length,
+    })
+  }, [onSummaryChange, projectMaterials.length, totals])
 
   useEffect(() => {
     let cancelled = false
@@ -169,35 +173,6 @@ export function MaterialsManager({
       upsertProjectItem(item)
       setSelectedQuantity("1")
       toast.success("Material added to project")
-    } catch (error) {
-      toast.error(getErrorMessage(error))
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function handleCreateAndAddMaterial() {
-    const input = toMaterialInput(projectForm)
-    const quantity = parseQuantity(newMaterialQuantity)
-
-    if (!input || quantity === null) {
-      toast.error("Enter material details and a valid quantity.")
-      return
-    }
-
-    setSaving(true)
-    try {
-      const nextProjectId = await ensureProject()
-      const item = await createAndAddProjectMaterial({
-        material: input,
-        projectId: nextProjectId,
-        quantity,
-      })
-      upsertProjectItem(item)
-      setMaterials((current) => [...current, item.material])
-      setProjectForm(emptyMaterialForm)
-      setNewMaterialQuantity("1")
-      toast.success("Custom material added to project")
     } catch (error) {
       toast.error(getErrorMessage(error))
     } finally {
@@ -323,6 +298,27 @@ export function MaterialsManager({
             <PlusIcon className="size-3.5" />
             Add from library
           </div>
+          <label className="grid gap-1">
+            <span className="text-xs text-muted-foreground">Board spacing</span>
+            <div className="flex items-center gap-1 rounded-lg border bg-background px-2">
+              <Input
+                className="border-0 px-0 shadow-none focus-visible:ring-0"
+                inputMode="decimal"
+                max={12}
+                min={0}
+                step={0.5}
+                type="number"
+                value={boardGapMm}
+                onChange={(event) => {
+                  const nextGap = Number.parseFloat(event.target.value)
+                  if (Number.isFinite(nextGap)) {
+                    setBoardGapMm(Math.min(12, Math.max(0, nextGap)))
+                  }
+                }}
+              />
+              <span className="text-xs text-muted-foreground">mm</span>
+            </div>
+          </label>
           <div className="grid grid-cols-[minmax(0,1fr)_88px] gap-2">
             <Select
               value={selectedMaterialId}
@@ -354,6 +350,7 @@ export function MaterialsManager({
           {selectedMaterial ? (
             <MaterialSelectionHint
               material={selectedMaterial}
+              boardGapMm={boardGapMm}
               suggestedLinearMetres={suggestedLinearMetres}
               suggestedPieces={suggestedPieces}
               onUseSuggested={() =>
@@ -371,29 +368,6 @@ export function MaterialsManager({
             <PlusIcon />
             Add to project
           </Button>
-        </div>
-
-        <div className="space-y-2 rounded-lg border p-2">
-          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-            <PlusIcon className="size-3.5" />
-            Create and add to project
-          </div>
-          <MaterialFields form={projectForm} onChange={setProjectForm} />
-          <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-2">
-            <Input
-              aria-label="New material quantity"
-              inputMode="decimal"
-              min={0}
-              step={0.1}
-              type="number"
-              value={newMaterialQuantity}
-              onChange={(event) => setNewMaterialQuantity(event.target.value)}
-            />
-            <Button disabled={saving} onClick={handleCreateAndAddMaterial}>
-              <CheckIcon />
-              Add custom
-            </Button>
-          </div>
         </div>
       </CardContent>
     </Card>
@@ -473,11 +447,13 @@ function MaterialThumbnail({ material }: { material: MaterialRecord }) {
 }
 
 function MaterialSelectionHint({
+  boardGapMm,
   material,
   onUseSuggested,
   suggestedLinearMetres,
   suggestedPieces,
 }: {
+  boardGapMm: number
   material: MaterialRecord
   onUseSuggested: () => void
   suggestedLinearMetres: number | null
@@ -495,7 +471,7 @@ function MaterialSelectionHint({
         <span className="min-w-0 truncate">
           {dimensions ? `${dimensions}` : "No dimensions"}
           {suggestedLinearMetres
-            ? ` · suggested ${suggestedLinearMetres} lpm`
+            ? ` · ${boardGapMm} mm gap · suggested ${suggestedLinearMetres} lpm`
             : ""}
           {suggestedPieces ? ` · ${suggestedPieces} boards` : ""}
         </span>

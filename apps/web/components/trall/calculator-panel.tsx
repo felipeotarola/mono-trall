@@ -1,6 +1,7 @@
 "use client"
 
 import type { Dispatch, SetStateAction } from "react"
+import { useCallback, useState } from "react"
 import { QuoteIcon } from "lucide-react"
 
 import { MaterialsManager } from "@/components/trall/materials-manager"
@@ -15,6 +16,11 @@ import {
 import { Input } from "@workspace/ui/components/input"
 import type { HouseModel, Material, Metric } from "@/lib/trall/types"
 import { clamp } from "@/lib/trall/geometry"
+import { formatCurrency } from "@/lib/trall/format"
+import {
+  emptyMaterialTotals,
+  type ProjectMaterialSummary,
+} from "@/lib/trall/materials"
 
 export function CalculatorPanel({
   calculations,
@@ -34,6 +40,19 @@ export function CalculatorPanel({
   projectId: string | null
   setHouse: Dispatch<SetStateAction<HouseModel>>
 }) {
+  const [projectMaterialSummary, setProjectMaterialSummary] =
+    useState<ProjectMaterialSummary>({
+      ...emptyMaterialTotals,
+      itemCount: 0,
+    })
+  const handleProjectMaterialSummaryChange = useCallback(
+    (summary: ProjectMaterialSummary) => {
+      setProjectMaterialSummary(summary)
+    },
+    []
+  )
+  const hasProjectMaterials = projectMaterialSummary.itemCount > 0
+
   return (
     <div className="space-y-3">
       <Card size="sm" className="bg-zinc-950 text-white dark:bg-primary">
@@ -41,13 +60,20 @@ export function CalculatorPanel({
           <div>
             <p className="text-sm text-white/70">Estimated material price</p>
             <p className="mt-1 text-3xl font-semibold tracking-tight">
-              {calculations.priceLabel}
+              {hasProjectMaterials
+                ? formatCurrency(projectMaterialSummary.totalCost)
+                : "No materials"}
             </p>
             <p className="mt-1 text-xs text-white/60">
-              Includes 10% waste factor
+              {hasProjectMaterials
+                ? "Calculated from materials assigned to this project"
+                : "Add project materials before creating a quote"}
             </p>
           </div>
-          <Button className="w-full bg-white text-zinc-950 hover:bg-white/90">
+          <Button
+            className="w-full bg-white text-zinc-950 hover:bg-white/90 disabled:bg-white/70"
+            disabled={!hasProjectMaterials}
+          >
             <QuoteIcon />
             Create quote
           </Button>
@@ -68,6 +94,7 @@ export function CalculatorPanel({
       <MaterialsManager
         deckAreaM2={calculations.areaM2}
         ensureProject={ensureProject}
+        onSummaryChange={handleProjectMaterialSummaryChange}
         projectId={projectId}
       />
 

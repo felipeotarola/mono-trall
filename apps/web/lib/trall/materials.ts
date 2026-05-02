@@ -56,6 +56,10 @@ export type MaterialTotals = {
   quantityByUnit: Record<MaterialUnit, number>
 }
 
+export type ProjectMaterialSummary = MaterialTotals & {
+  itemCount: number
+}
+
 export const emptyMaterialTotals: MaterialTotals = {
   totalCost: 0,
   totalQuantity: 0,
@@ -171,10 +175,12 @@ export function getProjectMaterialLineTotal(item: ProjectMaterialItem) {
 
 export function getDeckingLinearMetres({
   areaM2,
+  gapMm = 0,
   wasteFactor = 0.1,
   widthMm,
 }: {
   areaM2: number
+  gapMm?: number
   wasteFactor?: number
   widthMm: number | null | undefined
 }) {
@@ -182,7 +188,9 @@ export function getDeckingLinearMetres({
     return null
   }
 
-  return roundQuantity((areaM2 / (widthMm / 1000)) * (1 + wasteFactor))
+  const boardCoverageM = (widthMm + Math.max(0, gapMm)) / 1000
+
+  return roundQuantity((areaM2 / boardCoverageM) * (1 + wasteFactor))
 }
 
 export function getPiecesForLinearMetres({

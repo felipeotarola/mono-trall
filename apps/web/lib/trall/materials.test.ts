@@ -88,12 +88,17 @@ test("parses project material quantities", () => {
 
 test("calculates decking linear metres from board width", () => {
   assert.equal(
-    getDeckingLinearMetres({ areaM2: 24, widthMm: 170, wasteFactor: 0.1 }),
-    155.3
+    getDeckingLinearMetres({
+      areaM2: 24,
+      gapMm: 5,
+      widthMm: 170,
+      wasteFactor: 0.1,
+    }),
+    150.9
   )
   assert.equal(
-    getPiecesForLinearMetres({ linearMetres: 155.3, lengthMm: 5100 }),
-    31
+    getPiecesForLinearMetres({ linearMetres: 150.9, lengthMm: 5100 }),
+    30
   )
   assert.equal(
     getMaterialDimensionsLabel({

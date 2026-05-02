@@ -79,7 +79,8 @@ values
   ('00000000-0000-4000-8000-000000000004', 'Galvanized post anchors', 'Foundation', 'piece', 16.00, null, null, null, null, 'Post base anchor for concrete or pier fixing.', null, true),
   ('00000000-0000-4000-8000-000000000005', 'A4 stainless deck screws', 'Fasteners', 'box', 32.00, null, null, null, null, 'Box of corrosion-resistant deck screws.', null, true),
   ('00000000-0000-4000-8000-000000000006', 'Joist hangers', 'Fasteners', 'piece', 4.25, null, null, null, null, 'Galvanized connector for joist support.', null, true),
-  ('00000000-0000-4000-8000-000000000007', 'Beijerbygg Trall 34 x 170 mm XL Premium+ NTR/AB G4-2', 'Decking', 'linear_metre', 57.50, 34, 170, 5100, 'https://media-prod.beijerflow.com/media/derivates/8/001/205/062/Trall_34x145_130121_101605_0084_1536px.jpg', 'Pressure-treated premium deck board priced per löpmeter. Beijer article 880703417051.', null, true)
+  ('00000000-0000-4000-8000-000000000007', 'Beijerbygg Trall 34 x 170 mm XL Premium+ NTR/AB G4-2', 'Decking', 'linear_metre', 57.50, 34, 170, 5100, 'https://media-prod.beijerflow.com/media/derivates/8/001/205/062/Trall_34x145_130121_101605_0084_1536px.jpg', 'Pressure-treated premium deck board priced per löpmeter. Beijer article 880703417051.', null, true),
+  ('00000000-0000-4000-8000-000000000008', 'Beijerbygg Byggregel 45 x 145 mm C24 NTR/A RAW', 'Framing', 'linear_metre', 53.00, 45, 145, 5400, 'https://media-prod.beijerflow.com/media/derivates/8/001/192/677/IMP_45x145_130121_100615_0072_1536px.jpg', 'Pressure-treated C24 construction timber for ground and freshwater contact. Beijer article 882204514554.', null, true)
 on conflict (id) do update
 set
   name = excluded.name,
