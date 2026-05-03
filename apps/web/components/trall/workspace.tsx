@@ -8,7 +8,6 @@ import { Maximize2Icon, Minimize2Icon, PanelRightIcon } from "lucide-react"
 import { CalculatorPanel } from "@/components/trall/calculator-panel"
 import { MapControlsPanel } from "@/components/trall/canvas/map-controls"
 import { CanvasToolbar } from "@/components/trall/canvas-toolbar"
-import { ElevationView } from "@/components/trall/elevation/elevation-view"
 import { MobileSummary } from "@/components/trall/mobile-summary"
 import { PlanningSurface } from "@/components/trall/planning-surface"
 import {
@@ -23,12 +22,6 @@ import {
 import { formatCurrency } from "@/lib/trall/format"
 import { polygonArea, polygonPerimeter } from "@/lib/trall/geometry"
 import type { EdgeConstraint } from "@/lib/trall/edge-model"
-import {
-  defaultElevationSettings,
-  normalizeElevationSettings,
-  updateElevationSetting,
-  type ElevationField,
-} from "@/lib/trall/elevation"
 import { getHouseBounds } from "@/lib/trall/house"
 import {
   CURRENT_PROJECT_STORAGE_KEY,
@@ -46,7 +39,6 @@ import type {
   MeasurementLine,
   Metric,
   Point,
-  PlannerView,
   Tool,
   ViewBox,
 } from "@/lib/trall/types"
@@ -74,7 +66,6 @@ export function Workspace({
   const requestedProjectId = searchParams.get("projectId")
   const [calculatorOpen, setCalculatorOpen] = useState(true)
   const [activeTool, setActiveTool] = useState<ActiveTool>("select")
-  const [plannerView, setPlannerView] = useState<PlannerView>("top")
   const [viewBox, setViewBox] = useState<ViewBox>(INITIAL_VIEW_BOX)
   const [viewAspectRatio, setViewAspectRatio] = useState(
     INITIAL_VIEW_BOX.width / INITIAL_VIEW_BOX.height
@@ -88,9 +79,6 @@ export function Workspace({
   const [poolEdgeConstraints, setPoolEdgeConstraints] = useState<
     EdgeConstraint[]
   >([])
-  const [elevationSettings, setElevationSettings] = useState(
-    defaultElevationSettings
-  )
   const [activePointIndex, setActivePointIndex] = useState<number | null>(null)
   const [activePoolPointIndex, setActivePoolPointIndex] = useState<
     number | null
@@ -202,9 +190,6 @@ export function Workspace({
         setDeckPoints(version.state.deckPoints)
         setDeckEdgeConstraints(version.state.deckEdgeConstraints ?? [])
         setMeasurements(version.state.measurements ?? [])
-        setElevationSettings(
-          normalizeElevationSettings(version.state.elevation)
-        )
         setPoolPoints(version.state.poolPoints ?? null)
         setPoolEdgeConstraints(version.state.poolEdgeConstraints ?? [])
         setViewBox(version.state.viewBox)
@@ -269,7 +254,6 @@ export function Workspace({
       deckPoints,
       deckEdgeConstraints,
       measurements,
-      elevation: elevationSettings,
       poolPoints,
       poolEdgeConstraints,
       viewBox,
@@ -281,7 +265,6 @@ export function Workspace({
       calculations.materials,
       deckEdgeConstraints,
       deckPoints,
-      elevationSettings,
       house,
       measurements,
       poolEdgeConstraints,
@@ -371,7 +354,6 @@ export function Workspace({
   }, [
     deckEdgeConstraints,
     deckPoints,
-    elevationSettings,
     house,
     measurements,
     poolEdgeConstraints,
@@ -388,12 +370,6 @@ export function Workspace({
     setPoolPoints((currentPoints) => currentPoints ?? [...initialPoolPoints])
     setActivePointIndex(null)
     setActivePoolPointIndex(0)
-  }
-
-  function handleElevationChange(field: ElevationField, value: number) {
-    setElevationSettings((currentSettings) =>
-      updateElevationSetting(currentSettings, field, value)
-    )
   }
 
   function toggleWorkspacePanels() {
@@ -434,43 +410,33 @@ export function Workspace({
             onSaveProject={handleSaveProject}
             saveStatus={saveStatus}
             setActiveTool={setActiveTool}
-            setPlannerView={setPlannerView}
-            plannerView={plannerView}
           />
-          {plannerView === "top" ? (
-            <PlanningSurface
-              activeTool={activeTool}
-              activePointIndex={activePointIndex}
-              activePoolPointIndex={activePoolPointIndex}
-              deckEdgeConstraints={deckEdgeConstraints}
-              deckPoints={deckPoints}
-              house={house}
-              houseBounds={houseBounds}
-              measurements={measurements}
-              poolEdgeConstraints={poolEdgeConstraints}
-              poolPoints={poolPoints}
-              setActivePointIndex={setActivePointIndex}
-              setDeckEdgeConstraints={setDeckEdgeConstraints}
-              setDeckPoints={setDeckPoints}
-              setActivePoolPointIndex={setActivePoolPointIndex}
-              setHouse={setHouse}
-              setMeasurements={setMeasurements}
-              setPoolEdgeConstraints={setPoolEdgeConstraints}
-              setPoolPoints={setPoolPoints}
-              setViewAspectRatio={setViewAspectRatio}
-              setViewBox={setViewBox}
-              supportSegments={calculations.supportLayout.segments}
-              onResetView={fitViewBox}
-              viewBox={viewBox}
-              zoomPercent={zoomPercent}
-            />
-          ) : (
-            <ElevationView
-              elevation={elevationSettings}
-              hasPool={poolPoints !== null}
-              onElevationChange={handleElevationChange}
-            />
-          )}
+          <PlanningSurface
+            activeTool={activeTool}
+            activePointIndex={activePointIndex}
+            activePoolPointIndex={activePoolPointIndex}
+            deckEdgeConstraints={deckEdgeConstraints}
+            deckPoints={deckPoints}
+            house={house}
+            houseBounds={houseBounds}
+            measurements={measurements}
+            poolEdgeConstraints={poolEdgeConstraints}
+            poolPoints={poolPoints}
+            setActivePointIndex={setActivePointIndex}
+            setDeckEdgeConstraints={setDeckEdgeConstraints}
+            setDeckPoints={setDeckPoints}
+            setActivePoolPointIndex={setActivePoolPointIndex}
+            setHouse={setHouse}
+            setMeasurements={setMeasurements}
+            setPoolEdgeConstraints={setPoolEdgeConstraints}
+            setPoolPoints={setPoolPoints}
+            setViewAspectRatio={setViewAspectRatio}
+            setViewBox={setViewBox}
+            supportSegments={calculations.supportLayout.segments}
+            onResetView={fitViewBox}
+            viewBox={viewBox}
+            zoomPercent={zoomPercent}
+          />
           <MapControlsPanel
             activeTool={activeTool}
             onResetView={fitViewBox}

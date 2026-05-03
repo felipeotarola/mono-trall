@@ -24,12 +24,8 @@ import {
   DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu"
 import { Separator } from "@workspace/ui/components/separator"
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@workspace/ui/components/toggle-group"
 import { cn } from "@workspace/ui/lib/utils"
-import type { ActiveTool, PlannerView, Tool } from "@/lib/trall/types"
+import type { ActiveTool, Tool } from "@/lib/trall/types"
 
 export function CanvasToolbar({
   activeTool,
@@ -38,8 +34,6 @@ export function CanvasToolbar({
   onSaveProject,
   saveStatus,
   setActiveTool,
-  setPlannerView,
-  plannerView,
 }: {
   activeTool: ActiveTool
   extraTool: Tool
@@ -47,8 +41,6 @@ export function CanvasToolbar({
   onSaveProject: () => void
   saveStatus: string
   setActiveTool: (tool: ActiveTool) => void
-  setPlannerView: (view: PlannerView) => void
-  plannerView: PlannerView
 }) {
   const [toolbarRef, compact] = useCompactToolbar()
   const editingTools: Tool[] = [
@@ -91,31 +83,6 @@ export function CanvasToolbar({
         compact ? "right-auto" : "right-3"
       )}
     >
-      <ToolbarGroup compact={compact} label="View">
-        <ToggleGroup
-          aria-label="Planner view"
-          className="shrink-0"
-          size="default"
-          type="single"
-          value={plannerView}
-          variant="outline"
-          onValueChange={(value) => {
-            if (value === "top" || value === "side") {
-              setPlannerView(value)
-            }
-          }}
-        >
-          <ToggleGroupItem className="h-10 px-3" value="top">
-            <span className="sm:hidden">Top</span>
-            <span className="hidden sm:inline">Top view</span>
-          </ToggleGroupItem>
-          <ToggleGroupItem className="h-10 px-3" value="side">
-            <span className="sm:hidden">Side</span>
-            <span className="hidden sm:inline">Side view</span>
-          </ToggleGroupItem>
-        </ToggleGroup>
-      </ToolbarGroup>
-
       {compact ? (
         <CompactToolMenu editingTools={editingTools} />
       ) : (

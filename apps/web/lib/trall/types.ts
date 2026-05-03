@@ -22,8 +22,6 @@ export type SnapType = "none" | "grid" | "house" | "angle"
 
 export type ActiveTool = "select" | "draw" | "measure" | "pan"
 
-export type PlannerView = "top" | "side"
-
 export type ViewBox = {
   x: number
   y: number

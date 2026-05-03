@@ -6,10 +6,6 @@ import {
   PIXELS_PER_METER,
 } from "@/lib/trall/constants"
 import type { EdgeConstraint } from "@/lib/trall/edge-model"
-import {
-  defaultElevationSettings,
-  type ElevationSettings,
-} from "@/lib/trall/elevation"
 import { polygonArea } from "@/lib/trall/geometry"
 import { getHouseBounds } from "@/lib/trall/house"
 import type {
@@ -28,7 +24,6 @@ export type PlannerProjectState = {
   deckPoints: Point[]
   deckEdgeConstraints?: EdgeConstraint[]
   measurements?: MeasurementLine[]
-  elevation?: ElevationSettings
   poolPoints?: Point[] | null
   poolEdgeConstraints?: EdgeConstraint[]
   viewBox: ViewBox
@@ -236,7 +231,6 @@ export function createDefaultPlannerProjectState(): PlannerProjectState {
     deckPoints,
     deckEdgeConstraints: [],
     measurements: [],
-    elevation: defaultElevationSettings,
     poolPoints: null,
     poolEdgeConstraints: [],
     viewBox: getFitViewBox(houseBounds, deckPoints, []),
