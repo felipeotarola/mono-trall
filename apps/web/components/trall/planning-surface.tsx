@@ -7,6 +7,11 @@ import { PlanSvg } from "@/components/trall/plan-svg"
 import { ScaleIndicator } from "@/components/trall/svg/scale-indicator"
 import type { EdgeConstraint } from "@/lib/trall/edge-model"
 import type {
+  BoardDirectionSettings,
+  DeckFeature,
+  FeaturePlacementType,
+} from "@/lib/trall/features"
+import type {
   ActiveTool,
   HouseBounds,
   HouseModel,
@@ -21,24 +26,32 @@ export function PlanningSurface({
   activeTool,
   activePointIndex,
   activePoolPointIndex,
+  boardDirection,
   deckEdgeConstraints,
   deckPoints,
+  features,
   house,
   houseBounds,
   measurements,
+  placementMode,
   poolEdgeConstraints,
   poolPoints,
+  selectedFeatureId,
   setActivePointIndex,
   setDeckEdgeConstraints,
   setDeckPoints,
   setActivePoolPointIndex,
+  setFeatures,
   setHouse,
   setMeasurements,
   setPoolEdgeConstraints,
   setPoolPoints,
+  setSelectedFeatureId,
   setViewAspectRatio,
   setViewBox,
   supportSegments,
+  onDeleteFeature,
+  onFeaturePlaced,
   onResetView,
   viewBox,
   zoomPercent,
@@ -46,24 +59,32 @@ export function PlanningSurface({
   activeTool: ActiveTool
   activePointIndex: number | null
   activePoolPointIndex: number | null
+  boardDirection: BoardDirectionSettings
   deckEdgeConstraints: EdgeConstraint[]
   deckPoints: Point[]
+  features: DeckFeature[]
   house: HouseModel
   houseBounds: HouseBounds
   measurements: MeasurementLine[]
+  placementMode: FeaturePlacementType | null
   poolEdgeConstraints: EdgeConstraint[]
   poolPoints: Point[] | null
+  selectedFeatureId: string | null
   setActivePointIndex: (index: number | null) => void
   setDeckEdgeConstraints: Dispatch<SetStateAction<EdgeConstraint[]>>
   setDeckPoints: Dispatch<SetStateAction<Point[]>>
   setActivePoolPointIndex: (index: number | null) => void
+  setFeatures: Dispatch<SetStateAction<DeckFeature[]>>
   setHouse: Dispatch<SetStateAction<HouseModel>>
   setMeasurements: Dispatch<SetStateAction<MeasurementLine[]>>
   setPoolEdgeConstraints: Dispatch<SetStateAction<EdgeConstraint[]>>
   setPoolPoints: Dispatch<SetStateAction<Point[] | null>>
+  setSelectedFeatureId: (featureId: string | null) => void
   setViewAspectRatio: (aspectRatio: number) => void
   setViewBox: Dispatch<SetStateAction<ViewBox>>
   supportSegments: SupportSegment[]
+  onDeleteFeature: (featureId: string) => void
+  onFeaturePlaced: (featureId: string, keepPlacement?: boolean) => void
   onResetView: () => void
   viewBox: ViewBox
   zoomPercent: number
@@ -105,9 +126,7 @@ export function PlanningSurface({
       </div>
 
       <p className={`absolute top-28 right-4 max-w-[min(24rem,calc(100%-2rem))] md:top-24 2xl:top-20 ${trallPlanClasses.floatingLabel}`}>
-        {activeTool === "select"
-          ? "Select mode: drag highlighted points to adjust the deck shape. Double-click an edge to add a node."
-          : "Drag points to adjust deck shape. Double-click an edge to add a node."}
+        {getPlannerInstruction(activeTool, placementMode)}
       </p>
 
       <div className="relative flex h-[calc(100svh-13.5rem)] min-h-[520px] items-stretch justify-center px-3 py-8 md:h-[calc(100svh-10rem)]">
@@ -116,23 +135,31 @@ export function PlanningSurface({
             activeTool={activeTool}
             activePointIndex={activePointIndex}
             activePoolPointIndex={activePoolPointIndex}
+            boardDirection={boardDirection}
             deckEdgeConstraints={deckEdgeConstraints}
             deckPoints={deckPoints}
+            features={features}
             house={house}
             houseBounds={houseBounds}
             measurements={measurements}
+            placementMode={placementMode}
             poolEdgeConstraints={poolEdgeConstraints}
             poolPoints={poolPoints}
+            selectedFeatureId={selectedFeatureId}
             setActivePointIndex={setActivePointIndex}
             setDeckEdgeConstraints={setDeckEdgeConstraints}
             setDeckPoints={setDeckPoints}
             setActivePoolPointIndex={setActivePoolPointIndex}
+            setFeatures={setFeatures}
             setHouse={setHouse}
             setMeasurements={setMeasurements}
             setPoolEdgeConstraints={setPoolEdgeConstraints}
             setPoolPoints={setPoolPoints}
+            setSelectedFeatureId={setSelectedFeatureId}
             setViewBox={setViewBox}
             supportSegments={supportSegments}
+            onDeleteFeature={onDeleteFeature}
+            onFeaturePlaced={onFeaturePlaced}
             onResetView={onResetView}
             viewBox={viewBox}
           />
@@ -153,4 +180,35 @@ export function PlanningSurface({
       </div>
     </div>
   )
+}
+
+function getPlannerInstruction(
+  activeTool: ActiveTool,
+  placementMode: FeaturePlacementType | null
+) {
+  if (placementMode === "stairs") {
+    return "Stairs: click a deck edge to place stairs."
+  }
+
+  if (placementMode === "railing") {
+    return "Railing: click deck edges to toggle railing coverage."
+  }
+
+  if (placementMode === "pergola") {
+    return "Pergola: click inside the deck to place it."
+  }
+
+  if (placementMode === "privacyScreen") {
+    return "Privacy screen: click a deck edge to place a screen segment."
+  }
+
+  if (placementMode === "boardDirection") {
+    return "Board direction: use the calculator panel controls to rotate the deck boards."
+  }
+
+  if (activeTool === "select") {
+    return "Select mode: drag highlighted points to adjust the deck shape. Double-click an edge to add a node."
+  }
+
+  return "Drag points to adjust deck shape. Double-click an edge to add a node."
 }

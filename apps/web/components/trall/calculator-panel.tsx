@@ -4,6 +4,8 @@ import type { Dispatch, SetStateAction } from "react"
 import { useCallback, useState } from "react"
 import { Trash2Icon } from "lucide-react"
 
+import { BoardDirectionControl } from "@/components/trall/features/board-direction-control"
+import { FeatureSettingsCard } from "@/components/trall/features/feature-settings-card"
 import { MaterialsManager } from "@/components/trall/materials-manager"
 import { Button } from "@workspace/ui/components/button"
 import {
@@ -16,6 +18,11 @@ import {
 import { Input } from "@workspace/ui/components/input"
 import type { HouseModel, Material, Metric } from "@/lib/trall/types"
 import { clamp } from "@/lib/trall/geometry"
+import type {
+  BoardDirectionSettings,
+  DeckFeature,
+  FeaturePlacementType,
+} from "@/lib/trall/features"
 import { formatCurrency } from "@/lib/trall/format"
 import { getHouseDoors, getHouseWindows } from "@/lib/trall/house"
 import {
@@ -25,13 +32,20 @@ import {
 import type { SupportLayout } from "@/lib/trall/supports"
 
 export function CalculatorPanel({
+  boardDirection,
   calculations,
   ensureProject,
   house,
+  placementMode,
   projectId,
   projectName,
+  selectedFeature,
+  setBoardDirection,
   setHouse,
+  onDeleteFeature,
+  onUpdateFeature,
 }: {
+  boardDirection: BoardDirectionSettings
   calculations: {
     areaM2: number
     priceLabel: string
@@ -41,9 +55,14 @@ export function CalculatorPanel({
   }
   ensureProject: () => Promise<string>
   house: HouseModel
+  placementMode: FeaturePlacementType | null
   projectId: string | null
   projectName: string
+  selectedFeature: DeckFeature | null
+  setBoardDirection: (settings: BoardDirectionSettings) => void
   setHouse: Dispatch<SetStateAction<HouseModel>>
+  onDeleteFeature: (featureId: string) => void
+  onUpdateFeature: (feature: DeckFeature) => void
 }) {
   const [projectMaterialSummary, setProjectMaterialSummary] =
     useState<ProjectMaterialSummary>({
@@ -60,6 +79,19 @@ export function CalculatorPanel({
 
   return (
     <div className="space-y-3">
+      <FeatureSettingsCard
+        feature={selectedFeature}
+        onDelete={onDeleteFeature}
+        onUpdate={onUpdateFeature}
+      />
+
+      {!selectedFeature || placementMode === "boardDirection" ? (
+        <BoardDirectionControl
+          boardDirection={boardDirection}
+          onChange={setBoardDirection}
+        />
+      ) : null}
+
       <Card size="sm" className="bg-zinc-950 text-white dark:bg-primary">
         <CardContent className="space-y-4">
           <div>

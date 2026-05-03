@@ -13,17 +13,29 @@ import {
   SheetTrigger,
 } from "@workspace/ui/components/sheet"
 import { CalculatorPanel } from "@/components/trall/calculator-panel"
+import type {
+  BoardDirectionSettings,
+  DeckFeature,
+  FeaturePlacementType,
+} from "@/lib/trall/features"
 import type { HouseModel, Material, Metric } from "@/lib/trall/types"
 import type { SupportLayout } from "@/lib/trall/supports"
 
 export function MobileSummary({
+  boardDirection,
   calculations,
   ensureProject,
   house,
+  placementMode,
   projectId,
   projectName,
+  selectedFeature,
+  setBoardDirection,
   setHouse,
+  onDeleteFeature,
+  onUpdateFeature,
 }: {
+  boardDirection: BoardDirectionSettings
   calculations: {
     areaM2: number
     boardRunLm: number
@@ -34,9 +46,14 @@ export function MobileSummary({
   }
   ensureProject: () => Promise<string>
   house: HouseModel
+  placementMode: FeaturePlacementType | null
   projectId: string | null
   projectName: string
+  selectedFeature: DeckFeature | null
+  setBoardDirection: (settings: BoardDirectionSettings) => void
   setHouse: Dispatch<SetStateAction<HouseModel>>
+  onDeleteFeature: (featureId: string) => void
+  onUpdateFeature: (feature: DeckFeature) => void
 }) {
   return (
     <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 p-3 shadow-lg backdrop-blur lg:hidden">
@@ -70,11 +87,17 @@ export function MobileSummary({
             <div className="px-4 pb-4">
               <CalculatorPanel
                 calculations={calculations}
+                boardDirection={boardDirection}
                 ensureProject={ensureProject}
+                placementMode={placementMode}
+                selectedFeature={selectedFeature}
                 house={house}
                 projectId={projectId}
                 projectName={projectName}
+                setBoardDirection={setBoardDirection}
                 setHouse={setHouse}
+                onDeleteFeature={onDeleteFeature}
+                onUpdateFeature={onUpdateFeature}
               />
             </div>
           </SheetContent>

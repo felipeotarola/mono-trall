@@ -8,6 +8,7 @@ import { Maximize2Icon, Minimize2Icon, PanelRightIcon } from "lucide-react"
 import { CalculatorPanel } from "@/components/trall/calculator-panel"
 import { MapControlsPanel } from "@/components/trall/canvas/map-controls"
 import { CanvasToolbar } from "@/components/trall/canvas-toolbar"
+import { FeatureToolList } from "@/components/trall/features/feature-tool-list"
 import { MobileSummary } from "@/components/trall/mobile-summary"
 import { PlanningSurface } from "@/components/trall/planning-surface"
 import {
@@ -22,6 +23,16 @@ import {
 import { formatCurrency } from "@/lib/trall/format"
 import { polygonArea, polygonPerimeter } from "@/lib/trall/geometry"
 import type { EdgeConstraint } from "@/lib/trall/edge-model"
+import {
+  defaultBoardDirection,
+  deleteFeature,
+  normalizeBoardDirection,
+  normalizeDeckFeatures,
+  updateFeature,
+  type BoardDirectionSettings,
+  type DeckFeature,
+  type FeaturePlacementType,
+} from "@/lib/trall/features"
 import { getHouseBounds } from "@/lib/trall/house"
 import {
   CURRENT_PROJECT_STORAGE_KEY,
@@ -75,6 +86,15 @@ export function Workspace({
     EdgeConstraint[]
   >([])
   const [measurements, setMeasurements] = useState<MeasurementLine[]>([])
+  const [features, setFeatures] = useState<DeckFeature[]>([])
+  const [boardDirection, setBoardDirection] = useState<BoardDirectionSettings>(
+    defaultBoardDirection
+  )
+  const [placementMode, setPlacementMode] =
+    useState<FeaturePlacementType | null>(null)
+  const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(
+    null
+  )
   const [poolPoints, setPoolPoints] = useState<Point[] | null>(null)
   const [poolEdgeConstraints, setPoolEdgeConstraints] = useState<
     EdgeConstraint[]
@@ -96,6 +116,12 @@ export function Workspace({
   const latestSaveRequestRef = useRef(0)
 
   const houseBounds = useMemo(() => getHouseBounds(house), [house])
+  const selectedFeature = useMemo(
+    () =>
+      features.find((feature) => feature.id === selectedFeatureId) ?? null,
+    [features, selectedFeatureId]
+  )
+  const modeLabel = getModeLabel(activeTool, placementMode)
   const zoomPercent = Math.round((INITIAL_VIEW_BOX.width / viewBox.width) * 100)
   const fitViewBox = useCallback(() => {
     setViewBox(
@@ -190,6 +216,10 @@ export function Workspace({
         setDeckPoints(version.state.deckPoints)
         setDeckEdgeConstraints(version.state.deckEdgeConstraints ?? [])
         setMeasurements(version.state.measurements ?? [])
+        setFeatures(normalizeDeckFeatures(version.state.features))
+        setBoardDirection(normalizeBoardDirection(version.state.boardDirection))
+        setPlacementMode(null)
+        setSelectedFeatureId(null)
         setPoolPoints(version.state.poolPoints ?? null)
         setPoolEdgeConstraints(version.state.poolEdgeConstraints ?? [])
         setViewBox(version.state.viewBox)
@@ -254,6 +284,8 @@ export function Workspace({
       deckPoints,
       deckEdgeConstraints,
       measurements,
+      features,
+      boardDirection,
       poolPoints,
       poolEdgeConstraints,
       viewBox,
@@ -263,8 +295,10 @@ export function Workspace({
     }),
     [
       calculations.materials,
+      boardDirection,
       deckEdgeConstraints,
       deckPoints,
+      features,
       house,
       measurements,
       poolEdgeConstraints,
@@ -356,6 +390,8 @@ export function Workspace({
     deckPoints,
     house,
     measurements,
+    features,
+    boardDirection,
     poolEdgeConstraints,
     poolPoints,
     savePlannerState,
@@ -367,9 +403,50 @@ export function Workspace({
   }
 
   function handleAddPool() {
+    setPlacementMode(null)
+    setSelectedFeatureId(null)
+    setActiveTool("select")
     setPoolPoints((currentPoints) => currentPoints ?? [...initialPoolPoints])
     setActivePointIndex(null)
     setActivePoolPointIndex(0)
+  }
+
+  function handleSelectTool(tool: ActiveTool) {
+    setPlacementMode(null)
+    setSelectedFeatureId(null)
+    setActiveTool(tool)
+  }
+
+  function handleSelectFeatureTool(featureType: FeaturePlacementType) {
+    setActiveTool("select")
+    setActivePointIndex(null)
+    setActivePoolPointIndex(null)
+    setPlacementMode((currentMode) =>
+      currentMode === featureType ? null : featureType
+    )
+    if (featureType !== "boardDirection") {
+      setSelectedFeatureId(null)
+    }
+  }
+
+  function handleFeaturePlaced(featureId: string, keepPlacement = false) {
+    setSelectedFeatureId(featureId)
+    if (!keepPlacement) {
+      setPlacementMode(null)
+    }
+  }
+
+  function handleUpdateFeature(nextFeature: DeckFeature) {
+    setFeatures((currentFeatures) =>
+      updateFeature(currentFeatures, nextFeature.id, () => nextFeature)
+    )
+  }
+
+  function handleDeleteFeature(featureId: string) {
+    setFeatures((currentFeatures) => deleteFeature(currentFeatures, featureId))
+    setSelectedFeatureId((currentId) =>
+      currentId === featureId ? null : currentId
+    )
   }
 
   function toggleWorkspacePanels() {
@@ -402,50 +479,74 @@ export function Workspace({
             : "flex flex-1 flex-col gap-3 p-3 pb-24 transition-[padding] duration-200 sm:p-4 lg:pb-4 xl:p-5"
         }
       >
-        <section className="relative min-w-0 flex-1 overflow-hidden rounded-lg border bg-stone-50 shadow-sm dark:bg-zinc-950">
-          <CanvasToolbar
-            activeTool={activeTool}
-            extraTool={expandTool}
-            onAddPool={handleAddPool}
-            onSaveProject={handleSaveProject}
-            saveStatus={saveStatus}
-            setActiveTool={setActiveTool}
-          />
-          <PlanningSurface
-            activeTool={activeTool}
-            activePointIndex={activePointIndex}
-            activePoolPointIndex={activePoolPointIndex}
-            deckEdgeConstraints={deckEdgeConstraints}
-            deckPoints={deckPoints}
-            house={house}
-            houseBounds={houseBounds}
-            measurements={measurements}
-            poolEdgeConstraints={poolEdgeConstraints}
-            poolPoints={poolPoints}
-            setActivePointIndex={setActivePointIndex}
-            setDeckEdgeConstraints={setDeckEdgeConstraints}
-            setDeckPoints={setDeckPoints}
-            setActivePoolPointIndex={setActivePoolPointIndex}
-            setHouse={setHouse}
-            setMeasurements={setMeasurements}
-            setPoolEdgeConstraints={setPoolEdgeConstraints}
-            setPoolPoints={setPoolPoints}
-            setViewAspectRatio={setViewAspectRatio}
-            setViewBox={setViewBox}
-            supportSegments={calculations.supportLayout.segments}
-            onResetView={fitViewBox}
-            viewBox={viewBox}
-            zoomPercent={zoomPercent}
-          />
-          <MapControlsPanel
-            activeTool={activeTool}
-            onResetView={fitViewBox}
-            onZoomIn={zoomIn}
-            onZoomOut={zoomOut}
-            setActiveTool={setActiveTool}
-            zoomPercent={zoomPercent}
-          />
-        </section>
+        <div
+          className={
+            calculatorOpen
+              ? "grid min-w-0 flex-1 gap-3 xl:grid-cols-[230px_minmax(0,1fr)]"
+              : "min-w-0 flex-1"
+          }
+        >
+          {calculatorOpen ? (
+            <FeatureToolList
+              activeTool={activeTool}
+              className="order-2 xl:order-1 xl:self-start"
+              placementMode={placementMode}
+              onAddPool={handleAddPool}
+              onSelectFeatureTool={handleSelectFeatureTool}
+              onSelectTool={handleSelectTool}
+            />
+          ) : null}
+          <section className="relative order-1 min-w-0 flex-1 overflow-hidden rounded-lg border bg-stone-50 shadow-sm dark:bg-zinc-950 xl:order-2">
+            <CanvasToolbar
+              extraTool={expandTool}
+              modeLabel={modeLabel}
+              onSaveProject={handleSaveProject}
+              saveStatus={saveStatus}
+            />
+            <PlanningSurface
+              activeTool={activeTool}
+              activePointIndex={activePointIndex}
+              activePoolPointIndex={activePoolPointIndex}
+              boardDirection={boardDirection}
+              deckEdgeConstraints={deckEdgeConstraints}
+              deckPoints={deckPoints}
+              features={features}
+              house={house}
+              houseBounds={houseBounds}
+              measurements={measurements}
+              placementMode={placementMode}
+              poolEdgeConstraints={poolEdgeConstraints}
+              poolPoints={poolPoints}
+              selectedFeatureId={selectedFeatureId}
+              setActivePointIndex={setActivePointIndex}
+              setDeckEdgeConstraints={setDeckEdgeConstraints}
+              setDeckPoints={setDeckPoints}
+              setActivePoolPointIndex={setActivePoolPointIndex}
+              setFeatures={setFeatures}
+              setHouse={setHouse}
+              setMeasurements={setMeasurements}
+              setPoolEdgeConstraints={setPoolEdgeConstraints}
+              setPoolPoints={setPoolPoints}
+              setSelectedFeatureId={setSelectedFeatureId}
+              setViewAspectRatio={setViewAspectRatio}
+              setViewBox={setViewBox}
+              supportSegments={calculations.supportLayout.segments}
+              onDeleteFeature={handleDeleteFeature}
+              onFeaturePlaced={handleFeaturePlaced}
+              onResetView={fitViewBox}
+              viewBox={viewBox}
+              zoomPercent={zoomPercent}
+            />
+            <MapControlsPanel
+              activeTool={activeTool}
+              onResetView={fitViewBox}
+              onZoomIn={zoomIn}
+              onZoomOut={zoomOut}
+              setActiveTool={handleSelectTool}
+              zoomPercent={zoomPercent}
+            />
+          </section>
+        </div>
 
         <RightCalculatorSidebar
           open={calculatorOpen}
@@ -456,33 +557,51 @@ export function Workspace({
         >
           <CalculatorPanel
             calculations={calculations}
+            boardDirection={boardDirection}
             ensureProject={ensureCurrentProject}
+            placementMode={placementMode}
+            selectedFeature={selectedFeature}
             house={house}
             projectId={currentProjectId}
             projectName={currentProjectName}
+            setBoardDirection={setBoardDirection}
             setHouse={setHouse}
+            onDeleteFeature={handleDeleteFeature}
+            onUpdateFeature={handleUpdateFeature}
           />
         </RightCalculatorSidebar>
 
         <section className="lg:hidden">
           <CalculatorPanel
             calculations={calculations}
+            boardDirection={boardDirection}
             ensureProject={ensureCurrentProject}
+            placementMode={placementMode}
+            selectedFeature={selectedFeature}
             house={house}
             projectId={currentProjectId}
             projectName={currentProjectName}
+            setBoardDirection={setBoardDirection}
             setHouse={setHouse}
+            onDeleteFeature={handleDeleteFeature}
+            onUpdateFeature={handleUpdateFeature}
           />
         </section>
       </div>
 
       <MobileSummary
         calculations={calculations}
+        boardDirection={boardDirection}
         ensureProject={ensureCurrentProject}
+        placementMode={placementMode}
+        selectedFeature={selectedFeature}
         house={house}
         projectId={currentProjectId}
         projectName={currentProjectName}
+        setBoardDirection={setBoardDirection}
         setHouse={setHouse}
+        onDeleteFeature={handleDeleteFeature}
+        onUpdateFeature={handleUpdateFeature}
       />
     </main>
   )
@@ -560,4 +679,43 @@ function CalculatorSidebarTrigger({
       <span className="sr-only">{ariaLabel}</span>
     </Button>
   )
+}
+
+function getModeLabel(
+  activeTool: ActiveTool,
+  placementMode: FeaturePlacementType | null
+) {
+  if (placementMode === "stairs") {
+    return "Placing stairs"
+  }
+
+  if (placementMode === "railing") {
+    return "Placing railing"
+  }
+
+  if (placementMode === "pergola") {
+    return "Placing pergola"
+  }
+
+  if (placementMode === "privacyScreen") {
+    return "Placing privacy screen"
+  }
+
+  if (placementMode === "boardDirection") {
+    return "Board direction"
+  }
+
+  if (activeTool === "draw") {
+    return "Draw deck"
+  }
+
+  if (activeTool === "measure") {
+    return "Measure"
+  }
+
+  if (activeTool === "pan") {
+    return "Pan"
+  }
+
+  return "Select"
 }

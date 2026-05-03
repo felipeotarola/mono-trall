@@ -10,6 +10,10 @@ import type {
 import { useEffect, useRef, useState } from "react"
 
 import { AngleSnapGuide } from "@/components/trall/svg/angle-snap-guide"
+import {
+  BoardDirectionLayer,
+  FeatureRenderer,
+} from "@/components/trall/features/feature-renderer"
 import { DeckHandle } from "@/components/trall/svg/deck-handle"
 import { DeletePointHint } from "@/components/trall/svg/delete-point-hint"
 import { DimensionLine } from "@/components/trall/svg/dimension-line"
@@ -26,6 +30,17 @@ import {
   PIXELS_PER_METER,
 } from "@/lib/trall/constants"
 import { distance, lineAngle } from "@/lib/trall/geometry"
+import {
+  createDefaultPergola,
+  createDefaultPrivacyScreen,
+  createDefaultRailing,
+  createDefaultStairs,
+  pointInPolygon,
+  type BoardDirectionSettings,
+  type DeckFeature,
+  type FeaturePlacementType,
+  type RailingFeature,
+} from "@/lib/trall/features"
 import {
   getHouseAttachEdge,
   getHouseDoors,
@@ -63,46 +78,62 @@ export function PlanSvg({
   activeTool,
   activePointIndex,
   activePoolPointIndex = null,
+  boardDirection,
   deckEdgeConstraints,
   deckPoints,
+  features,
   house,
   houseBounds,
   measurements,
+  placementMode,
   poolEdgeConstraints,
   poolPoints = null,
+  selectedFeatureId,
   setActivePointIndex,
   setDeckEdgeConstraints,
   setDeckPoints,
   setActivePoolPointIndex = noopSetActivePointIndex,
+  setFeatures,
   setHouse,
   setMeasurements,
   setPoolEdgeConstraints,
   setPoolPoints = noopSetPoolPoints,
+  setSelectedFeatureId,
   setViewBox,
   supportSegments,
+  onDeleteFeature,
+  onFeaturePlaced,
   onResetView,
   viewBox,
 }: {
   activeTool: ActiveTool
   activePointIndex: number | null
   activePoolPointIndex?: number | null
+  boardDirection: BoardDirectionSettings
   deckEdgeConstraints: EdgeConstraint[]
   deckPoints: Point[]
+  features: DeckFeature[]
   house: HouseModel
   houseBounds: HouseBounds
   measurements: MeasurementLine[]
+  placementMode: FeaturePlacementType | null
   poolEdgeConstraints: EdgeConstraint[]
   poolPoints?: Point[] | null
+  selectedFeatureId: string | null
   setActivePointIndex: (index: number | null) => void
   setDeckEdgeConstraints: Dispatch<SetStateAction<EdgeConstraint[]>>
   setDeckPoints: Dispatch<SetStateAction<Point[]>>
   setActivePoolPointIndex?: (index: number | null) => void
+  setFeatures: Dispatch<SetStateAction<DeckFeature[]>>
   setHouse: Dispatch<SetStateAction<HouseModel>>
   setMeasurements: Dispatch<SetStateAction<MeasurementLine[]>>
   setPoolEdgeConstraints: Dispatch<SetStateAction<EdgeConstraint[]>>
   setPoolPoints?: Dispatch<SetStateAction<Point[] | null>>
+  setSelectedFeatureId: (featureId: string | null) => void
   setViewBox: Dispatch<SetStateAction<ViewBox>>
   supportSegments: SupportSegment[]
+  onDeleteFeature: (featureId: string) => void
+  onFeaturePlaced: (featureId: string, keepPlacement?: boolean) => void
   onResetView: () => void
   viewBox: ViewBox
 }) {
@@ -145,6 +176,7 @@ export function PlanSvg({
       setActivePointIndex(index)
       if (index !== null) {
         setActivePoolPointIndex(null)
+        setSelectedFeatureId(null)
       }
     },
     setDeckPoints,
@@ -162,6 +194,7 @@ export function PlanSvg({
       setActivePoolPointIndex(index)
       if (index !== null) {
         setActivePointIndex(null)
+        setSelectedFeatureId(null)
       }
     },
     setDeckPoints: (nextPoints) => {
@@ -204,6 +237,12 @@ export function PlanSvg({
       return
     }
 
+    if (selectedFeatureId && !isTypingTarget(event.target)) {
+      event.preventDefault()
+      onDeleteFeature(selectedFeatureId)
+      return
+    }
+
     if (activePoolPointIndex !== null) {
       if (!poolPoints || poolPoints.length <= 3) {
         return
@@ -223,12 +262,20 @@ export function PlanSvg({
   }
 
   function handlePointerDown(event: ReactPointerEvent<SVGSVGElement>) {
+    if (placePergolaFromCanvas(event)) {
+      return
+    }
+
     if (startMeasurementCreate(event)) {
       return
     }
 
     if (viewport.startPointer(event, canPan)) {
       return
+    }
+
+    if (activeTool === "select" && !isInteractiveTarget(event.target)) {
+      setSelectedFeatureId(null)
     }
   }
 
@@ -291,6 +338,7 @@ export function PlanSvg({
     svgRef.current.setPointerCapture(event.pointerId)
     setActivePointIndex(null)
     setActivePoolPointIndex(null)
+    setSelectedFeatureId(null)
     setSelectedMeasurementId(null)
     setEditingMeasurement(null)
     setDoorDrag({
@@ -358,6 +406,7 @@ export function PlanSvg({
     svgRef.current.setPointerCapture(event.pointerId)
     setActivePointIndex(null)
     setActivePoolPointIndex(null)
+    setSelectedFeatureId(null)
     setSelectedMeasurementId(null)
     setEditingMeasurement(null)
     setWindowDrag({
@@ -424,6 +473,7 @@ export function PlanSvg({
     const point = clientPointToSvgPoint(event, svgRef.current)
     const id = `measurement-${Date.now()}`
     setMeasurements((current) => [...current, { id, start: point, end: point }])
+    setSelectedFeatureId(null)
     setSelectedMeasurementId(id)
     setEditingMeasurement(null)
     setMeasurementDrag({ type: "create", id })
@@ -545,6 +595,130 @@ export function PlanSvg({
     setEditingMeasurement(null)
   }
 
+  function selectFeature(featureId: string) {
+    setSelectedFeatureId(featureId)
+    setActivePointIndex(null)
+    setActivePoolPointIndex(null)
+    setSelectedMeasurementId(null)
+    setEditingMeasurement(null)
+  }
+
+  function placePergolaFromCanvas(event: ReactPointerEvent<SVGSVGElement>) {
+    if (
+      placementMode !== "pergola" ||
+      !svgRef.current ||
+      isInteractiveTarget(event.target)
+    ) {
+      return false
+    }
+
+    const point = clientPointToSvgPoint(event, svgRef.current)
+    if (!pointInPolygon(point, deckPoints)) {
+      return false
+    }
+
+    event.preventDefault()
+    svgRef.current.focus()
+    const feature = createDefaultPergola({
+      point,
+      rotationDeg: boardDirection.boardDirectionDeg,
+    })
+    setFeatures((currentFeatures) => [...currentFeatures, feature])
+    setActivePointIndex(null)
+    setActivePoolPointIndex(null)
+    setSelectedMeasurementId(null)
+    setEditingMeasurement(null)
+    onFeaturePlaced(feature.id)
+    return true
+  }
+
+  function placeFeatureOnDeckEdge(edgeIndex: number) {
+    if (
+      !placementMode ||
+      placementMode === "pergola" ||
+      placementMode === "boardDirection"
+    ) {
+      return false
+    }
+
+    const edge = editor.edges[edgeIndex]
+    if (!edge) {
+      return false
+    }
+
+    if (placementMode === "railing") {
+      if (editor.attachedEdgeIndexes.has(edgeIndex)) {
+        return true
+      }
+
+      const existingRailing = features.find(
+        (feature): feature is RailingFeature =>
+          feature.type === "railing" && feature.edgeIds.includes(edge.id)
+      )
+
+      if (existingRailing) {
+        const nextEdgeIds = existingRailing.edgeIds.filter(
+          (edgeId) => edgeId !== edge.id
+        )
+        if (nextEdgeIds.length === 0) {
+          setFeatures((currentFeatures) =>
+            currentFeatures.filter(
+              (feature) => feature.id !== existingRailing.id
+            )
+          )
+          setSelectedFeatureId(null)
+          return true
+        }
+
+        setFeatures((currentFeatures) =>
+          currentFeatures.map((feature) =>
+            feature.id === existingRailing.id
+              ? { ...existingRailing, edgeIds: nextEdgeIds }
+              : feature
+          )
+        )
+        onFeaturePlaced(existingRailing.id, true)
+        return true
+      }
+
+      const selectedRailing = features.find(
+        (feature): feature is RailingFeature =>
+          feature.id === selectedFeatureId && feature.type === "railing"
+      )
+
+      if (selectedRailing) {
+        const nextRailing = {
+          ...selectedRailing,
+          edgeIds: Array.from(new Set([...selectedRailing.edgeIds, edge.id])),
+        }
+        setFeatures((currentFeatures) =>
+          currentFeatures.map((feature) =>
+            feature.id === selectedRailing.id ? nextRailing : feature
+          )
+        )
+        onFeaturePlaced(nextRailing.id, true)
+        return true
+      }
+
+      const feature = createDefaultRailing(edge)
+      setFeatures((currentFeatures) => [...currentFeatures, feature])
+      onFeaturePlaced(feature.id, true)
+      return true
+    }
+
+    const feature =
+      placementMode === "stairs"
+        ? createDefaultStairs({ edge })
+        : createDefaultPrivacyScreen(edge)
+    setFeatures((currentFeatures) => [...currentFeatures, feature])
+    setActivePointIndex(null)
+    setActivePoolPointIndex(null)
+    setSelectedMeasurementId(null)
+    setEditingMeasurement(null)
+    onFeaturePlaced(feature.id)
+    return true
+  }
+
   return (
     <svg
       ref={svgRef}
@@ -563,19 +737,6 @@ export function PlanSvg({
         <clipPath id="deck-clip">
           <polygon points={getPolygonPoints(deckPoints)} />
         </clipPath>
-        <pattern
-          id="deck-board-lines"
-          width="26"
-          height="26"
-          patternUnits="userSpaceOnUse"
-          patternTransform="rotate(8)"
-        >
-          <path
-            d="M 0 0 L 0 26"
-            className={trallPlanClasses.deckBoardLine}
-            strokeWidth="3"
-          />
-        </pattern>
       </defs>
 
       <HouseLayer
@@ -593,12 +754,18 @@ export function PlanSvg({
         activeTool={activeTool}
         activePointIndex={activePointIndex}
         activePoolPointIndex={activePoolPointIndex}
+        boardDirection={boardDirection}
         deckPoints={deckPoints}
         editor={editor}
+        features={features}
         houseBounds={houseBounds}
+        placementMode={placementMode}
         poolEditor={poolEditor}
         poolPoints={poolPoints}
+        selectedFeatureId={selectedFeatureId}
         supportSegments={supportSegments}
+        onDeckEdgeClick={placeFeatureOnDeckEdge}
+        onSelectFeature={selectFeature}
       />
       <MeasurementLayer
         editingMeasurement={editingMeasurement}
@@ -612,6 +779,7 @@ export function PlanSvg({
         }
         onSelectMeasurement={(id) => {
           setSelectedMeasurementId(id)
+          setSelectedFeatureId(null)
           setActivePointIndex(null)
           setActivePoolPointIndex(null)
         }}
@@ -633,22 +801,34 @@ function DeckLayer({
   activeTool,
   activePointIndex,
   activePoolPointIndex,
+  boardDirection,
   deckPoints,
   editor,
+  features,
   houseBounds,
+  placementMode,
   poolEditor,
   poolPoints,
+  selectedFeatureId,
   supportSegments,
+  onDeckEdgeClick,
+  onSelectFeature,
 }: {
   activeTool: ActiveTool
   activePointIndex: number | null
   activePoolPointIndex: number | null
+  boardDirection: BoardDirectionSettings
   deckPoints: Point[]
   editor: ReturnType<typeof useDeckEditor>
+  features: DeckFeature[]
   houseBounds: HouseBounds
+  placementMode: FeaturePlacementType | null
   poolEditor: ReturnType<typeof useDeckEditor>
   poolPoints: Point[] | null
+  selectedFeatureId: string | null
   supportSegments: SupportSegment[]
+  onDeckEdgeClick: (edgeIndex: number) => boolean
+  onSelectFeature: (featureId: string) => void
 }) {
   const polygonPoints = getPolygonPoints(deckPoints)
   const p1 = deckPoints[0] ?? initialDeckPoints[0]
@@ -705,18 +885,10 @@ function DeckLayer({
         strokeLinejoin="round"
         strokeWidth="5"
       />
-      <polygon
-        points={polygonPoints}
-        fill="url(#deck-board-lines)"
-        className="stroke-transparent"
+      <BoardDirectionLayer
+        boardDirection={boardDirection}
+        deckPoints={deckPoints}
       />
-      <g clipPath="url(#deck-clip)">
-        <path
-          d="M120 396 H980 M120 438 H980 M120 482 H980 M120 526 H980 M120 570 H980 M120 614 H980 M120 658 H980 M120 702 H980"
-          className={trallPlanClasses.deckBoardLine}
-          strokeWidth="3"
-        />
-      </g>
       <g clipPath="url(#deck-clip)" className="pointer-events-none">
         {supportSegments.map((segment, index) => (
           <line
@@ -732,6 +904,23 @@ function DeckLayer({
           />
         ))}
       </g>
+
+      {poolPoints ? (
+        <PoolLayer
+          activePointIndex={activePoolPointIndex}
+          canMovePlane={activeTool === "select" && !placementMode}
+          editor={poolEditor}
+          points={poolPoints}
+        />
+      ) : null}
+
+      <FeatureRenderer
+        deckPoints={deckPoints}
+        edges={editor.edges}
+        features={features}
+        selectedFeatureId={selectedFeatureId}
+        onSelectFeature={onSelectFeature}
+      />
 
       {editor.attachedEdges.map((edge) => {
         if (!edge.attached) {
@@ -853,7 +1042,11 @@ function DeckLayer({
           y1={hoveredEdgeStart.y}
           x2={hoveredEdgeEnd.x}
           y2={hoveredEdgeEnd.y}
-          className="pointer-events-none stroke-sky-500"
+          className={
+            placementMode && placementMode !== "pergola"
+              ? "pointer-events-none stroke-amber-500"
+              : "pointer-events-none stroke-sky-500"
+          }
           strokeLinecap="round"
           strokeWidth="6"
           opacity="0.7"
@@ -875,7 +1068,11 @@ function DeckLayer({
             y2={nextPoint.y}
             data-edge-index={index}
             data-interactive="true"
-            className="cursor-pointer stroke-transparent"
+            className={
+              placementMode && placementMode !== "pergola"
+                ? "cursor-crosshair stroke-transparent"
+                : "cursor-pointer stroke-transparent"
+            }
             strokeWidth="30"
             pointerEvents="stroke"
             onDoubleClick={(event) =>
@@ -884,6 +1081,9 @@ function DeckLayer({
             onClick={(event) => {
               event.preventDefault()
               event.stopPropagation()
+              if (onDeckEdgeClick(index)) {
+                return
+              }
               editor.selectEdge(index)
             }}
             onPointerEnter={() => edgeControls.show(index)}
@@ -972,14 +1172,6 @@ function DeckLayer({
         <DeletePointHint point={activePoint} />
       ) : null}
 
-      {poolPoints ? (
-        <PoolLayer
-          activePointIndex={activePoolPointIndex}
-          canMovePlane={activeTool === "select"}
-          editor={poolEditor}
-          points={poolPoints}
-        />
-      ) : null}
     </>
   )
 }
@@ -1467,6 +1659,16 @@ function getDimensionLabelPoint(
 function noopSetActivePointIndex() {}
 
 function noopSetPoolPoints() {}
+
+function isTypingTarget(target: EventTarget | null) {
+  return (
+    target instanceof HTMLElement &&
+    (target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.tagName === "SELECT" ||
+      target.isContentEditable)
+  )
+}
 
 function formatLengthInput(value: number) {
   return Number.isInteger(value) ? String(value) : String(roundLength(value))
