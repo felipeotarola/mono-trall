@@ -24,7 +24,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@workspace/ui/components/select"
-import type { ElevationSettings } from "@/lib/trall/elevation"
+import {
+  normalizeElevationSettings,
+  type ElevationSettings,
+} from "@/lib/trall/elevation"
 import type { HouseModel, Material, Metric } from "@/lib/trall/types"
 import { clamp } from "@/lib/trall/geometry"
 import type {
@@ -182,6 +185,8 @@ function ElevationSettingsCard({
   elevationSettings: ElevationSettings
   setElevationSettings: Dispatch<SetStateAction<ElevationSettings>>
 }) {
+  const normalizedElevationSettings = normalizeElevationSettings(elevationSettings)
+
   function updateNumber(path: ElevationNumberPath, value: string) {
     const numericValue = Number.parseFloat(value)
     if (!Number.isFinite(numericValue)) {
@@ -286,6 +291,42 @@ function ElevationSettingsCard({
           />
           Show deck support posts
         </label>
+        <div className="grid gap-2">
+          <label className="flex items-center gap-2 rounded-lg border bg-muted/25 px-3 py-2 text-sm">
+            <Checkbox
+              checked={
+                normalizedElevationSettings.visualization.showHeightMarkers
+              }
+              onCheckedChange={(checked) =>
+                setElevationSettings((current) => ({
+                  ...normalizeElevationSettings(current),
+                  visualization: {
+                    ...normalizeElevationSettings(current).visualization,
+                    showHeightMarkers: checked === true,
+                  },
+                }))
+              }
+            />
+            Show 3D height markers
+          </label>
+          <label className="flex items-center gap-2 rounded-lg border bg-muted/25 px-3 py-2 text-sm">
+            <Checkbox
+              checked={
+                normalizedElevationSettings.visualization.showPoolExcavation
+              }
+              onCheckedChange={(checked) =>
+                setElevationSettings((current) => ({
+                  ...normalizeElevationSettings(current),
+                  visualization: {
+                    ...normalizeElevationSettings(current).visualization,
+                    showPoolExcavation: checked === true,
+                  },
+                }))
+              }
+            />
+            Show pool excavation cut
+          </label>
+        </div>
       </CardContent>
     </Card>
   )

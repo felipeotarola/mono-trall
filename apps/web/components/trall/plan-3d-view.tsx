@@ -4,7 +4,7 @@
 
 import { useEffect, useMemo, useRef, type ElementRef } from "react"
 import { Canvas, useThree } from "@react-three/fiber"
-import { OrbitControls, PerspectiveCamera } from "@react-three/drei"
+import { Html, OrbitControls, PerspectiveCamera } from "@react-three/drei"
 import * as THREE from "three"
 import { RotateCcwIcon } from "lucide-react"
 
@@ -23,6 +23,7 @@ import type { HouseBounds, HouseModel, Point } from "@/lib/trall/types"
 import { Button } from "@workspace/ui/components/button"
 import {
   getTerrainHeightAt,
+  mToCm,
   type ElevationSettings,
 } from "@/lib/trall/elevation"
 
@@ -111,6 +112,9 @@ export function Plan3DView({
           <HouseMass model={model} />
           <DeckSlab model={model} />
           <PoolBody model={model} />
+          {model.elevation.settings.visualization.showPoolExcavation ? (
+            <PoolExcavation model={model} />
+          ) : null}
           <BoardLines
             deckFinishedY={model.elevation.deckFinishedY}
             lines={model.boardLines}
@@ -120,6 +124,9 @@ export function Plan3DView({
           <Stairs model={model} />
           <Pergolas model={model} />
           <PrivacyScreens model={model} />
+          {model.elevation.settings.visualization.showHeightMarkers ? (
+            <HeightMarkers model={model} />
+          ) : null}
         </group>
         <OrbitControls
           ref={controlsRef}
@@ -374,6 +381,35 @@ function PoolBody({ model }: { model: Plan3DModel }) {
   )
 }
 
+function PoolExcavation({ model }: { model: Plan3DModel }) {
+  const geometry = useMemo(() => createPoolExcavationGeometry(model), [model])
+  const rimGeometry = useMemo(
+    () => createPoolExcavationRimGeometry(model),
+    [model]
+  )
+
+  if (!geometry || !rimGeometry) {
+    return null
+  }
+
+  return (
+    <>
+      <mesh receiveShadow geometry={geometry}>
+        <meshStandardMaterial
+          color="#7d674c"
+          polygonOffset
+          polygonOffsetFactor={-1}
+          roughness={0.98}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      <lineSegments geometry={rimGeometry}>
+        <lineBasicMaterial color="#594733" transparent opacity={0.86} />
+      </lineSegments>
+    </>
+  )
+}
+
 function Supports({ model }: { model: Plan3DModel }) {
   return (
     <>
@@ -393,6 +429,97 @@ function Supports({ model }: { model: Plan3DModel }) {
         </mesh>
       ))}
     </>
+  )
+}
+
+function HeightMarkers({ model }: { model: Plan3DModel }) {
+  const deckPoint = getLabelPoint(model.deckPoints)
+  const poolPoint = model.poolPoints ? getLabelPoint(model.poolPoints) : null
+  const groundPoint = getGroundLabelPoint(model)
+
+  return (
+    <>
+      <HeightMarker
+        baseY={getTerrainHeightAt(
+          deckPoint,
+          model.elevation.settings.terrain,
+          model.elevation.terrainBounds
+        )}
+        color="#6f4b2f"
+        label={`Deck ${formatHeightCm(model.elevation.deckFinishedY)}`}
+        point={deckPoint}
+        y={model.elevation.deckFinishedY + 0.08}
+      />
+      {poolPoint ? (
+        <HeightMarker
+          baseY={model.elevation.poolTopY - model.elevation.poolBodyHeightM}
+          color="#1d79b7"
+          label={`Pool top ${formatHeightCm(model.elevation.poolTopY)}`}
+          point={poolPoint}
+          y={model.elevation.poolTopY + 0.1}
+        />
+      ) : null}
+      <HeightMarker
+        baseY={groundPoint.y - 0.22}
+        color="#645846"
+        label={`Ground ${formatHeightCm(groundPoint.y)}`}
+        point={groundPoint}
+        y={groundPoint.y + 0.12}
+      />
+    </>
+  )
+}
+
+function HeightMarker({
+  baseY,
+  color,
+  label,
+  point,
+  y,
+}: {
+  baseY: number
+  color: string
+  label: string
+  point: Point3D
+  y: number
+}) {
+  const lineGeometry = useMemo(() => {
+    const geometry = new THREE.BufferGeometry()
+    geometry.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(
+        [point.x, baseY, point.z, point.x, y, point.z],
+        3
+      )
+    )
+
+    return geometry
+  }, [baseY, point, y])
+
+  return (
+    <group>
+      <lineSegments geometry={lineGeometry}>
+        <lineBasicMaterial color={color} transparent opacity={0.72} />
+      </lineSegments>
+      <mesh position={[point.x, y, point.z]}>
+        <sphereGeometry args={[0.055, 14, 10]} />
+        <meshStandardMaterial color={color} roughness={0.42} />
+      </mesh>
+      <Html
+        center
+        distanceFactor={5}
+        position={[point.x, y + 0.22, point.z]}
+        style={{ pointerEvents: "none" }}
+        zIndexRange={[20, 0]}
+      >
+        <span
+          className="rounded border border-stone-300 bg-white/95 px-2.5 py-1 text-xs font-semibold text-stone-800 shadow-sm"
+          style={{ whiteSpace: "nowrap" }}
+        >
+          {label}
+        </span>
+      </Html>
+    </group>
   )
 }
 
@@ -599,6 +726,110 @@ function PrivacyScreens({ model }: { model: Plan3DModel }) {
   )
 }
 
+function createPoolExcavationGeometry(model: Plan3DModel) {
+  const points = model.poolPoints
+  if (!points || points.length < 3) {
+    return null
+  }
+
+  const terrain = model.elevation.settings.terrain
+  const terrainBounds = model.elevation.terrainBounds
+  const poolBottomY =
+    model.elevation.poolTopY - model.elevation.poolBodyHeightM - 0.015
+  const center = getLabelPoint(points)
+  const positions: number[] = []
+
+  points.forEach((point, index) => {
+    const next = points[(index + 1) % points.length]
+    if (!next) {
+      return
+    }
+
+    const start = offsetFromCenter(point, center, 0.045)
+    const end = offsetFromCenter(next, center, 0.045)
+    const startTerrainY = getTerrainHeightAt(start, terrain, terrainBounds)
+    const endTerrainY = getTerrainHeightAt(end, terrain, terrainBounds)
+
+    if (
+      startTerrainY <= poolBottomY + 0.05 &&
+      endTerrainY <= poolBottomY + 0.05
+    ) {
+      return
+    }
+
+    positions.push(
+      start.x,
+      startTerrainY + 0.01,
+      start.z,
+      end.x,
+      endTerrainY + 0.01,
+      end.z,
+      end.x,
+      poolBottomY,
+      end.z,
+      start.x,
+      startTerrainY + 0.01,
+      start.z,
+      end.x,
+      poolBottomY,
+      end.z,
+      start.x,
+      poolBottomY,
+      start.z
+    )
+  })
+
+  if (positions.length === 0) {
+    return null
+  }
+
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3))
+  geometry.computeVertexNormals()
+
+  return geometry
+}
+
+function createPoolExcavationRimGeometry(model: Plan3DModel) {
+  const points = model.poolPoints
+  if (!points || points.length < 3) {
+    return null
+  }
+
+  const center = getLabelPoint(points)
+  const terrain = model.elevation.settings.terrain
+  const terrainBounds = model.elevation.terrainBounds
+  const positions: number[] = []
+
+  points.forEach((point, index) => {
+    const next = points[(index + 1) % points.length]
+    if (!next) {
+      return
+    }
+
+    const start = offsetFromCenter(point, center, 0.07)
+    const end = offsetFromCenter(next, center, 0.07)
+
+    positions.push(
+      start.x,
+      getTerrainHeightAt(start, terrain, terrainBounds) + 0.035,
+      start.z,
+      end.x,
+      getTerrainHeightAt(end, terrain, terrainBounds) + 0.035,
+      end.z
+    )
+  })
+
+  if (positions.length === 0) {
+    return null
+  }
+
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3))
+
+  return geometry
+}
+
 function createTerrainGeometry(model: Plan3DModel) {
   const bounds = model.elevation.terrainBounds
   const terrain = model.elevation.settings.terrain
@@ -795,6 +1026,70 @@ function getMidpoint(a: Point3D, b: Point3D) {
     x: (a.x + b.x) / 2,
     z: (a.z + b.z) / 2,
   }
+}
+
+function getLabelPoint(points: Point3D[]) {
+  const total = points.reduce(
+    (sum, point) => ({
+      x: sum.x + point.x,
+      z: sum.z + point.z,
+    }),
+    { x: 0, z: 0 }
+  )
+  const count = Math.max(1, points.length)
+
+  return {
+    x: total.x / count,
+    z: total.z / count,
+  }
+}
+
+function getGroundLabelPoint(model: Plan3DModel) {
+  const bounds = model.elevation.terrainBounds
+  const angleRad =
+    (model.elevation.settings.terrain.slopeDirectionDeg * Math.PI) / 180
+  const direction = {
+    x: Math.sin(angleRad),
+    z: Math.cos(angleRad),
+  }
+  const corners = [
+    { x: bounds.minX + 0.7, z: bounds.minZ + 0.7 },
+    { x: bounds.maxX - 0.7, z: bounds.minZ + 0.7 },
+    { x: bounds.maxX - 0.7, z: bounds.maxZ - 0.7 },
+    { x: bounds.minX + 0.7, z: bounds.maxZ - 0.7 },
+  ]
+  const point = corners.reduce((best, candidate) =>
+    candidate.x * direction.x + candidate.z * direction.z >
+    best.x * direction.x + best.z * direction.z
+      ? candidate
+      : best
+  )
+
+  return {
+    ...point,
+    y: getTerrainHeightAt(
+      point,
+      model.elevation.settings.terrain,
+      model.elevation.terrainBounds
+    ),
+  }
+}
+
+function offsetFromCenter(point: Point3D, center: Point3D, distance: number) {
+  const x = point.x - center.x
+  const z = point.z - center.z
+  const length = Math.hypot(x, z) || 1
+
+  return {
+    x: point.x + (x / length) * distance,
+    z: point.z + (z / length) * distance,
+  }
+}
+
+function formatHeightCm(valueM: number) {
+  const valueCm = Math.round(mToCm(valueM))
+
+  return `${valueCm > 0 ? "+" : ""}${valueCm} cm`
 }
 
 function getHorizontalVector(a: Point3D, b: Point3D) {

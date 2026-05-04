@@ -21,6 +21,10 @@ export type ElevationSettings = {
     showPosts: boolean
     maxPostSpacingM: number
   }
+  visualization: {
+    showHeightMarkers: boolean
+    showPoolExcavation: boolean
+  }
 }
 
 export type TerrainBounds = {
@@ -66,6 +70,10 @@ export function getDefaultElevationSettings(): ElevationSettings {
     supports: {
       showPosts: true,
       maxPostSpacingM: 2,
+    },
+    visualization: {
+      showHeightMarkers: true,
+      showPoolExcavation: true,
     },
   }
 }
@@ -142,6 +150,16 @@ export function normalizeElevationSettings(input: unknown): ElevationSettings {
         0.8,
         5
       ),
+    },
+    visualization: {
+      showHeightMarkers:
+        typeof candidate.visualization?.showHeightMarkers === "boolean"
+          ? candidate.visualization.showHeightMarkers
+          : defaults.visualization.showHeightMarkers,
+      showPoolExcavation:
+        typeof candidate.visualization?.showPoolExcavation === "boolean"
+          ? candidate.visualization.showPoolExcavation
+          : defaults.visualization.showPoolExcavation,
     },
   }
 }
