@@ -44,6 +44,7 @@ import {
 import {
   getHouseAttachEdge,
   getHouseDoors,
+  getHouseRoofStyle,
   getHouseWindows,
 } from "@/lib/trall/house"
 import { clientPointToSvgPoint } from "@/lib/trall/svg"
@@ -752,6 +753,7 @@ export function PlanSvg({
         onDoorPointerDown={startDoorDrag}
         onEditValueChange={dimensions.updateEditingDimension}
         onWindowPointerDown={startWindowDrag}
+        roofStyle={getHouseRoofStyle(house)}
         windows={houseWindows}
       />
       <DeckLayer

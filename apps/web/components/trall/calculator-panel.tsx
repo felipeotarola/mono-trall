@@ -31,6 +31,7 @@ import {
 import type {
   HouseDoor,
   HouseModel,
+  HouseRoofStyle,
   HouseWindow,
   Material,
   Metric,
@@ -54,7 +55,9 @@ import {
   createDefaultHouseDoor,
   createDefaultHouseWindow,
   getHouseDoors,
+  getHouseRoofStyle,
   getHouseWindows,
+  houseRoofStyleOptions,
 } from "@/lib/trall/house"
 import {
   emptyMaterialTotals,
@@ -647,10 +650,18 @@ function HouseDimensionsCard({
     }))
   }
   const doors = getHouseDoors(house)
+  const roofStyle = getHouseRoofStyle(house)
   const windows = getHouseWindows(house)
   const openingWidthM =
     doors.reduce((total, door) => total + (door.widthCm ?? 90) / 100, 0) +
     windows.reduce((total, window) => total + (window.widthCm ?? 120) / 100, 0)
+
+  function updateRoofStyle(value: HouseRoofStyle) {
+    setHouse((current) => ({
+      ...current,
+      roofStyle: value,
+    }))
+  }
 
   function addDoor() {
     setHouse((current) => {
@@ -822,6 +833,24 @@ function HouseDimensionsCard({
             />
             <span className="text-xs text-muted-foreground">m</span>
           </div>
+        </label>
+        <label className="col-span-2 space-y-1">
+          <span className="text-xs text-muted-foreground">Roof type</span>
+          <Select
+            value={roofStyle}
+            onValueChange={(value) => updateRoofStyle(value as HouseRoofStyle)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {houseRoofStyleOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </label>
         <div className="col-span-2 grid gap-2 rounded-lg border bg-muted/25 p-2">
           <div className="flex items-center justify-between gap-2">

@@ -20,6 +20,7 @@ import { polygonArea } from "@/lib/trall/geometry"
 import {
   getHouseBounds,
   getHouseDoors,
+  getHouseRoofStyle,
   getHouseWindows,
 } from "@/lib/trall/house"
 import type {
@@ -249,6 +250,7 @@ export function createDefaultPlannerProjectState(): PlannerProjectState {
     house: {
       ...initialHouse,
       doors: getHouseDoors(initialHouse).map((door) => ({ ...door })),
+      roofStyle: getHouseRoofStyle(initialHouse),
       windows: getHouseWindows(initialHouse).map((window) => ({ ...window })),
     },
     deckPoints,
@@ -281,6 +283,7 @@ export function normalizePlannerProjectState(
     house: {
       ...state.house,
       doors: getHouseDoors(state.house),
+      roofStyle: getHouseRoofStyle(state.house),
       windows: getHouseWindows(state.house),
     },
     elevationSettings: normalizeElevationSettings(state.elevationSettings),

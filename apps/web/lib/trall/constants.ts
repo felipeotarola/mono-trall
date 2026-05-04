@@ -41,6 +41,7 @@ export const initialHouse: HouseModel = {
   centerX: 456,
   doorOffsetM: 0,
   doors: [{ id: "door-1", offsetM: 0, widthCm: 90, heightCm: 210 }],
+  roofStyle: "gable",
   windows: [
     {
       id: "window-1",

@@ -32,6 +32,7 @@ import {
   DEFAULT_HOUSE_DOOR_HEIGHT_CM,
   DEFAULT_HOUSE_DOOR_WIDTH_CM,
   getHouseDoors,
+  getHouseRoofStyle,
   getHouseWindows,
 } from "./house.ts"
 
@@ -95,6 +96,7 @@ export type Plan3DHouse = {
   center: Point3D
   doors: Plan3DHouseDoor[]
   heightM: number
+  roofStyle: NonNullable<HouseModel["roofStyle"]>
   widthM: number
   depthM: number
   windows: Plan3DHouseWindow[]
@@ -247,6 +249,7 @@ export function getPlan3DModel({
       ),
       doors: get3DHouseDoors(house),
       heightM: DEFAULT_HOUSE_WALL_HEIGHT_M,
+      roofStyle: getHouseRoofStyle(house),
       widthM: houseBounds.widthPx / PIXELS_PER_METER,
       depthM: houseBounds.depthPx / PIXELS_PER_METER,
       windows: get3DHouseWindows(house),

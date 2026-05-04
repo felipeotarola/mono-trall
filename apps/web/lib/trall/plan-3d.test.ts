@@ -55,6 +55,7 @@ describe("plan 3D conversion", () => {
     assert.equal(model.house.doors.length, initialHouse.doors?.length)
     assert.equal(model.house.windows.length, initialHouse.windows?.length)
     assert.equal(model.house.heightM, DEFAULT_HOUSE_WALL_HEIGHT_M)
+    assert.equal(model.house.roofStyle, "gable")
 
     for (const door of model.house.doors) {
       assert.equal(door.widthM, STANDARD_DOOR_WIDTH_M)
@@ -160,5 +161,38 @@ describe("plan 3D conversion", () => {
 
     assert.equal(model.house.doors[0]?.widthM, 1.1)
     assert.equal(model.house.doors[0]?.heightM, 2.2)
+  })
+
+  it("preserves configured house roof style in the 3D model", () => {
+    const model = getPlan3DModel({
+      boardDirection: defaultBoardDirection,
+      deckEdgeConstraints: [],
+      deckPoints: [
+        { x: 0, y: 0 },
+        { x: PIXELS_PER_METER * 4, y: 0 },
+        { x: PIXELS_PER_METER * 4, y: PIXELS_PER_METER * 3 },
+        { x: 0, y: PIXELS_PER_METER * 3 },
+      ],
+      elevationSettings: getDefaultElevationSettings(),
+      features: [],
+      house: {
+        ...initialHouse,
+        roofStyle: "shed",
+      },
+      houseBounds: {
+        left:
+          initialHouse.centerX - (initialHouse.widthM * PIXELS_PER_METER) / 2,
+        right:
+          initialHouse.centerX + (initialHouse.widthM * PIXELS_PER_METER) / 2,
+        top: initialHouse.topY,
+        bottom: initialHouse.topY + initialHouse.depthM * PIXELS_PER_METER,
+        centerX: initialHouse.centerX,
+        widthPx: initialHouse.widthM * PIXELS_PER_METER,
+        depthPx: initialHouse.depthM * PIXELS_PER_METER,
+      },
+      poolPoints: null,
+    })
+
+    assert.equal(model.house.roofStyle, "shed")
   })
 })

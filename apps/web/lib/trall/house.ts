@@ -3,6 +3,7 @@ import type {
   HouseBounds,
   HouseDoor,
   HouseModel,
+  HouseRoofStyle,
   HouseWindow,
 } from "./types.ts"
 
@@ -18,6 +19,11 @@ export const MIN_HOUSE_DOOR_WIDTH_CM = 60
 export const MAX_HOUSE_DOOR_WIDTH_CM = 240
 export const MIN_HOUSE_DOOR_HEIGHT_CM = 180
 export const MAX_HOUSE_DOOR_HEIGHT_CM = 260
+export const houseRoofStyleOptions = [
+  { value: "gable", label: "Sadeltak" },
+  { value: "shed", label: "Pulpettak" },
+  { value: "flat", label: "Flat roof" },
+] as const satisfies ReadonlyArray<{ value: HouseRoofStyle; label: string }>
 
 export function getHouseBounds(house: HouseModel): HouseBounds {
   const widthPx = house.widthM * PIXELS_PER_METER
@@ -52,6 +58,10 @@ export function getHouseDoors(house: HouseModel): HouseDoor[] {
   }
 
   return [createDefaultHouseDoor("door-1", house.doorOffsetM ?? 0)]
+}
+
+export function getHouseRoofStyle(house: HouseModel): HouseRoofStyle {
+  return normalizeHouseRoofStyle(house.roofStyle)
 }
 
 export function getHouseWindows(house: HouseModel): HouseWindow[] {
@@ -106,6 +116,16 @@ export function normalizeHouseDoor(door: HouseDoor): HouseDoor {
       MAX_HOUSE_DOOR_HEIGHT_CM
     ),
   }
+}
+
+export function normalizeHouseRoofStyle(
+  roofStyle: HouseModel["roofStyle"]
+): HouseRoofStyle {
+  if (roofStyle === "flat" || roofStyle === "gable" || roofStyle === "shed") {
+    return roofStyle
+  }
+
+  return "gable"
 }
 
 export function normalizeHouseWindow(window: HouseWindow): HouseWindow {

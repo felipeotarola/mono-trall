@@ -59,11 +59,14 @@ export type HouseModel = {
   centerX: number
   doorOffsetM?: number
   doors?: HouseDoor[]
+  roofStyle?: HouseRoofStyle
   windows?: HouseWindow[]
   topY: number
   widthM: number
   depthM: number
 }
+
+export type HouseRoofStyle = "flat" | "gable" | "shed"
 
 export type HouseDoor = {
   id: string

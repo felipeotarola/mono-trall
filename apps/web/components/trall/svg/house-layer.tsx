@@ -7,6 +7,7 @@ import type {
   EditableDimension,
   HouseBounds,
   HouseDoor,
+  HouseRoofStyle,
   HouseWindow,
 } from "@/lib/trall/types"
 
@@ -19,6 +20,7 @@ export function HouseLayer({
   onDoorPointerDown,
   onEditValueChange,
   onWindowPointerDown,
+  roofStyle,
   windows,
 }: {
   doors: HouseDoor[]
@@ -35,9 +37,11 @@ export function HouseLayer({
     event: ReactPointerEvent<SVGElement>,
     window: HouseWindow
   ) => void
+  roofStyle: HouseRoofStyle
   windows: HouseWindow[]
 }) {
   const roofPeakY = houseBounds.top - Math.min(82, houseBounds.widthPx * 0.2)
+  const shedHighY = houseBounds.top - Math.min(54, houseBounds.widthPx * 0.12)
   const upperWindowY = houseBounds.top + houseBounds.depthPx * 0.25
   const lowerWindowY = houseBounds.top + houseBounds.depthPx * 0.55
 
@@ -52,12 +56,11 @@ export function HouseLayer({
         className={trallPlanClasses.houseBody}
         strokeWidth="5"
       />
-      <path
-        d={`M${houseBounds.left} ${houseBounds.top} L${houseBounds.centerX} ${roofPeakY} L${houseBounds.right} ${houseBounds.top}`}
-        className={trallPlanClasses.houseRoof}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="5"
+      <HouseRoofSymbol
+        houseBounds={houseBounds}
+        roofPeakY={roofPeakY}
+        roofStyle={roofStyle}
+        shedHighY={shedHighY}
       />
       {doors.map((door) => {
         const doorWidth = ((door.widthCm ?? 90) / 100) * PIXELS_PER_METER
@@ -174,6 +177,54 @@ export function HouseLayer({
         readonly
       />
     </>
+  )
+}
+
+function HouseRoofSymbol({
+  houseBounds,
+  roofPeakY,
+  roofStyle,
+  shedHighY,
+}: {
+  houseBounds: HouseBounds
+  roofPeakY: number
+  roofStyle: HouseRoofStyle
+  shedHighY: number
+}) {
+  if (roofStyle === "flat") {
+    return (
+      <line
+        x1={houseBounds.left}
+        x2={houseBounds.right}
+        y1={houseBounds.top}
+        y2={houseBounds.top}
+        className={trallPlanClasses.houseRoof}
+        strokeLinecap="round"
+        strokeWidth="5"
+      />
+    )
+  }
+
+  if (roofStyle === "shed") {
+    return (
+      <path
+        d={`M${houseBounds.left} ${houseBounds.top} L${houseBounds.right} ${shedHighY}`}
+        className={trallPlanClasses.houseRoof}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="5"
+      />
+    )
+  }
+
+  return (
+    <path
+      d={`M${houseBounds.left} ${houseBounds.top} L${houseBounds.centerX} ${roofPeakY} L${houseBounds.right} ${houseBounds.top}`}
+      className={trallPlanClasses.houseRoof}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="5"
+    />
   )
 }
 

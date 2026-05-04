@@ -4,15 +4,17 @@
 
 import { Suspense, useEffect, useMemo, useRef, type ElementRef } from "react"
 import { Canvas, useThree } from "@react-three/fiber"
-import { Html, OrbitControls, PerspectiveCamera, useTexture } from "@react-three/drei"
+import {
+  Html,
+  OrbitControls,
+  PerspectiveCamera,
+  useTexture,
+} from "@react-three/drei"
 import * as THREE from "three"
 import { RotateCcwIcon } from "lucide-react"
 
 import type { EdgeConstraint } from "@/lib/trall/edge-model"
-import type {
-  BoardDirectionSettings,
-  DeckFeature,
-} from "@/lib/trall/features"
+import type { BoardDirectionSettings, DeckFeature } from "@/lib/trall/features"
 import {
   getPlan3DModel,
   type Plan3DLine,
@@ -160,7 +162,8 @@ function getSceneMaterials(appearance: AppearanceSettings): SceneMaterials {
     excavationColor: terrain.excavation,
     excavationRimColor: terrain.rim,
     houseWallColor: houseWall,
-    poolBorderColor: appearance.poolWallMaterial === "blue_tile" ? "#d9f4ff" : "#e7f8ff",
+    poolBorderColor:
+      appearance.poolWallMaterial === "blue_tile" ? "#d9f4ff" : "#e7f8ff",
     poolWallColor: poolWall,
     poolWaterColor: realistic ? "#1f87c9" : "#2b8fd6",
     roofColor: roof,
@@ -187,16 +190,15 @@ function useSelectedTextureMaps(selection: SceneTextureSelection) {
   useEffect(() => {
     textures.forEach((texture, index) => {
       const key = keys[index]
-      const repeat =
-        key?.startsWith("deck-")
-          ? [6, 6]
-          : key?.startsWith("terrain-")
-            ? [5, 5]
-            : key?.startsWith("roof-")
-              ? [3, 2]
-              : key?.startsWith("house-")
-                ? [3, 1.4]
-                : [2, 2]
+      const repeat = key?.startsWith("deck-")
+        ? [6, 6]
+        : key?.startsWith("terrain-")
+          ? [5, 5]
+          : key?.startsWith("roof-")
+            ? [3, 2]
+            : key?.startsWith("house-")
+              ? [3, 1.4]
+              : [2, 2]
 
       texture.colorSpace = THREE.SRGBColorSpace
       texture.wrapS = THREE.RepeatWrapping
@@ -223,41 +225,41 @@ function getSceneTextureSelection(
   appearance: AppearanceSettings
 ): SceneTextureSelection {
   return {
-    deck: ({
-      treated_wood: "deck-treated-wood",
-      cedar: "deck-cedar",
-      grey_composite: "deck-grey-composite",
-    } satisfies Record<AppearanceSettings["deckMaterial"], TextureKey>)[
-      appearance.deckMaterial
-    ],
-    houseWall: ({
-      light_plaster: "house-light-plaster",
-      timber_siding: "house-timber-siding",
-      brick: "house-brick",
-    } satisfies Record<AppearanceSettings["houseWallMaterial"], TextureKey>)[
-      appearance.houseWallMaterial
-    ],
-    poolWall: ({
-      white_liner: "pool-white-liner",
-      blue_tile: "pool-blue-tile",
-      concrete: "pool-concrete",
-    } satisfies Record<AppearanceSettings["poolWallMaterial"], TextureKey>)[
-      appearance.poolWallMaterial
-    ],
-    roof: ({
-      dark_metal: "roof-dark-metal",
-      red_tile: "roof-red-tile",
-      roofing_felt: "roof-felt",
-    } satisfies Record<AppearanceSettings["roofMaterial"], TextureKey>)[
-      appearance.roofMaterial
-    ],
-    terrain: ({
-      soil: "terrain-soil",
-      grass: "terrain-grass",
-      gravel: "terrain-gravel",
-    } satisfies Record<AppearanceSettings["terrainMaterial"], TextureKey>)[
-      appearance.terrainMaterial
-    ],
+    deck: (
+      {
+        treated_wood: "deck-treated-wood",
+        cedar: "deck-cedar",
+        grey_composite: "deck-grey-composite",
+      } satisfies Record<AppearanceSettings["deckMaterial"], TextureKey>
+    )[appearance.deckMaterial],
+    houseWall: (
+      {
+        light_plaster: "house-light-plaster",
+        timber_siding: "house-timber-siding",
+        brick: "house-brick",
+      } satisfies Record<AppearanceSettings["houseWallMaterial"], TextureKey>
+    )[appearance.houseWallMaterial],
+    poolWall: (
+      {
+        white_liner: "pool-white-liner",
+        blue_tile: "pool-blue-tile",
+        concrete: "pool-concrete",
+      } satisfies Record<AppearanceSettings["poolWallMaterial"], TextureKey>
+    )[appearance.poolWallMaterial],
+    roof: (
+      {
+        dark_metal: "roof-dark-metal",
+        red_tile: "roof-red-tile",
+        roofing_felt: "roof-felt",
+      } satisfies Record<AppearanceSettings["roofMaterial"], TextureKey>
+    )[appearance.roofMaterial],
+    terrain: (
+      {
+        soil: "terrain-soil",
+        grass: "terrain-grass",
+        gravel: "terrain-gravel",
+      } satisfies Record<AppearanceSettings["terrainMaterial"], TextureKey>
+    )[appearance.terrainMaterial],
   }
 }
 
@@ -330,11 +332,18 @@ export function Plan3DView({
           fov={42}
           near={0.1}
           far={250}
-          position={[cameraDistance * 0.6, cameraDistance * 0.6, cameraDistance]}
+          position={[
+            cameraDistance * 0.6,
+            cameraDistance * 0.6,
+            cameraDistance,
+          ]}
         />
         <SceneCameraReset controlsRef={controlsRef} model={model} />
         <color attach="background" args={["#e7e5df"]} />
-        <fog attach="fog" args={["#e7e5df", cameraDistance * 1.2, cameraDistance * 3]} />
+        <fog
+          attach="fog"
+          args={["#e7e5df", cameraDistance * 1.2, cameraDistance * 3]}
+        />
         <ambientLight intensity={0.65} />
         <directionalLight
           castShadow
@@ -412,11 +421,7 @@ function Plan3DSceneObjects({
   }
 
   return (
-    <Plan3DSceneContent
-      materials={materials}
-      model={model}
-      textureMaps={{}}
-    />
+    <Plan3DSceneContent materials={materials} model={model} textureMaps={{}} />
   )
 }
 
@@ -463,16 +468,8 @@ function Plan3DSceneContent({
         model={model}
         textureMaps={textureMaps}
       />
-      <DeckSlab
-        materials={materials}
-        model={model}
-        textureMaps={textureMaps}
-      />
-      <PoolBody
-        materials={materials}
-        model={model}
-        textureMaps={textureMaps}
-      />
+      <DeckSlab materials={materials} model={model} textureMaps={textureMaps} />
+      <PoolBody materials={materials} model={model} textureMaps={textureMaps} />
       {model.elevation.settings.visualization.showPoolExcavation ? (
         <PoolExcavation materials={materials} model={model} />
       ) : null}
@@ -539,21 +536,201 @@ function HouseMass({
           roughness={0.82}
         />
       </mesh>
-      <mesh position={[0, model.house.heightM + 0.06, 0]}>
-        <boxGeometry
-          args={[model.house.widthM + 0.2, 0.12, model.house.depthM + 0.2]}
-        />
-        <meshStandardMaterial
-          color={materials.roofColor}
-          roughness={0.75}
-        />
-      </mesh>
+      <HouseRoof3D
+        color={materials.roofColor}
+        depthM={model.house.depthM}
+        heightM={model.house.heightM}
+        materialId={model.elevation.settings.appearance.roofMaterial}
+        roofStyle={model.house.roofStyle}
+        texture={textureMaps.roof}
+        widthM={model.house.widthM}
+      />
       {model.house.doors.map((door) => (
         <HouseDoor3D key={door.id} door={door} frontZ={frontZ} />
       ))}
       {model.house.windows.map((window) => (
         <HouseWindow3D key={window.id} frontZ={frontZ} window={window} />
       ))}
+    </group>
+  )
+}
+
+function HouseRoof3D({
+  color,
+  depthM,
+  heightM,
+  materialId,
+  roofStyle,
+  texture,
+  widthM,
+}: {
+  color: string
+  depthM: number
+  heightM: number
+  materialId: Plan3DModel["elevation"]["settings"]["appearance"]["roofMaterial"]
+  roofStyle: Plan3DModel["house"]["roofStyle"]
+  texture?: THREE.Texture
+  widthM: number
+}) {
+  const geometry = useMemo(
+    () => createHouseRoofGeometry({ depthM, roofStyle, widthM }),
+    [depthM, roofStyle, widthM]
+  )
+  const dimensions = getHouseRoofDimensions(widthM, depthM)
+
+  return (
+    <group position={[0, heightM, 0]}>
+      <mesh castShadow receiveShadow geometry={geometry}>
+        <meshStandardMaterial
+          color={texture ? "#ffffff" : color}
+          map={texture}
+          roughness={0.72}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      <RoofDetailLines dimensions={dimensions} roofStyle={roofStyle} />
+      <RoofTilePattern
+        dimensions={dimensions}
+        materialId={materialId}
+        roofStyle={roofStyle}
+      />
+    </group>
+  )
+}
+
+function RoofTilePattern({
+  dimensions,
+  materialId,
+  roofStyle,
+}: {
+  dimensions: HouseRoofDimensions
+  materialId: Plan3DModel["elevation"]["settings"]["appearance"]["roofMaterial"]
+  roofStyle: Plan3DModel["house"]["roofStyle"]
+}) {
+  if (materialId !== "red_tile" || roofStyle === "flat") {
+    return null
+  }
+
+  const rows = getRoofTileRows(dimensions, roofStyle)
+  const rowColor = "#8f3426"
+  const shadowColor = "#5d211a"
+
+  return (
+    <group>
+      {rows.map((row) => (
+        <group key={row.id} position={row.position} rotation={row.rotation}>
+          <mesh castShadow receiveShadow>
+            <boxGeometry args={row.args} />
+            <meshStandardMaterial color={rowColor} roughness={0.82} />
+          </mesh>
+          <mesh position={row.shadowPosition}>
+            <boxGeometry args={row.shadowArgs} />
+            <meshStandardMaterial color={shadowColor} roughness={0.9} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  )
+}
+
+function RoofDetailLines({
+  dimensions,
+  roofStyle,
+}: {
+  dimensions: HouseRoofDimensions
+  roofStyle: Plan3DModel["house"]["roofStyle"]
+}) {
+  const lineColor = "#f5f1e6"
+  const fasciaColor = "#403832"
+
+  if (roofStyle === "flat") {
+    return (
+      <group>
+        <mesh position={[0, dimensions.thickness + 0.01, dimensions.halfDepth]}>
+          <boxGeometry args={[dimensions.halfWidth * 2, 0.035, 0.035]} />
+          <meshStandardMaterial color={lineColor} roughness={0.55} />
+        </mesh>
+        <mesh
+          position={[0, dimensions.thickness + 0.01, -dimensions.halfDepth]}
+        >
+          <boxGeometry args={[dimensions.halfWidth * 2, 0.035, 0.035]} />
+          <meshStandardMaterial color={lineColor} roughness={0.55} />
+        </mesh>
+      </group>
+    )
+  }
+
+  if (roofStyle === "shed") {
+    return (
+      <group>
+        <mesh
+          position={[
+            0,
+            dimensions.shedRise + dimensions.thickness + 0.035,
+            -dimensions.halfDepth,
+          ]}
+        >
+          <boxGeometry args={[dimensions.halfWidth * 2, 0.07, 0.07]} />
+          <meshStandardMaterial color={lineColor} roughness={0.5} />
+        </mesh>
+        <mesh position={[0, dimensions.thickness + 0.02, dimensions.halfDepth]}>
+          <boxGeometry args={[dimensions.halfWidth * 2, 0.08, 0.09]} />
+          <meshStandardMaterial color={fasciaColor} roughness={0.7} />
+        </mesh>
+        <mesh
+          rotation={[dimensions.shedAngleRad, 0, 0]}
+          position={[
+            -dimensions.halfWidth * 0.45,
+            dimensions.shedRise / 2 + dimensions.thickness + 0.03,
+            0,
+          ]}
+        >
+          <boxGeometry args={[0.04, 0.035, dimensions.slopeLength]} />
+          <meshStandardMaterial color={lineColor} roughness={0.5} />
+        </mesh>
+        <mesh
+          rotation={[dimensions.shedAngleRad, 0, 0]}
+          position={[
+            dimensions.halfWidth * 0.45,
+            dimensions.shedRise / 2 + dimensions.thickness + 0.03,
+            0,
+          ]}
+        >
+          <boxGeometry args={[0.04, 0.035, dimensions.slopeLength]} />
+          <meshStandardMaterial color={lineColor} roughness={0.5} />
+        </mesh>
+      </group>
+    )
+  }
+
+  return (
+    <group>
+      <mesh position={[0, dimensions.gableRise + 0.055, 0]}>
+        <boxGeometry args={[0.08, 0.08, dimensions.halfDepth * 2]} />
+        <meshStandardMaterial color={lineColor} roughness={0.5} />
+      </mesh>
+      <mesh
+        rotation={[0, 0, dimensions.gableAngleRad]}
+        position={[
+          -dimensions.halfWidth / 2,
+          dimensions.gableRise / 2 + 0.035,
+          0,
+        ]}
+      >
+        <boxGeometry args={[dimensions.rafterLength, 0.04, 0.035]} />
+        <meshStandardMaterial color={lineColor} roughness={0.5} />
+      </mesh>
+      <mesh
+        rotation={[0, 0, -dimensions.gableAngleRad]}
+        position={[
+          dimensions.halfWidth / 2,
+          dimensions.gableRise / 2 + 0.035,
+          0,
+        ]}
+      >
+        <boxGeometry args={[dimensions.rafterLength, 0.04, 0.035]} />
+        <meshStandardMaterial color={lineColor} roughness={0.5} />
+      </mesh>
     </group>
   )
 }
@@ -585,7 +762,11 @@ function HouseDoor3D({
       </mesh>
       <mesh position={[door.widthM * 0.32, 0.05, 0.04]}>
         <sphereGeometry args={[0.035, 12, 8]} />
-        <meshStandardMaterial color="#d8b56c" metalness={0.45} roughness={0.4} />
+        <meshStandardMaterial
+          color="#d8b56c"
+          metalness={0.45}
+          roughness={0.4}
+        />
       </mesh>
     </group>
   )
@@ -731,7 +912,10 @@ function PoolBody({
           opacity={0.88}
         />
       </mesh>
-      <lineSegments geometry={borderGeometry} position={[0, -model.elevation.poolTopY, 0]}>
+      <lineSegments
+        geometry={borderGeometry}
+        position={[0, -model.elevation.poolTopY, 0]}
+      >
         <lineBasicMaterial color={materials.poolBorderColor} linewidth={1} />
       </lineSegments>
     </group>
@@ -798,7 +982,10 @@ function Supports({
           ]}
         >
           <boxGeometry args={[0.11, post.heightM, 0.11]} />
-          <meshStandardMaterial color={materials.supportColor} roughness={0.84} />
+          <meshStandardMaterial
+            color={materials.supportColor}
+            roughness={0.84}
+          />
         </mesh>
       ))}
     </>
@@ -925,9 +1112,17 @@ function Railings({ model }: { model: Plan3DModel }) {
     <>
       {model.railings.map((railing) => {
         const mid = getMidpoint(railing.edge.start, railing.edge.end)
-        const railColor = railing.style === "metal" ? "#5f6468" : railing.style === "glass" ? "#9fc9d5" : "#775439"
+        const railColor =
+          railing.style === "metal"
+            ? "#5f6468"
+            : railing.style === "glass"
+              ? "#9fc9d5"
+              : "#775439"
         const postCount = Math.max(2, Math.ceil(railing.edge.lengthM / 1.2) + 1)
-        const tangent = getHorizontalVector(railing.edge.start, railing.edge.end)
+        const tangent = getHorizontalVector(
+          railing.edge.start,
+          railing.edge.end
+        )
 
         return (
           <group key={railing.id}>
@@ -937,7 +1132,12 @@ function Railings({ model }: { model: Plan3DModel }) {
               rotation={[0, -railing.edge.angleY, 0]}
             >
               <boxGeometry args={[railing.edge.lengthM, 0.08, 0.08]} />
-              <meshStandardMaterial color={railColor} roughness={0.66} transparent={railing.style === "glass"} opacity={railing.style === "glass" ? 0.58 : 1} />
+              <meshStandardMaterial
+                color={railColor}
+                roughness={0.66}
+                transparent={railing.style === "glass"}
+                opacity={railing.style === "glass" ? 0.58 : 1}
+              />
             </mesh>
             <mesh
               castShadow
@@ -945,7 +1145,12 @@ function Railings({ model }: { model: Plan3DModel }) {
               rotation={[0, -railing.edge.angleY, 0]}
             >
               <boxGeometry args={[railing.edge.lengthM, 0.055, 0.055]} />
-              <meshStandardMaterial color={railColor} roughness={0.7} transparent={railing.style === "glass"} opacity={railing.style === "glass" ? 0.32 : 1} />
+              <meshStandardMaterial
+                color={railColor}
+                roughness={0.7}
+                transparent={railing.style === "glass"}
+                opacity={railing.style === "glass" ? 0.32 : 1}
+              />
             </mesh>
             {Array.from({ length: postCount }, (_, index) => {
               const t = postCount === 1 ? 0 : index / (postCount - 1)
@@ -991,27 +1196,33 @@ function Stairs({
 
         return (
           <group key={stairs.id}>
-            {Array.from({ length: Math.max(1, stairs.stepCount) }, (_, index) => {
-              const depth = stepDepth * (index + 1)
-              const height = stepHeight * (index + 1)
-              const center = {
-                x: stairs.anchor.x + stairs.normal.x * (depth / 2),
-                z: stairs.anchor.z + stairs.normal.z * (depth / 2),
-              }
+            {Array.from(
+              { length: Math.max(1, stairs.stepCount) },
+              (_, index) => {
+                const depth = stepDepth * (index + 1)
+                const height = stepHeight * (index + 1)
+                const center = {
+                  x: stairs.anchor.x + stairs.normal.x * (depth / 2),
+                  z: stairs.anchor.z + stairs.normal.z * (depth / 2),
+                }
 
-              return (
-                <mesh
-                  key={`${stairs.id}-step-${index}`}
-                  castShadow
-                  receiveShadow
-                  position={[center.x, deckBottomY + height / 2, center.z]}
-                  rotation={[0, -stairs.angleY, 0]}
-                >
-                  <boxGeometry args={[stairs.widthM, height, depth]} />
-                  <meshStandardMaterial color={materials.stairColor} roughness={0.82} />
-                </mesh>
-              )
-            })}
+                return (
+                  <mesh
+                    key={`${stairs.id}-step-${index}`}
+                    castShadow
+                    receiveShadow
+                    position={[center.x, deckBottomY + height / 2, center.z]}
+                    rotation={[0, -stairs.angleY, 0]}
+                  >
+                    <boxGeometry args={[stairs.widthM, height, depth]} />
+                    <meshStandardMaterial
+                      color={materials.stairColor}
+                      roughness={0.82}
+                    />
+                  </mesh>
+                )
+              }
+            )}
           </group>
         )
       })}
@@ -1047,23 +1258,43 @@ function Pergolas({
             rotation={[0, -pergola.rotationRad, 0]}
           >
             {postPositions.map(([postX, postZ], index) => (
-              <mesh key={`${pergola.id}-post-${index}`} castShadow position={[postX ?? 0, 1.15, postZ ?? 0]}>
+              <mesh
+                key={`${pergola.id}-post-${index}`}
+                castShadow
+                position={[postX ?? 0, 1.15, postZ ?? 0]}
+              >
                 <boxGeometry args={[0.12, 2.3, 0.12]} />
-                <meshStandardMaterial color={materials.supportColor} roughness={0.78} />
+                <meshStandardMaterial
+                  color={materials.supportColor}
+                  roughness={0.78}
+                />
               </mesh>
             ))}
             <mesh castShadow position={[0, 2.35, -z]}>
               <boxGeometry args={[pergola.widthM + 0.18, 0.12, 0.16]} />
-              <meshStandardMaterial color={materials.supportColor} roughness={0.74} />
+              <meshStandardMaterial
+                color={materials.supportColor}
+                roughness={0.74}
+              />
             </mesh>
             <mesh castShadow position={[0, 2.35, z]}>
               <boxGeometry args={[pergola.widthM + 0.18, 0.12, 0.16]} />
-              <meshStandardMaterial color={materials.supportColor} roughness={0.74} />
+              <meshStandardMaterial
+                color={materials.supportColor}
+                roughness={0.74}
+              />
             </mesh>
             {[-0.36, 0, 0.36].map((offset) => (
-              <mesh key={`${pergola.id}-beam-${offset}`} castShadow position={[offset * pergola.widthM, 2.52, 0]}>
+              <mesh
+                key={`${pergola.id}-beam-${offset}`}
+                castShadow
+                position={[offset * pergola.widthM, 2.52, 0]}
+              >
                 <boxGeometry args={[0.1, 0.1, pergola.depthM + 0.36]} />
-                <meshStandardMaterial color={materials.deckColor} roughness={0.74} />
+                <meshStandardMaterial
+                  color={materials.deckColor}
+                  roughness={0.74}
+                />
               </mesh>
             ))}
           </group>
@@ -1080,8 +1311,16 @@ function PrivacyScreens({ model }: { model: Plan3DModel }) {
     <>
       {model.privacyScreens.map((screen) => {
         const mid = getMidpoint(screen.start, screen.end)
-        const color = screen.style === "greenery" ? "#5f7a48" : screen.style === "solid" ? "#816447" : "#8c6b48"
-        const slatCount = screen.style === "slatted" ? Math.max(3, Math.floor(screen.lengthM / 0.22)) : 1
+        const color =
+          screen.style === "greenery"
+            ? "#5f7a48"
+            : screen.style === "solid"
+              ? "#816447"
+              : "#8c6b48"
+        const slatCount =
+          screen.style === "slatted"
+            ? Math.max(3, Math.floor(screen.lengthM / 0.22))
+            : 1
 
         return (
           <group key={screen.id}>
@@ -1094,14 +1333,23 @@ function PrivacyScreens({ model }: { model: Plan3DModel }) {
                 }
 
                 return (
-                  <mesh key={`${screen.id}-slat-${index}`} castShadow position={[point.x, deckY + screen.heightM / 2, point.z]} rotation={[0, -screen.angleY, 0]}>
+                  <mesh
+                    key={`${screen.id}-slat-${index}`}
+                    castShadow
+                    position={[point.x, deckY + screen.heightM / 2, point.z]}
+                    rotation={[0, -screen.angleY, 0]}
+                  >
                     <boxGeometry args={[0.06, screen.heightM, 0.08]} />
                     <meshStandardMaterial color={color} roughness={0.76} />
                   </mesh>
                 )
               })
             ) : (
-              <mesh castShadow position={[mid.x, deckY + screen.heightM / 2, mid.z]} rotation={[0, -screen.angleY, 0]}>
+              <mesh
+                castShadow
+                position={[mid.x, deckY + screen.heightM / 2, mid.z]}
+                rotation={[0, -screen.angleY, 0]}
+              >
                 <boxGeometry args={[screen.lengthM, screen.heightM, 0.08]} />
                 <meshStandardMaterial color={color} roughness={0.78} />
               </mesh>
@@ -1171,7 +1419,10 @@ function createPoolExcavationGeometry(model: Plan3DModel) {
   }
 
   const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3))
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3)
+  )
   setPlanarUvAttribute(geometry)
   geometry.computeVertexNormals()
 
@@ -1213,7 +1464,10 @@ function createPoolExcavationRimGeometry(model: Plan3DModel) {
   }
 
   const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3))
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3)
+  )
 
   return geometry
 }
@@ -1253,7 +1507,10 @@ function createTerrainGeometry(model: Plan3DModel) {
   ]
 
   const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3))
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3)
+  )
   setPlanarUvAttribute(geometry)
   geometry.computeVertexNormals()
 
@@ -1295,7 +1552,10 @@ function createPolygonSlabGeometry(
   holes.forEach((hole) => addSlabSideFaces(positions, hole, thickness))
 
   const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3))
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3)
+  )
   setPlanarUvAttribute(geometry)
   geometry.computeVertexNormals()
 
@@ -1353,7 +1613,10 @@ function createPoolBodyGeometry(points: Point3D[], depthM: number) {
   addSlabSideFaces(positions, points, depthM)
 
   const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3))
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3)
+  )
   geometry.computeVertexNormals()
 
   return geometry
@@ -1374,7 +1637,10 @@ function createFlatPolygonGeometry(points: Point3D[]) {
   }
 
   const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3))
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3)
+  )
   geometry.computeVertexNormals()
 
   return geometry
@@ -1390,7 +1656,10 @@ function createLineSegmentsGeometry(lines: Plan3DLine[], y: number) {
     line.end.z,
   ])
   const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3))
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3)
+  )
 
   return geometry
 }
@@ -1436,7 +1705,10 @@ function createLineLoopGeometry(points: Point3D[], y: number) {
   })
 
   const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3))
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3)
+  )
 
   return geometry
 }
@@ -1519,4 +1791,244 @@ function getHorizontalVector(a: Point3D, b: Point3D) {
     x: (b.x - a.x) / length,
     z: (b.z - a.z) / length,
   }
+}
+
+function createHouseRoofGeometry({
+  depthM,
+  roofStyle,
+  widthM,
+}: {
+  depthM: number
+  roofStyle: Plan3DModel["house"]["roofStyle"]
+  widthM: number
+}) {
+  const dimensions = getHouseRoofDimensions(widthM, depthM)
+
+  if (roofStyle === "shed") {
+    return createShedRoofGeometry(dimensions)
+  }
+
+  if (roofStyle === "flat") {
+    return new THREE.BoxGeometry(
+      dimensions.halfWidth * 2,
+      dimensions.thickness,
+      dimensions.halfDepth * 2
+    )
+      .translate(0, dimensions.thickness / 2, 0)
+      .toNonIndexed()
+  }
+
+  return createGableRoofGeometry(dimensions)
+}
+
+type HouseRoofDimensions = {
+  gableAngleRad: number
+  gableRise: number
+  halfDepth: number
+  halfWidth: number
+  rafterLength: number
+  shedAngleRad: number
+  shedRise: number
+  slopeLength: number
+  thickness: number
+}
+
+type RoofTileRow = {
+  args: [number, number, number]
+  id: string
+  position: [number, number, number]
+  rotation: [number, number, number]
+  shadowArgs: [number, number, number]
+  shadowPosition: [number, number, number]
+}
+
+function getHouseRoofDimensions(
+  widthM: number,
+  depthM: number
+): HouseRoofDimensions {
+  const halfWidth = widthM / 2 + 0.26
+  const halfDepth = depthM / 2 + 0.24
+  const gableRise = Math.min(2.2, Math.max(0.9, widthM * 0.18))
+  const shedRise = Math.min(1.8, Math.max(0.85, depthM * 0.22))
+  const rafterLength = Math.hypot(halfWidth, gableRise)
+  const slopeLength = Math.hypot(halfDepth * 2, shedRise)
+
+  return {
+    gableAngleRad: Math.atan2(gableRise, halfWidth),
+    gableRise,
+    halfDepth,
+    halfWidth,
+    rafterLength,
+    shedAngleRad: Math.atan2(shedRise, halfDepth * 2),
+    shedRise,
+    slopeLength,
+    thickness: 0.16,
+  }
+}
+
+function createGableRoofGeometry(dimensions: HouseRoofDimensions) {
+  const { gableRise, halfDepth, halfWidth } = dimensions
+  const eaveY = -0.04
+  const undersideY = -dimensions.thickness
+  const vertices = new Float32Array([
+    -halfWidth,
+    eaveY,
+    halfDepth,
+    halfWidth,
+    eaveY,
+    halfDepth,
+    0,
+    gableRise,
+    halfDepth,
+    -halfWidth,
+    eaveY,
+    -halfDepth,
+    halfWidth,
+    eaveY,
+    -halfDepth,
+    0,
+    gableRise,
+    -halfDepth,
+    -halfWidth,
+    undersideY,
+    halfDepth,
+    halfWidth,
+    undersideY,
+    halfDepth,
+    -halfWidth,
+    undersideY,
+    -halfDepth,
+    halfWidth,
+    undersideY,
+    -halfDepth,
+  ])
+  const indices = [
+    0, 2, 5, 0, 5, 3, 2, 1, 4, 2, 4, 5, 0, 1, 2, 3, 5, 4, 6, 8, 9, 6, 9, 7, 0,
+    6, 7, 0, 7, 1, 3, 4, 9, 3, 9, 8, 0, 3, 8, 0, 8, 6, 1, 7, 9, 1, 9, 4,
+  ]
+
+  return createIndexedGeometry(vertices, indices)
+}
+
+function createShedRoofGeometry(dimensions: HouseRoofDimensions) {
+  const { halfDepth, halfWidth, shedRise, thickness } = dimensions
+  const vertices = new Float32Array([
+    -halfWidth,
+    0,
+    halfDepth,
+    halfWidth,
+    0,
+    halfDepth,
+    halfWidth,
+    shedRise,
+    -halfDepth,
+    -halfWidth,
+    shedRise,
+    -halfDepth,
+    -halfWidth,
+    thickness,
+    halfDepth,
+    halfWidth,
+    thickness,
+    halfDepth,
+    halfWidth,
+    shedRise + thickness,
+    -halfDepth,
+    -halfWidth,
+    shedRise + thickness,
+    -halfDepth,
+  ])
+  const indices = [
+    4, 5, 6, 4, 6, 7, 0, 3, 2, 0, 2, 1, 0, 4, 7, 0, 7, 3, 1, 2, 6, 1, 6, 5, 3,
+    7, 6, 3, 6, 2, 0, 1, 5, 0, 5, 4,
+  ]
+
+  return createIndexedGeometry(vertices, indices)
+}
+
+function createIndexedGeometry(vertices: Float32Array, indices: number[]) {
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3))
+  geometry.setIndex(indices)
+  geometry.computeVertexNormals()
+
+  return geometry
+}
+
+function getRoofTileRows(
+  dimensions: HouseRoofDimensions,
+  roofStyle: Plan3DModel["house"]["roofStyle"]
+): RoofTileRow[] {
+  if (roofStyle === "shed") {
+    return getShedRoofTileRows(dimensions)
+  }
+
+  if (roofStyle === "gable") {
+    return getGableRoofTileRows(dimensions)
+  }
+
+  return []
+}
+
+function getGableRoofTileRows(dimensions: HouseRoofDimensions): RoofTileRow[] {
+  const rows: RoofTileRow[] = []
+  const rowCount = Math.max(
+    5,
+    Math.min(11, Math.floor(dimensions.halfWidth / 0.42))
+  )
+  const depth = dimensions.halfDepth * 2 - 0.28
+  const rowWidth = 0.055
+
+  for (let index = 1; index <= rowCount; index += 1) {
+    const t = index / (rowCount + 1)
+    const leftX = -dimensions.halfWidth + dimensions.halfWidth * t
+    const rightX = dimensions.halfWidth - dimensions.halfWidth * t
+    const y = dimensions.gableRise * t + 0.075
+
+    rows.push({
+      args: [rowWidth, 0.035, depth],
+      id: `gable-left-${index}`,
+      position: [leftX, y, 0],
+      rotation: [0, 0, dimensions.gableAngleRad],
+      shadowArgs: [0.018, 0.018, depth],
+      shadowPosition: [0.048, -0.035, 0],
+    })
+    rows.push({
+      args: [rowWidth, 0.035, depth],
+      id: `gable-right-${index}`,
+      position: [rightX, y, 0],
+      rotation: [0, 0, -dimensions.gableAngleRad],
+      shadowArgs: [0.018, 0.018, depth],
+      shadowPosition: [-0.048, -0.035, 0],
+    })
+  }
+
+  return rows
+}
+
+function getShedRoofTileRows(dimensions: HouseRoofDimensions): RoofTileRow[] {
+  const rows: RoofTileRow[] = []
+  const rowCount = Math.max(
+    6,
+    Math.min(14, Math.floor(dimensions.slopeLength / 0.42))
+  )
+  const width = dimensions.halfWidth * 2 - 0.32
+  const rowDepth = 0.055
+
+  for (let index = 1; index <= rowCount; index += 1) {
+    const t = index / (rowCount + 1)
+    const z = dimensions.halfDepth - dimensions.halfDepth * 2 * t
+    const y = dimensions.shedRise * t + dimensions.thickness + 0.07
+
+    rows.push({
+      args: [width, 0.035, rowDepth],
+      id: `shed-${index}`,
+      position: [0, y, z],
+      rotation: [dimensions.shedAngleRad, 0, 0],
+      shadowArgs: [width, 0.014, 0.018],
+      shadowPosition: [0, -0.035, 0.046],
+    })
+  }
+
+  return rows
 }
