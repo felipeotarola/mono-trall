@@ -7,6 +7,11 @@ import {
 } from "@/lib/trall/constants"
 import type { EdgeConstraint } from "@/lib/trall/edge-model"
 import {
+  getDefaultElevationSettings,
+  normalizeElevationSettings,
+  type ElevationSettings,
+} from "@/lib/trall/elevation"
+import {
   defaultBoardDirection,
   type BoardDirectionSettings,
   type DeckFeature,
@@ -31,6 +36,7 @@ export type PlannerProjectState = {
   measurements?: MeasurementLine[]
   features?: DeckFeature[]
   boardDirection?: BoardDirectionSettings
+  elevationSettings?: ElevationSettings
   poolPoints?: Point[] | null
   poolEdgeConstraints?: EdgeConstraint[]
   viewBox: ViewBox
@@ -203,7 +209,13 @@ export async function loadProject(projectId: string) {
     throw versionError
   }
 
-  return { project, version }
+  return {
+    project,
+    version: {
+      ...version,
+      state: normalizePlannerProjectState(version.state),
+    },
+  }
 }
 
 export async function listProjects() {
@@ -240,6 +252,7 @@ export function createDefaultPlannerProjectState(): PlannerProjectState {
     measurements: [],
     features: [],
     boardDirection: defaultBoardDirection,
+    elevationSettings: getDefaultElevationSettings(),
     poolPoints: null,
     poolEdgeConstraints: [],
     viewBox: getFitViewBox(houseBounds, deckPoints, []),
@@ -253,6 +266,15 @@ export function createDefaultPlannerProjectState(): PlannerProjectState {
         ...baseMaterials,
       ],
     },
+  }
+}
+
+export function normalizePlannerProjectState(
+  state: PlannerProjectState
+): PlannerProjectState {
+  return {
+    ...state,
+    elevationSettings: normalizeElevationSettings(state.elevationSettings),
   }
 }
 

@@ -24,6 +24,11 @@ import { formatCurrency } from "@/lib/trall/format"
 import { polygonArea, polygonPerimeter } from "@/lib/trall/geometry"
 import type { EdgeConstraint } from "@/lib/trall/edge-model"
 import {
+  getDefaultElevationSettings,
+  normalizeElevationSettings,
+  type ElevationSettings,
+} from "@/lib/trall/elevation"
+import {
   defaultBoardDirection,
   deleteFeature,
   normalizeBoardDirection,
@@ -93,6 +98,8 @@ export function Workspace({
   const [boardDirection, setBoardDirection] = useState<BoardDirectionSettings>(
     defaultBoardDirection
   )
+  const [elevationSettings, setElevationSettings] =
+    useState<ElevationSettings>(getDefaultElevationSettings)
   const [placementMode, setPlacementMode] =
     useState<FeaturePlacementType | null>(null)
   const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(
@@ -221,6 +228,9 @@ export function Workspace({
         setMeasurements(version.state.measurements ?? [])
         setFeatures(normalizeDeckFeatures(version.state.features))
         setBoardDirection(normalizeBoardDirection(version.state.boardDirection))
+        setElevationSettings(
+          normalizeElevationSettings(version.state.elevationSettings)
+        )
         setPlacementMode(null)
         setSelectedFeatureId(null)
         setPoolPoints(version.state.poolPoints ?? null)
@@ -289,6 +299,7 @@ export function Workspace({
       measurements,
       features,
       boardDirection,
+      elevationSettings,
       poolPoints,
       poolEdgeConstraints,
       viewBox,
@@ -301,6 +312,7 @@ export function Workspace({
       boardDirection,
       deckEdgeConstraints,
       deckPoints,
+      elevationSettings,
       features,
       house,
       measurements,
@@ -395,6 +407,7 @@ export function Workspace({
     measurements,
     features,
     boardDirection,
+    elevationSettings,
     poolEdgeConstraints,
     poolPoints,
     savePlannerState,
@@ -513,6 +526,7 @@ export function Workspace({
               boardDirection={boardDirection}
               deckEdgeConstraints={deckEdgeConstraints}
               deckPoints={deckPoints}
+              elevationSettings={elevationSettings}
               features={features}
               house={house}
               houseBounds={houseBounds}
@@ -565,12 +579,14 @@ export function Workspace({
             calculations={calculations}
             boardDirection={boardDirection}
             ensureProject={ensureCurrentProject}
+            elevationSettings={elevationSettings}
             placementMode={placementMode}
             selectedFeature={selectedFeature}
             house={house}
             projectId={currentProjectId}
             projectName={currentProjectName}
             setBoardDirection={setBoardDirection}
+            setElevationSettings={setElevationSettings}
             setHouse={setHouse}
             onDeleteFeature={handleDeleteFeature}
             onUpdateFeature={handleUpdateFeature}
@@ -582,12 +598,14 @@ export function Workspace({
             calculations={calculations}
             boardDirection={boardDirection}
             ensureProject={ensureCurrentProject}
+            elevationSettings={elevationSettings}
             placementMode={placementMode}
             selectedFeature={selectedFeature}
             house={house}
             projectId={currentProjectId}
             projectName={currentProjectName}
             setBoardDirection={setBoardDirection}
+            setElevationSettings={setElevationSettings}
             setHouse={setHouse}
             onDeleteFeature={handleDeleteFeature}
             onUpdateFeature={handleUpdateFeature}
@@ -599,12 +617,14 @@ export function Workspace({
         calculations={calculations}
         boardDirection={boardDirection}
         ensureProject={ensureCurrentProject}
+        elevationSettings={elevationSettings}
         placementMode={placementMode}
         selectedFeature={selectedFeature}
         house={house}
         projectId={currentProjectId}
         projectName={currentProjectName}
         setBoardDirection={setBoardDirection}
+        setElevationSettings={setElevationSettings}
         setHouse={setHouse}
         onDeleteFeature={handleDeleteFeature}
         onUpdateFeature={handleUpdateFeature}

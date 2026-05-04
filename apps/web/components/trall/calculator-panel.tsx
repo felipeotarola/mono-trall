@@ -15,7 +15,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card"
+import { Checkbox } from "@workspace/ui/components/checkbox"
 import { Input } from "@workspace/ui/components/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@workspace/ui/components/select"
+import type { ElevationSettings } from "@/lib/trall/elevation"
 import type { HouseModel, Material, Metric } from "@/lib/trall/types"
 import { clamp } from "@/lib/trall/geometry"
 import type {
@@ -34,6 +43,7 @@ import type { SupportLayout } from "@/lib/trall/supports"
 export function CalculatorPanel({
   boardDirection,
   calculations,
+  elevationSettings,
   ensureProject,
   house,
   placementMode,
@@ -41,6 +51,7 @@ export function CalculatorPanel({
   projectName,
   selectedFeature,
   setBoardDirection,
+  setElevationSettings,
   setHouse,
   onDeleteFeature,
   onUpdateFeature,
@@ -53,6 +64,7 @@ export function CalculatorPanel({
     metrics: Metric[]
     materials: Material[]
   }
+  elevationSettings: ElevationSettings
   ensureProject: () => Promise<string>
   house: HouseModel
   placementMode: FeaturePlacementType | null
@@ -60,6 +72,7 @@ export function CalculatorPanel({
   projectName: string
   selectedFeature: DeckFeature | null
   setBoardDirection: (settings: BoardDirectionSettings) => void
+  setElevationSettings: Dispatch<SetStateAction<ElevationSettings>>
   setHouse: Dispatch<SetStateAction<HouseModel>>
   onDeleteFeature: (featureId: string) => void
   onUpdateFeature: (feature: DeckFeature) => void
@@ -129,6 +142,11 @@ export function CalculatorPanel({
         supportLayout={calculations.supportLayout}
       />
 
+      <ElevationSettingsCard
+        elevationSettings={elevationSettings}
+        setElevationSettings={setElevationSettings}
+      />
+
       <HouseDimensionsCard house={house} setHouse={setHouse} />
 
       <Card size="sm">
@@ -154,6 +172,230 @@ function MetricRow({ label, value }: Metric) {
       </span>
       <span className="shrink-0 text-sm font-semibold">{value}</span>
     </div>
+  )
+}
+
+function ElevationSettingsCard({
+  elevationSettings,
+  setElevationSettings,
+}: {
+  elevationSettings: ElevationSettings
+  setElevationSettings: Dispatch<SetStateAction<ElevationSettings>>
+}) {
+  function updateNumber(path: ElevationNumberPath, value: string) {
+    const numericValue = Number.parseFloat(value)
+    if (!Number.isFinite(numericValue)) {
+      return
+    }
+
+    setElevationSettings((current) => setElevationNumber(current, path, numericValue))
+  }
+
+  return (
+    <Card size="sm">
+      <CardHeader>
+        <CardTitle>Levels & terrain</CardTitle>
+        <CardDescription>
+          House threshold = 0 cm. Model sloped plots while the deck stays level.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid gap-1.5">
+          <span className="text-xs text-muted-foreground">Terrain mode</span>
+          <Select
+            value={elevationSettings.terrain.mode}
+            onValueChange={(value) =>
+              setElevationSettings((current) => ({
+                ...current,
+                terrain: {
+                  ...current.terrain,
+                  mode: value === "flat" ? "flat" : "single_slope",
+                },
+              }))
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="flat">Flat</SelectItem>
+              <SelectItem value="single_slope">Single slope</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <CentimeterInput
+            label="Deck height"
+            value={elevationSettings.deck.finishedHeightCm}
+            onChange={(value) => updateNumber("deck.finishedHeightCm", value)}
+          />
+          <CentimeterInput
+            label="Deck thickness"
+            min={8}
+            value={elevationSettings.deck.thicknessCm}
+            onChange={(value) => updateNumber("deck.thicknessCm", value)}
+          />
+          <CentimeterInput
+            label="Pool top"
+            value={elevationSettings.pool.topHeightCm}
+            onChange={(value) => updateNumber("pool.topHeightCm", value)}
+          />
+          <CentimeterInput
+            label="Pool body"
+            min={20}
+            value={elevationSettings.pool.bodyHeightCm}
+            onChange={(value) => updateNumber("pool.bodyHeightCm", value)}
+          />
+          <CentimeterInput
+            label="Ground house"
+            value={elevationSettings.terrain.heightAtHouseCm}
+            onChange={(value) => updateNumber("terrain.heightAtHouseCm", value)}
+          />
+          <CentimeterInput
+            label="Ground front"
+            value={elevationSettings.terrain.heightAtFarEdgeCm}
+            onChange={(value) => updateNumber("terrain.heightAtFarEdgeCm", value)}
+          />
+          <NumberInput
+            label="Slope direction"
+            suffix="deg"
+            value={elevationSettings.terrain.slopeDirectionDeg}
+            onChange={(value) => updateNumber("terrain.slopeDirectionDeg", value)}
+          />
+          <NumberInput
+            label="Post spacing"
+            min={0.8}
+            step={0.1}
+            suffix="m"
+            value={elevationSettings.supports.maxPostSpacingM}
+            onChange={(value) => updateNumber("supports.maxPostSpacingM", value)}
+          />
+        </div>
+        <label className="flex items-center gap-2 rounded-lg border bg-muted/25 px-3 py-2 text-sm">
+          <Checkbox
+            checked={elevationSettings.supports.showPosts}
+            onCheckedChange={(checked) =>
+              setElevationSettings((current) => ({
+                ...current,
+                supports: {
+                  ...current.supports,
+                  showPosts: checked === true,
+                },
+              }))
+            }
+          />
+          Show deck support posts
+        </label>
+      </CardContent>
+    </Card>
+  )
+}
+
+type ElevationNumberPath =
+  | "deck.finishedHeightCm"
+  | "deck.thicknessCm"
+  | "pool.topHeightCm"
+  | "pool.bodyHeightCm"
+  | "terrain.heightAtHouseCm"
+  | "terrain.heightAtFarEdgeCm"
+  | "terrain.slopeDirectionDeg"
+  | "supports.maxPostSpacingM"
+
+function setElevationNumber(
+  current: ElevationSettings,
+  path: ElevationNumberPath,
+  value: number
+): ElevationSettings {
+  if (path === "deck.finishedHeightCm") {
+    return { ...current, deck: { ...current.deck, finishedHeightCm: value } }
+  }
+  if (path === "deck.thicknessCm") {
+    return { ...current, deck: { ...current.deck, thicknessCm: value } }
+  }
+  if (path === "pool.topHeightCm") {
+    return { ...current, pool: { ...current.pool, topHeightCm: value } }
+  }
+  if (path === "pool.bodyHeightCm") {
+    return { ...current, pool: { ...current.pool, bodyHeightCm: value } }
+  }
+  if (path === "terrain.heightAtHouseCm") {
+    return {
+      ...current,
+      terrain: { ...current.terrain, heightAtHouseCm: value },
+    }
+  }
+  if (path === "terrain.heightAtFarEdgeCm") {
+    return {
+      ...current,
+      terrain: { ...current.terrain, heightAtFarEdgeCm: value },
+    }
+  }
+  if (path === "terrain.slopeDirectionDeg") {
+    return {
+      ...current,
+      terrain: { ...current.terrain, slopeDirectionDeg: value },
+    }
+  }
+
+  return {
+    ...current,
+    supports: { ...current.supports, maxPostSpacingM: value },
+  }
+}
+
+function CentimeterInput({
+  label,
+  min,
+  onChange,
+  value,
+}: {
+  label: string
+  min?: number
+  onChange: (value: string) => void
+  value: number
+}) {
+  return (
+    <NumberInput
+      label={label}
+      min={min}
+      suffix="cm"
+      value={value}
+      onChange={onChange}
+    />
+  )
+}
+
+function NumberInput({
+  label,
+  min,
+  onChange,
+  step = 1,
+  suffix,
+  value,
+}: {
+  label: string
+  min?: number
+  onChange: (value: string) => void
+  step?: number
+  suffix: string
+  value: number
+}) {
+  return (
+    <label className="space-y-1">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <div className="flex items-center gap-1 rounded-lg border bg-background px-2">
+        <Input
+          className="border-0 px-0 shadow-none focus-visible:ring-0"
+          inputMode="decimal"
+          min={min}
+          step={step}
+          type="number"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <span className="shrink-0 text-xs text-muted-foreground">{suffix}</span>
+      </div>
+    </label>
   )
 }
 

@@ -18,12 +18,14 @@ import type {
   DeckFeature,
   FeaturePlacementType,
 } from "@/lib/trall/features"
+import type { ElevationSettings } from "@/lib/trall/elevation"
 import type { HouseModel, Material, Metric } from "@/lib/trall/types"
 import type { SupportLayout } from "@/lib/trall/supports"
 
 export function MobileSummary({
   boardDirection,
   calculations,
+  elevationSettings,
   ensureProject,
   house,
   placementMode,
@@ -31,6 +33,7 @@ export function MobileSummary({
   projectName,
   selectedFeature,
   setBoardDirection,
+  setElevationSettings,
   setHouse,
   onDeleteFeature,
   onUpdateFeature,
@@ -44,6 +47,7 @@ export function MobileSummary({
     metrics: Metric[]
     materials: Material[]
   }
+  elevationSettings: ElevationSettings
   ensureProject: () => Promise<string>
   house: HouseModel
   placementMode: FeaturePlacementType | null
@@ -51,6 +55,7 @@ export function MobileSummary({
   projectName: string
   selectedFeature: DeckFeature | null
   setBoardDirection: (settings: BoardDirectionSettings) => void
+  setElevationSettings: Dispatch<SetStateAction<ElevationSettings>>
   setHouse: Dispatch<SetStateAction<HouseModel>>
   onDeleteFeature: (featureId: string) => void
   onUpdateFeature: (feature: DeckFeature) => void
@@ -88,6 +93,7 @@ export function MobileSummary({
               <CalculatorPanel
                 calculations={calculations}
                 boardDirection={boardDirection}
+                elevationSettings={elevationSettings}
                 ensureProject={ensureProject}
                 placementMode={placementMode}
                 selectedFeature={selectedFeature}
@@ -95,6 +101,7 @@ export function MobileSummary({
                 projectId={projectId}
                 projectName={projectName}
                 setBoardDirection={setBoardDirection}
+                setElevationSettings={setElevationSettings}
                 setHouse={setHouse}
                 onDeleteFeature={onDeleteFeature}
                 onUpdateFeature={onUpdateFeature}

@@ -21,14 +21,18 @@ import {
 } from "@/lib/trall/plan-3d"
 import type { HouseBounds, HouseModel, Point } from "@/lib/trall/types"
 import { Button } from "@workspace/ui/components/button"
+import {
+  getTerrainHeightAt,
+  type ElevationSettings,
+} from "@/lib/trall/elevation"
 
-const DECK_THICKNESS_M = 0.18
 const BOARD_LINE_LIMIT = 72
 
 export function Plan3DView({
   boardDirection,
   deckEdgeConstraints,
   deckPoints,
+  elevationSettings,
   features,
   house,
   houseBounds,
@@ -37,6 +41,7 @@ export function Plan3DView({
   boardDirection: BoardDirectionSettings
   deckEdgeConstraints: EdgeConstraint[]
   deckPoints: Point[]
+  elevationSettings: ElevationSettings
   features: DeckFeature[]
   house: HouseModel
   houseBounds: HouseBounds
@@ -49,6 +54,7 @@ export function Plan3DView({
         boardDirection,
         deckEdgeConstraints,
         deckPoints,
+        elevationSettings,
         features,
         house,
         houseBounds,
@@ -58,6 +64,7 @@ export function Plan3DView({
       boardDirection,
       deckEdgeConstraints,
       deckPoints,
+      elevationSettings,
       features,
       house,
       houseBounds,
@@ -100,11 +107,15 @@ export function Plan3DView({
           shadow-mapSize-width={1024}
         />
         <group>
-          <GroundPlane model={model} />
+          <TerrainMesh model={model} />
           <HouseMass model={model} />
           <DeckSlab model={model} />
-          <PoolSurface points={model.poolPoints} />
-          <BoardLines lines={model.boardLines} />
+          <PoolBody model={model} />
+          <BoardLines
+            deckFinishedY={model.elevation.deckFinishedY}
+            lines={model.boardLines}
+          />
+          <Supports model={model} />
           <Railings model={model} />
           <Stairs model={model} />
           <Pergolas model={model} />
@@ -164,13 +175,12 @@ function SceneCameraReset({
   return null
 }
 
-function GroundPlane({ model }: { model: Plan3DModel }) {
-  const size = Math.max(16, model.bounds.diagonalM * 1.8)
+function TerrainMesh({ model }: { model: Plan3DModel }) {
+  const geometry = useMemo(() => createTerrainGeometry(model), [model])
 
   return (
-    <mesh receiveShadow position={[0, -DECK_THICKNESS_M - 0.025, 0]}>
-      <boxGeometry args={[size, 0.025, size]} />
-      <meshStandardMaterial color="#c9c2b5" roughness={0.94} />
+    <mesh receiveShadow geometry={geometry}>
+      <meshStandardMaterial color="#b9b09f" roughness={0.96} />
     </mesh>
   )
 }
@@ -288,12 +298,22 @@ function HouseWindow3D({
 
 function DeckSlab({ model }: { model: Plan3DModel }) {
   const geometry = useMemo(
-    () => createPolygonSlabGeometry(model.deckPoints, DECK_THICKNESS_M),
-    [model.deckPoints]
+    () =>
+      createPolygonSlabGeometry(
+        model.deckPoints,
+        model.elevation.deckThicknessM,
+        model.poolPoints ? [model.poolPoints] : []
+      ),
+    [model.deckPoints, model.elevation.deckThicknessM, model.poolPoints]
   )
 
   return (
-    <mesh castShadow receiveShadow geometry={geometry}>
+    <mesh
+      castShadow
+      receiveShadow
+      geometry={geometry}
+      position={[0, model.elevation.deckFinishedY, 0]}
+    >
       <meshStandardMaterial
         color="#a87948"
         roughness={0.78}
@@ -303,40 +323,91 @@ function DeckSlab({ model }: { model: Plan3DModel }) {
   )
 }
 
-function PoolSurface({ points }: { points: Point3D[] | null }) {
+function PoolBody({ model }: { model: Plan3DModel }) {
+  const points = model.poolPoints
   const geometry = useMemo(
+    () =>
+      points
+        ? createPoolBodyGeometry(points, model.elevation.poolBodyHeightM)
+        : null,
+    [model.elevation.poolBodyHeightM, points]
+  )
+  const waterGeometry = useMemo(
     () => (points ? createFlatPolygonGeometry(points) : null),
     [points]
   )
   const borderGeometry = useMemo(
-    () => (points ? createLineLoopGeometry(points, 0.016) : null),
-    [points]
+    () =>
+      points
+        ? createLineLoopGeometry(points, model.elevation.poolTopY + 0.018)
+        : null,
+    [model.elevation.poolTopY, points]
   )
 
-  if (!geometry || !borderGeometry) {
+  if (!geometry || !waterGeometry || !borderGeometry) {
     return null
   }
 
   return (
-    <group position={[0, 0.012, 0]}>
-      <mesh receiveShadow geometry={geometry}>
+    <group position={[0, model.elevation.poolTopY, 0]}>
+      <mesh castShadow receiveShadow geometry={geometry}>
         <meshStandardMaterial
-          color="#2b8fd6"
-          metalness={0.05}
-          roughness={0.28}
+          color="#d8e3e7"
+          roughness={0.72}
           side={THREE.DoubleSide}
         />
       </mesh>
-      <lineSegments geometry={borderGeometry}>
-        <lineBasicMaterial color="#d7eefb" linewidth={1} />
+      <mesh geometry={waterGeometry} position={[0, -0.045, 0]}>
+        <meshStandardMaterial
+          color="#2b8fd6"
+          metalness={0.05}
+          roughness={0.24}
+          side={THREE.DoubleSide}
+          transparent
+          opacity={0.88}
+        />
+      </mesh>
+      <lineSegments geometry={borderGeometry} position={[0, -model.elevation.poolTopY, 0]}>
+        <lineBasicMaterial color="#e7f8ff" linewidth={1} />
       </lineSegments>
     </group>
   )
 }
 
-function BoardLines({ lines }: { lines: Plan3DLine[] }) {
+function Supports({ model }: { model: Plan3DModel }) {
+  return (
+    <>
+      {model.supportPosts.map((post) => (
+        <mesh
+          key={post.id}
+          castShadow
+          receiveShadow
+          position={[
+            post.point.x,
+            post.terrainY + post.heightM / 2,
+            post.point.z,
+          ]}
+        >
+          <boxGeometry args={[0.11, post.heightM, 0.11]} />
+          <meshStandardMaterial color="#6f5437" roughness={0.84} />
+        </mesh>
+      ))}
+    </>
+  )
+}
+
+function BoardLines({
+  deckFinishedY,
+  lines,
+}: {
+  deckFinishedY: number
+  lines: Plan3DLine[]
+}) {
   const visibleLines = lines.slice(0, BOARD_LINE_LIMIT)
-  const geometry = useMemo(() => createLineSegmentsGeometry(visibleLines, 0.026), [visibleLines])
+  const geometry = useMemo(
+    () => createLineSegmentsGeometry(visibleLines, deckFinishedY + 0.026),
+    [deckFinishedY, visibleLines]
+  )
 
   return (
     <lineSegments geometry={geometry}>
@@ -346,6 +417,8 @@ function BoardLines({ lines }: { lines: Plan3DLine[] }) {
 }
 
 function Railings({ model }: { model: Plan3DModel }) {
+  const deckY = model.elevation.deckFinishedY
+
   return (
     <>
       {model.railings.map((railing) => {
@@ -358,7 +431,7 @@ function Railings({ model }: { model: Plan3DModel }) {
           <group key={railing.id}>
             <mesh
               castShadow
-              position={[mid.x, railing.heightM, mid.z]}
+              position={[mid.x, deckY + railing.heightM, mid.z]}
               rotation={[0, -railing.edge.angleY, 0]}
             >
               <boxGeometry args={[railing.edge.lengthM, 0.08, 0.08]} />
@@ -366,7 +439,7 @@ function Railings({ model }: { model: Plan3DModel }) {
             </mesh>
             <mesh
               castShadow
-              position={[mid.x, railing.heightM * 0.55, mid.z]}
+              position={[mid.x, deckY + railing.heightM * 0.55, mid.z]}
               rotation={[0, -railing.edge.angleY, 0]}
             >
               <boxGeometry args={[railing.edge.lengthM, 0.055, 0.055]} />
@@ -383,7 +456,7 @@ function Railings({ model }: { model: Plan3DModel }) {
                 <mesh
                   key={`${railing.id}-post-${index}`}
                   castShadow
-                  position={[point.x, railing.heightM / 2, point.z]}
+                  position={[point.x, deckY + railing.heightM / 2, point.z]}
                 >
                   <boxGeometry args={[0.09, railing.heightM, 0.09]} />
                   <meshStandardMaterial color={railColor} roughness={0.72} />
@@ -398,11 +471,15 @@ function Railings({ model }: { model: Plan3DModel }) {
 }
 
 function Stairs({ model }: { model: Plan3DModel }) {
+  const deckBottomY =
+    model.elevation.deckFinishedY - model.elevation.deckThicknessM
+
   return (
     <>
       {model.stairs.map((stairs) => {
         const stepDepth = stairs.depthM / Math.max(1, stairs.stepCount)
-        const stepHeight = DECK_THICKNESS_M / Math.max(1, stairs.stepCount)
+        const stepHeight =
+          model.elevation.deckThicknessM / Math.max(1, stairs.stepCount)
 
         return (
           <group key={stairs.id}>
@@ -419,7 +496,7 @@ function Stairs({ model }: { model: Plan3DModel }) {
                   key={`${stairs.id}-step-${index}`}
                   castShadow
                   receiveShadow
-                  position={[center.x, -DECK_THICKNESS_M + height / 2, center.z]}
+                  position={[center.x, deckBottomY + height / 2, center.z]}
                   rotation={[0, -stairs.angleY, 0]}
                 >
                   <boxGeometry args={[stairs.widthM, height, depth]} />
@@ -435,6 +512,8 @@ function Stairs({ model }: { model: Plan3DModel }) {
 }
 
 function Pergolas({ model }: { model: Plan3DModel }) {
+  const deckY = model.elevation.deckFinishedY
+
   return (
     <>
       {model.pergolas.map((pergola) => {
@@ -450,7 +529,7 @@ function Pergolas({ model }: { model: Plan3DModel }) {
         return (
           <group
             key={pergola.id}
-            position={[pergola.center.x, 0, pergola.center.z]}
+            position={[pergola.center.x, deckY, pergola.center.z]}
             rotation={[0, -pergola.rotationRad, 0]}
           >
             {postPositions.map(([postX, postZ], index) => (
@@ -481,6 +560,8 @@ function Pergolas({ model }: { model: Plan3DModel }) {
 }
 
 function PrivacyScreens({ model }: { model: Plan3DModel }) {
+  const deckY = model.elevation.deckFinishedY
+
   return (
     <>
       {model.privacyScreens.map((screen) => {
@@ -499,14 +580,14 @@ function PrivacyScreens({ model }: { model: Plan3DModel }) {
                 }
 
                 return (
-                  <mesh key={`${screen.id}-slat-${index}`} castShadow position={[point.x, screen.heightM / 2, point.z]} rotation={[0, -screen.angleY, 0]}>
+                  <mesh key={`${screen.id}-slat-${index}`} castShadow position={[point.x, deckY + screen.heightM / 2, point.z]} rotation={[0, -screen.angleY, 0]}>
                     <boxGeometry args={[0.06, screen.heightM, 0.08]} />
                     <meshStandardMaterial color={color} roughness={0.76} />
                   </mesh>
                 )
               })
             ) : (
-              <mesh castShadow position={[mid.x, screen.heightM / 2, mid.z]} rotation={[0, -screen.angleY, 0]}>
+              <mesh castShadow position={[mid.x, deckY + screen.heightM / 2, mid.z]} rotation={[0, -screen.angleY, 0]}>
                 <boxGeometry args={[screen.lengthM, screen.heightM, 0.08]} />
                 <meshStandardMaterial color={color} roughness={0.78} />
               </mesh>
@@ -518,14 +599,63 @@ function PrivacyScreens({ model }: { model: Plan3DModel }) {
   )
 }
 
-function createPolygonSlabGeometry(points: Point3D[], thickness: number) {
+function createTerrainGeometry(model: Plan3DModel) {
+  const bounds = model.elevation.terrainBounds
+  const terrain = model.elevation.settings.terrain
+  const corners = [
+    { x: bounds.minX, z: bounds.minZ },
+    { x: bounds.maxX, z: bounds.minZ },
+    { x: bounds.maxX, z: bounds.maxZ },
+    { x: bounds.minX, z: bounds.maxZ },
+  ]
+  const top = corners.map((point) => ({
+    ...point,
+    y: getTerrainHeightAt(point, terrain, bounds),
+  }))
+  const positions = [
+    top[0]?.x ?? 0,
+    top[0]?.y ?? 0,
+    top[0]?.z ?? 0,
+    top[1]?.x ?? 0,
+    top[1]?.y ?? 0,
+    top[1]?.z ?? 0,
+    top[2]?.x ?? 0,
+    top[2]?.y ?? 0,
+    top[2]?.z ?? 0,
+    top[0]?.x ?? 0,
+    top[0]?.y ?? 0,
+    top[0]?.z ?? 0,
+    top[2]?.x ?? 0,
+    top[2]?.y ?? 0,
+    top[2]?.z ?? 0,
+    top[3]?.x ?? 0,
+    top[3]?.y ?? 0,
+    top[3]?.z ?? 0,
+  ]
+
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3))
+  geometry.computeVertexNormals()
+
+  return geometry
+}
+
+function createPolygonSlabGeometry(
+  points: Point3D[],
+  thickness: number,
+  holes: Point3D[][] = []
+) {
   const contour = points.map((point) => new THREE.Vector2(point.x, point.z))
-  const triangles = THREE.ShapeUtils.triangulateShape(contour, [])
+  const holeContours = holes.map((hole) =>
+    hole.map((point) => new THREE.Vector2(point.x, point.z))
+  )
+  const vertices = [...points, ...holes.flat()]
+  const triangles = THREE.ShapeUtils.triangulateShape(contour, holeContours)
   const positions: number[] = []
 
   for (const triangle of triangles) {
     for (const index of triangle) {
-      const point = points[index]
+      const point = vertices[index]
       if (point) {
         positions.push(point.x, 0, point.z)
       }
@@ -534,13 +664,28 @@ function createPolygonSlabGeometry(points: Point3D[], thickness: number) {
 
   for (const triangle of triangles) {
     for (const index of [...triangle].reverse()) {
-      const point = points[index]
+      const point = vertices[index]
       if (point) {
         positions.push(point.x, -thickness, point.z)
       }
     }
   }
 
+  addSlabSideFaces(positions, points, thickness)
+  holes.forEach((hole) => addSlabSideFaces(positions, hole, thickness))
+
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3))
+  geometry.computeVertexNormals()
+
+  return geometry
+}
+
+function addSlabSideFaces(
+  positions: number[],
+  points: Point3D[],
+  thickness: number
+) {
   points.forEach((point, index) => {
     const next = points[(index + 1) % points.length]
     if (!next) {
@@ -568,6 +713,23 @@ function createPolygonSlabGeometry(points: Point3D[], thickness: number) {
       point.z
     )
   })
+}
+
+function createPoolBodyGeometry(points: Point3D[], depthM: number) {
+  const contour = points.map((point) => new THREE.Vector2(point.x, point.z))
+  const triangles = THREE.ShapeUtils.triangulateShape(contour, [])
+  const positions: number[] = []
+
+  for (const triangle of triangles) {
+    for (const index of [...triangle].reverse()) {
+      const point = points[index]
+      if (point) {
+        positions.push(point.x, -depthM, point.z)
+      }
+    }
+  }
+
+  addSlabSideFaces(positions, points, depthM)
 
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3))

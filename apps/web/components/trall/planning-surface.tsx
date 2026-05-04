@@ -7,6 +7,7 @@ import { Plan3DView } from "@/components/trall/plan-3d-view"
 import { PlanSvg } from "@/components/trall/plan-svg"
 import { ScaleIndicator } from "@/components/trall/svg/scale-indicator"
 import type { EdgeConstraint } from "@/lib/trall/edge-model"
+import type { ElevationSettings } from "@/lib/trall/elevation"
 import type {
   BoardDirectionSettings,
   DeckFeature,
@@ -31,6 +32,7 @@ export function PlanningSurface({
   boardDirection,
   deckEdgeConstraints,
   deckPoints,
+  elevationSettings,
   features,
   house,
   houseBounds,
@@ -65,6 +67,7 @@ export function PlanningSurface({
   boardDirection: BoardDirectionSettings
   deckEdgeConstraints: EdgeConstraint[]
   deckPoints: Point[]
+  elevationSettings: ElevationSettings
   features: DeckFeature[]
   house: HouseModel
   houseBounds: HouseBounds
@@ -142,6 +145,7 @@ export function PlanningSurface({
               boardDirection={boardDirection}
               deckEdgeConstraints={deckEdgeConstraints}
               deckPoints={deckPoints}
+              elevationSettings={elevationSettings}
               features={features}
               house={house}
               houseBounds={houseBounds}

@@ -1,5 +1,12 @@
 import { PIXELS_PER_METER } from "./constants.ts"
 import {
+  cmToM,
+  getTerrainHeightAt,
+  normalizeElevationSettings,
+  type ElevationSettings,
+  type TerrainBounds,
+} from "./elevation.ts"
+import {
   getBoardLineSegments,
   getDeckEdges,
   getEdgeNormal,
@@ -87,6 +94,23 @@ export type Plan3DHouse = {
   windows: Plan3DHouseWindow[]
 }
 
+export type Plan3DElevation = {
+  settings: ElevationSettings
+  deckFinishedY: number
+  deckThicknessM: number
+  poolTopY: number
+  poolBodyHeightM: number
+  terrainBounds: TerrainBounds
+}
+
+export type Plan3DSupportPost = {
+  id: string
+  point: Point3D
+  terrainY: number
+  deckBottomY: number
+  heightM: number
+}
+
 export type Plan3DHouseDoor = {
   id: string
   centerX: number
@@ -112,9 +136,11 @@ export type Plan3DModel = {
   }
   deckEdges: Plan3DEdge[]
   deckPoints: Point3D[]
+  elevation: Plan3DElevation
   house: Plan3DHouse
   poolPoints: Point3D[] | null
   railings: Plan3DRailing[]
+  supportPosts: Plan3DSupportPost[]
   stairs: Plan3DStairs[]
   pergolas: Plan3DPergola[]
   privacyScreens: Plan3DPrivacyScreen[]
@@ -138,6 +164,7 @@ export function getPlan3DModel({
   boardDirection,
   deckEdgeConstraints,
   deckPoints,
+  elevationSettings,
   features,
   house,
   houseBounds,
@@ -146,6 +173,7 @@ export function getPlan3DModel({
   boardDirection: BoardDirectionSettings
   deckEdgeConstraints: EdgeConstraint[]
   deckPoints: Point[]
+  elevationSettings: ElevationSettings
   features: DeckFeature[]
   house: HouseModel
   houseBounds: HouseBounds
@@ -157,13 +185,19 @@ export function getPlan3DModel({
     poolPoints ?? []
   )
   const origin = getCenteredOrigin(contentBounds)
+  const normalizedElevation = normalizeElevationSettings(elevationSettings)
   const deckEdges = getDeckEdges({
     constraints: deckEdgeConstraints,
     points: deckPoints,
   })
   const convertedEdges = deckEdges.map((edge) => toPlan3DEdge(edge, origin))
+  const convertedDeckPoints = deckPoints.map((point) => pointToPlan3D(point, origin))
   const boundsWidthM = (contentBounds.right - contentBounds.left) / PIXELS_PER_METER
   const boundsDepthM = (contentBounds.bottom - contentBounds.top) / PIXELS_PER_METER
+  const terrainBounds = getTerrainBounds(contentBounds, 3)
+  const deckFinishedY = cmToM(normalizedElevation.deck.finishedHeightCm)
+  const deckThicknessM = cmToM(normalizedElevation.deck.thicknessCm)
+  const deckBottomY = deckFinishedY - deckThicknessM
 
   return {
     boardLines: getBoardLineSegments({
@@ -172,6 +206,7 @@ export function getPlan3DModel({
       spacingPx: 18,
     })
       .flatMap((line) => clipLineToPolygon(line.start, line.end, deckPoints))
+      .filter((line) => !isLineInsidePool(line, poolPoints))
       .map((line, index) => ({
         id: `board-line-${index}`,
         start: pointToPlan3D(line.start, origin),
@@ -183,7 +218,15 @@ export function getPlan3DModel({
       diagonalM: Math.hypot(boundsWidthM, boundsDepthM),
     },
     deckEdges: convertedEdges,
-    deckPoints: deckPoints.map((point) => pointToPlan3D(point, origin)),
+    deckPoints: convertedDeckPoints,
+    elevation: {
+      settings: normalizedElevation,
+      deckFinishedY,
+      deckThicknessM,
+      poolTopY: cmToM(normalizedElevation.pool.topHeightCm),
+      poolBodyHeightM: cmToM(normalizedElevation.pool.bodyHeightCm),
+      terrainBounds,
+    },
     house: {
       center: pointToPlan3D(
         {
@@ -200,9 +243,47 @@ export function getPlan3DModel({
     },
     poolPoints: poolPoints?.map((point) => pointToPlan3D(point, origin)) ?? null,
     railings: get3DRailings(features, convertedEdges),
+    supportPosts: normalizedElevation.supports.showPosts
+      ? get3DSupportPosts({
+          deckBottomY,
+          deckPoints: convertedDeckPoints,
+          maxSpacingM: normalizedElevation.supports.maxPostSpacingM,
+          terrain: normalizedElevation.terrain,
+          terrainBounds,
+        })
+      : [],
     stairs: get3DStairs(features, deckEdges, deckPoints, origin),
     pergolas: get3DPergolas(features, origin),
     privacyScreens: get3DPrivacyScreens(features, deckEdges, origin),
+  }
+}
+
+function isLineInsidePool(
+  line: { start: Point; end: Point },
+  poolPoints: Point[] | null
+) {
+  if (!poolPoints || poolPoints.length < 3) {
+    return false
+  }
+
+  return pointInPolygon(
+    {
+      x: (line.start.x + line.end.x) / 2,
+      y: (line.start.y + line.end.y) / 2,
+    },
+    poolPoints
+  )
+}
+
+function getTerrainBounds(
+  bounds: PlanContentBounds,
+  paddingM: number
+): TerrainBounds {
+  return {
+    minX: -((bounds.right - bounds.left) / PIXELS_PER_METER) / 2 - paddingM,
+    maxX: ((bounds.right - bounds.left) / PIXELS_PER_METER) / 2 + paddingM,
+    minZ: -((bounds.bottom - bounds.top) / PIXELS_PER_METER) / 2 - paddingM,
+    maxZ: ((bounds.bottom - bounds.top) / PIXELS_PER_METER) / 2 + paddingM,
   }
 }
 
@@ -243,6 +324,69 @@ function get3DHouseWindows(house: HouseModel): Plan3DHouseWindow[] {
     heightM,
     row: window.row,
   }))
+}
+
+function get3DSupportPosts({
+  deckBottomY,
+  deckPoints,
+  maxSpacingM,
+  terrain,
+  terrainBounds,
+}: {
+  deckBottomY: number
+  deckPoints: Point3D[]
+  maxSpacingM: number
+  terrain: ElevationSettings["terrain"]
+  terrainBounds: TerrainBounds
+}): Plan3DSupportPost[] {
+  const candidates: Point3D[] = []
+
+  deckPoints.forEach((point, index) => {
+    const next = deckPoints[(index + 1) % deckPoints.length]
+    candidates.push(point)
+    if (!next) {
+      return
+    }
+
+    const edgeLength = Math.hypot(next.x - point.x, next.z - point.z)
+    const extraCount = Math.max(0, Math.ceil(edgeLength / maxSpacingM) - 1)
+    for (let step = 1; step <= extraCount; step += 1) {
+      const t = step / (extraCount + 1)
+      candidates.push({
+        x: point.x + (next.x - point.x) * t,
+        z: point.z + (next.z - point.z) * t,
+      })
+    }
+  })
+
+  return dedupeSupportPoints(candidates)
+    .slice(0, 48)
+    .flatMap((point, index) => {
+      const terrainY = getTerrainHeightAt(point, terrain, terrainBounds)
+      const heightM = deckBottomY - terrainY
+
+      return heightM > 0.12
+        ? [
+            {
+              id: `support-post-${index}`,
+              point,
+              terrainY,
+              deckBottomY,
+              heightM,
+            },
+          ]
+        : []
+    })
+}
+
+function dedupeSupportPoints(points: Point3D[]) {
+  return points.filter((point, index) =>
+    points.every(
+      (candidate, candidateIndex) =>
+        candidateIndex >= index ||
+        Math.hypot(candidate.x - point.x, candidate.z - point.z) > 0.08
+    )
+  )
 }
 
 function clipLineToPolygon(start: Point, end: Point, polygon: Point[]) {
