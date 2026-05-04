@@ -214,7 +214,7 @@ function StairsSymbol({
   return (
     <g
       data-interactive="true"
-      className="cursor-ew-resize"
+      className="cursor-grab active:cursor-grabbing"
       onClick={stopAnd(onSelect)}
       onPointerDown={(event) => onPointerDown?.(event, feature)}
     >
@@ -383,7 +383,7 @@ function PergolaSymbol({
   return (
     <g
       data-interactive="true"
-      className="cursor-ew-resize"
+      className="cursor-grab active:cursor-grabbing"
       onClick={stopAnd(onSelect)}
       onPointerDown={(event) => onPointerDown?.(event, feature)}
     >
