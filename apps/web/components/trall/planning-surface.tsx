@@ -143,6 +143,7 @@ export function PlanningSurface({
               deckEdgeConstraints={deckEdgeConstraints}
               deckPoints={deckPoints}
               features={features}
+              house={house}
               houseBounds={houseBounds}
               poolPoints={poolPoints}
             />

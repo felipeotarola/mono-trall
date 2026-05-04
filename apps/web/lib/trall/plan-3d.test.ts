@@ -3,7 +3,13 @@ import { describe, it } from "node:test"
 
 import { initialHouse, PIXELS_PER_METER } from "./constants.ts"
 import { defaultBoardDirection } from "./features.ts"
-import { getPlan3DModel, pointToPlan3D } from "./plan-3d.ts"
+import {
+  DEFAULT_HOUSE_WALL_HEIGHT_M,
+  getPlan3DModel,
+  pointToPlan3D,
+  STANDARD_DOOR_HEIGHT_M,
+  STANDARD_DOOR_WIDTH_M,
+} from "./plan-3d.ts"
 
 describe("plan 3D conversion", () => {
   it("converts planner pixels to centered metres", () => {
@@ -28,6 +34,7 @@ describe("plan 3D conversion", () => {
       deckEdgeConstraints: [],
       deckPoints,
       features: [],
+      house: initialHouse,
       houseBounds: {
         left: initialHouse.centerX - (initialHouse.widthM * PIXELS_PER_METER) / 2,
         right: initialHouse.centerX + (initialHouse.widthM * PIXELS_PER_METER) / 2,
@@ -41,6 +48,16 @@ describe("plan 3D conversion", () => {
     })
 
     assert.ok(model.boardLines.length > 0)
+    assert.equal(model.house.doors.length, initialHouse.doors?.length)
+    assert.equal(model.house.windows.length, initialHouse.windows?.length)
+    assert.equal(model.house.heightM, DEFAULT_HOUSE_WALL_HEIGHT_M)
+
+    for (const door of model.house.doors) {
+      assert.equal(door.widthM, STANDARD_DOOR_WIDTH_M)
+      assert.equal(door.heightM, STANDARD_DOOR_HEIGHT_M)
+      assert.ok(door.heightM < model.house.heightM)
+    }
+
     const minX = Math.min(...model.deckPoints.map((point) => point.x))
     const maxX = Math.max(...model.deckPoints.map((point) => point.x))
     const minZ = Math.min(...model.deckPoints.map((point) => point.z))

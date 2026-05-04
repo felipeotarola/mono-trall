@@ -13,7 +13,14 @@ import {
   type RailingFeature,
 } from "./features.ts"
 import type { EdgeConstraint, GeometryEdge } from "./edge-model"
-import type { HouseBounds, Point, PlanContentBounds } from "./types.ts"
+import type {
+  HouseBounds,
+  HouseDoor,
+  HouseModel,
+  HouseWindow,
+  Point,
+  PlanContentBounds,
+} from "./types.ts"
 
 export type Point3D = {
   x: number
@@ -73,8 +80,27 @@ export type Plan3DPrivacyScreen = {
 
 export type Plan3DHouse = {
   center: Point3D
+  doors: Plan3DHouseDoor[]
+  heightM: number
   widthM: number
   depthM: number
+  windows: Plan3DHouseWindow[]
+}
+
+export type Plan3DHouseDoor = {
+  id: string
+  centerX: number
+  widthM: number
+  heightM: number
+}
+
+export type Plan3DHouseWindow = {
+  id: string
+  centerX: number
+  centerY: number
+  widthM: number
+  heightM: number
+  row: HouseWindow["row"]
 }
 
 export type Plan3DModel = {
@@ -94,6 +120,10 @@ export type Plan3DModel = {
   privacyScreens: Plan3DPrivacyScreen[]
 }
 
+export const STANDARD_DOOR_WIDTH_M = 0.9
+export const STANDARD_DOOR_HEIGHT_M = 2.1
+export const DEFAULT_HOUSE_WALL_HEIGHT_M = 2.7
+
 export function pointToPlan3D(
   point: Point,
   origin: { x: number; y: number }
@@ -109,6 +139,7 @@ export function getPlan3DModel({
   deckEdgeConstraints,
   deckPoints,
   features,
+  house,
   houseBounds,
   poolPoints,
 }: {
@@ -116,6 +147,7 @@ export function getPlan3DModel({
   deckEdgeConstraints: EdgeConstraint[]
   deckPoints: Point[]
   features: DeckFeature[]
+  house: HouseModel
   houseBounds: HouseBounds
   poolPoints: Point[] | null
 }): Plan3DModel {
@@ -160,8 +192,11 @@ export function getPlan3DModel({
         },
         origin
       ),
+      doors: get3DHouseDoors(house),
+      heightM: DEFAULT_HOUSE_WALL_HEIGHT_M,
       widthM: houseBounds.widthPx / PIXELS_PER_METER,
       depthM: houseBounds.depthPx / PIXELS_PER_METER,
+      windows: get3DHouseWindows(house),
     },
     poolPoints: poolPoints?.map((point) => pointToPlan3D(point, origin)) ?? null,
     railings: get3DRailings(features, convertedEdges),
@@ -169,6 +204,45 @@ export function getPlan3DModel({
     pergolas: get3DPergolas(features, origin),
     privacyScreens: get3DPrivacyScreens(features, deckEdges, origin),
   }
+}
+
+function get3DHouseDoors(house: HouseModel): Plan3DHouseDoor[] {
+  const doors =
+    house.doors && house.doors.length > 0
+      ? house.doors
+      : [{ id: "door-1", offsetM: house.doorOffsetM ?? 0 }]
+  const widthM = STANDARD_DOOR_WIDTH_M
+  const maxOffsetM = Math.max(0, house.widthM / 2 - widthM / 2)
+
+  return doors.map((door: HouseDoor) => ({
+    id: door.id,
+    centerX: clamp(door.offsetM, -maxOffsetM, maxOffsetM),
+    widthM,
+    heightM: STANDARD_DOOR_HEIGHT_M,
+  }))
+}
+
+function get3DHouseWindows(house: HouseModel): Plan3DHouseWindow[] {
+  const windows =
+    house.windows ??
+    [
+      { id: "window-1", offsetM: -house.widthM * 0.3, row: "upper" as const },
+      { id: "window-2", offsetM: house.widthM * 0.3, row: "upper" as const },
+      { id: "window-3", offsetM: -house.widthM * 0.3, row: "lower" as const },
+      { id: "window-4", offsetM: house.widthM * 0.3, row: "lower" as const },
+    ]
+  const widthM = Math.min(1.75, house.widthM * 0.16)
+  const heightM = 0.72
+  const maxOffsetM = Math.max(0, house.widthM / 2 - widthM / 2)
+
+  return windows.map((window: HouseWindow) => ({
+    id: window.id,
+    centerX: clamp(window.offsetM, -maxOffsetM, maxOffsetM),
+    centerY: window.row === "upper" ? 1.82 : 1.05,
+    widthM,
+    heightM,
+    row: window.row,
+  }))
 }
 
 function clipLineToPolygon(start: Point, end: Point, polygon: Point[]) {
@@ -256,6 +330,10 @@ function dedupeIntersections(intersections: Array<{ point: Point; t: number }>) 
         candidateIndex >= index || Math.abs(candidate.t - intersection.t) > 0.0001
     )
   )
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max)
 }
 
 function getCenteredOrigin(bounds: PlanContentBounds) {

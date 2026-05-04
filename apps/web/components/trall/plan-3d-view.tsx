@@ -19,7 +19,7 @@ import {
   type Plan3DModel,
   type Point3D,
 } from "@/lib/trall/plan-3d"
-import type { HouseBounds, Point } from "@/lib/trall/types"
+import type { HouseBounds, HouseModel, Point } from "@/lib/trall/types"
 import { Button } from "@workspace/ui/components/button"
 
 const DECK_THICKNESS_M = 0.18
@@ -30,6 +30,7 @@ export function Plan3DView({
   deckEdgeConstraints,
   deckPoints,
   features,
+  house,
   houseBounds,
   poolPoints,
 }: {
@@ -37,6 +38,7 @@ export function Plan3DView({
   deckEdgeConstraints: EdgeConstraint[]
   deckPoints: Point[]
   features: DeckFeature[]
+  house: HouseModel
   houseBounds: HouseBounds
   poolPoints: Point[] | null
 }) {
@@ -48,6 +50,7 @@ export function Plan3DView({
         deckEdgeConstraints,
         deckPoints,
         features,
+        house,
         houseBounds,
         poolPoints,
       }),
@@ -56,6 +59,7 @@ export function Plan3DView({
       deckEdgeConstraints,
       deckPoints,
       features,
+      house,
       houseBounds,
       poolPoints,
     ]
@@ -172,19 +176,111 @@ function GroundPlane({ model }: { model: Plan3DModel }) {
 }
 
 function HouseMass({ model }: { model: Plan3DModel }) {
+  const frontZ = model.house.depthM / 2 + 0.018
+
   return (
     <group position={[model.house.center.x, 0, model.house.center.z]}>
-      <mesh castShadow receiveShadow position={[0, 0.9, 0]}>
-        <boxGeometry args={[model.house.widthM, 1.8, model.house.depthM]} />
+      <mesh castShadow receiveShadow position={[0, model.house.heightM / 2, 0]}>
+        <boxGeometry
+          args={[model.house.widthM, model.house.heightM, model.house.depthM]}
+        />
         <meshStandardMaterial color="#d8d3ca" roughness={0.82} />
       </mesh>
-      <mesh position={[0, 1.83, 0]}>
-        <boxGeometry args={[model.house.widthM + 0.2, 0.12, model.house.depthM + 0.2]} />
+      <mesh position={[0, model.house.heightM + 0.06, 0]}>
+        <boxGeometry
+          args={[model.house.widthM + 0.2, 0.12, model.house.depthM + 0.2]}
+        />
         <meshStandardMaterial color="#77736b" roughness={0.75} />
       </mesh>
-      <mesh position={[0, 0.82, model.house.depthM / 2 + 0.011]}>
-        <boxGeometry args={[1.2, 1.35, 0.025]} />
-        <meshStandardMaterial color="#8c6f4f" roughness={0.7} />
+      {model.house.doors.map((door) => (
+        <HouseDoor3D key={door.id} door={door} frontZ={frontZ} />
+      ))}
+      {model.house.windows.map((window) => (
+        <HouseWindow3D key={window.id} frontZ={frontZ} window={window} />
+      ))}
+    </group>
+  )
+}
+
+function HouseDoor3D({
+  door,
+  frontZ,
+}: {
+  door: Plan3DModel["house"]["doors"][number]
+  frontZ: number
+}) {
+  return (
+    <group position={[door.centerX, door.heightM / 2, frontZ]}>
+      <mesh castShadow position={[0, 0, 0]}>
+        <boxGeometry args={[door.widthM, door.heightM, 0.04]} />
+        <meshStandardMaterial color="#7a5534" roughness={0.68} />
+      </mesh>
+      <mesh position={[0, door.heightM / 2 + 0.035, 0.018]}>
+        <boxGeometry args={[door.widthM + 0.16, 0.07, 0.055]} />
+        <meshStandardMaterial color="#f2eee7" roughness={0.72} />
+      </mesh>
+      <mesh position={[-door.widthM / 2 - 0.045, 0, 0.018]}>
+        <boxGeometry args={[0.07, door.heightM + 0.08, 0.055]} />
+        <meshStandardMaterial color="#f2eee7" roughness={0.72} />
+      </mesh>
+      <mesh position={[door.widthM / 2 + 0.045, 0, 0.018]}>
+        <boxGeometry args={[0.07, door.heightM + 0.08, 0.055]} />
+        <meshStandardMaterial color="#f2eee7" roughness={0.72} />
+      </mesh>
+      <mesh position={[door.widthM * 0.32, 0.05, 0.04]}>
+        <sphereGeometry args={[0.035, 12, 8]} />
+        <meshStandardMaterial color="#d8b56c" metalness={0.45} roughness={0.4} />
+      </mesh>
+    </group>
+  )
+}
+
+function HouseWindow3D({
+  frontZ,
+  window,
+}: {
+  frontZ: number
+  window: Plan3DModel["house"]["windows"][number]
+}) {
+  const frameColor = window.row === "upper" ? "#eef5f8" : "#edf1f1"
+
+  return (
+    <group position={[window.centerX, window.centerY, frontZ + 0.006]}>
+      <mesh position={[0, 0, 0]}>
+        <boxGeometry args={[window.widthM, window.heightM, 0.035]} />
+        <meshStandardMaterial
+          color="#86b8c7"
+          metalness={0.05}
+          roughness={0.22}
+        />
+      </mesh>
+      <mesh position={[0, 0, 0.022]}>
+        <boxGeometry args={[window.widthM + 0.14, 0.055, 0.045]} />
+        <meshStandardMaterial color={frameColor} roughness={0.64} />
+      </mesh>
+      <mesh position={[0, window.heightM / 2 + 0.045, 0.022]}>
+        <boxGeometry args={[window.widthM + 0.16, 0.07, 0.05]} />
+        <meshStandardMaterial color={frameColor} roughness={0.64} />
+      </mesh>
+      <mesh position={[0, -window.heightM / 2 - 0.045, 0.022]}>
+        <boxGeometry args={[window.widthM + 0.16, 0.07, 0.05]} />
+        <meshStandardMaterial color={frameColor} roughness={0.64} />
+      </mesh>
+      <mesh position={[-window.widthM / 2 - 0.045, 0, 0.022]}>
+        <boxGeometry args={[0.07, window.heightM + 0.16, 0.05]} />
+        <meshStandardMaterial color={frameColor} roughness={0.64} />
+      </mesh>
+      <mesh position={[window.widthM / 2 + 0.045, 0, 0.022]}>
+        <boxGeometry args={[0.07, window.heightM + 0.16, 0.05]} />
+        <meshStandardMaterial color={frameColor} roughness={0.64} />
+      </mesh>
+      <mesh position={[0, 0, 0.045]}>
+        <boxGeometry args={[0.045, window.heightM, 0.035]} />
+        <meshStandardMaterial color={frameColor} roughness={0.64} />
+      </mesh>
+      <mesh position={[0, 0, 0.046]}>
+        <boxGeometry args={[window.widthM, 0.04, 0.035]} />
+        <meshStandardMaterial color={frameColor} roughness={0.64} />
       </mesh>
     </group>
   )
