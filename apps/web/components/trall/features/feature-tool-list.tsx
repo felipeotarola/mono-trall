@@ -3,16 +3,20 @@
 import type { ReactNode } from "react"
 import {
   BlindsIcon,
+  BoxIcon,
   ChevronsLeftIcon,
   ChevronsRightIcon,
   ConstructionIcon,
   FenceIcon,
   HandIcon,
+  LightbulbIcon,
   PencilRulerIcon,
   PointerIcon,
   RotateCwIcon,
   RulerIcon,
+  SproutIcon,
   SquareIcon,
+  TreePineIcon,
   WavesIcon,
 } from "lucide-react"
 
@@ -85,7 +89,7 @@ export function FeatureToolList({
       onClick: () => onSelectFeatureTool("stairs"),
     },
     {
-      label: "Railing",
+      label: "Fence",
       icon: <FenceIcon />,
       active: placementMode === "railing",
       onClick: () => onSelectFeatureTool("railing"),
@@ -103,6 +107,30 @@ export function FeatureToolList({
       onClick: () => onSelectFeatureTool("privacyScreen"),
     },
     {
+      label: "Tree",
+      icon: <TreePineIcon />,
+      active: placementMode === "siteTree",
+      onClick: () => onSelectFeatureTool("siteTree"),
+    },
+    {
+      label: "Bush",
+      icon: <SproutIcon />,
+      active: placementMode === "siteBush",
+      onClick: () => onSelectFeatureTool("siteBush"),
+    },
+    {
+      label: "Planter",
+      icon: <BoxIcon />,
+      active: placementMode === "sitePlanter",
+      onClick: () => onSelectFeatureTool("sitePlanter"),
+    },
+    {
+      label: "Outdoor light",
+      icon: <LightbulbIcon />,
+      active: placementMode === "siteLight",
+      onClick: () => onSelectFeatureTool("siteLight"),
+    },
+    {
       label: "Board direction",
       icon: <RotateCwIcon />,
       active: placementMode === "boardDirection",
@@ -116,7 +144,7 @@ export function FeatureToolList({
       className={cn(
         "min-w-0 border-stone-200 bg-white/94 shadow-lg shadow-black/10 backdrop-blur transition-[width] duration-200",
         collapsed
-          ? "w-[calc(100vw-2rem)] sm:w-[4.25rem]"
+          ? "max-h-[calc(100svh-17rem)] w-[calc(100vw-2rem)] overflow-y-auto sm:w-[4.25rem]"
           : "w-[min(17rem,calc(100vw-2rem))]",
         className
       )}

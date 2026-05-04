@@ -18,6 +18,7 @@ import {
   type PergolaFeature,
   type PrivacyScreenFeature,
   type RailingFeature,
+  type SiteObjectFeature,
   type StairFeature,
 } from "@/lib/trall/features"
 import { degreesToRadians, distance } from "@/lib/trall/geometry"
@@ -58,6 +59,7 @@ export function FeatureRenderer({
   edges,
   features,
   onPergolaPointerDown,
+  onSiteObjectPointerDown,
   onStairPointerDown,
   onSelectFeature,
   selectedFeatureId,
@@ -68,6 +70,10 @@ export function FeatureRenderer({
   onPergolaPointerDown?: (
     event: ReactPointerEvent<SVGGElement>,
     feature: PergolaFeature
+  ) => void
+  onSiteObjectPointerDown?: (
+    event: ReactPointerEvent<SVGGElement>,
+    feature: SiteObjectFeature
   ) => void
   onStairPointerDown?: (
     event: ReactPointerEvent<SVGGElement>,
@@ -86,6 +92,7 @@ export function FeatureRenderer({
           feature={feature}
           selected={feature.id === selectedFeatureId}
           onPergolaPointerDown={onPergolaPointerDown}
+          onSiteObjectPointerDown={onSiteObjectPointerDown}
           onStairPointerDown={onStairPointerDown}
           onSelect={() => onSelectFeature(feature.id)}
         />
@@ -99,6 +106,7 @@ function FeatureSymbol({
   edges,
   feature,
   onPergolaPointerDown,
+  onSiteObjectPointerDown,
   onStairPointerDown,
   onSelect,
   selected,
@@ -109,6 +117,10 @@ function FeatureSymbol({
   onPergolaPointerDown?: (
     event: ReactPointerEvent<SVGGElement>,
     feature: PergolaFeature
+  ) => void
+  onSiteObjectPointerDown?: (
+    event: ReactPointerEvent<SVGGElement>,
+    feature: SiteObjectFeature
   ) => void
   onStairPointerDown?: (
     event: ReactPointerEvent<SVGGElement>,
@@ -147,6 +159,17 @@ function FeatureSymbol({
       <PergolaSymbol
         feature={feature}
         onPointerDown={onPergolaPointerDown}
+        selected={selected}
+        onSelect={onSelect}
+      />
+    )
+  }
+
+  if (feature.type === "siteObject") {
+    return (
+      <SiteObjectSymbol
+        feature={feature}
+        onPointerDown={onSiteObjectPointerDown}
         selected={selected}
         onSelect={onSelect}
       />
@@ -313,9 +336,26 @@ function RailingSymbol({
             : feature.style === "metal"
               ? "stroke-zinc-700"
               : "stroke-amber-900"
+        const postClass =
+          feature.style === "glass"
+            ? "fill-white stroke-sky-700"
+            : feature.style === "metal"
+              ? "fill-zinc-100 stroke-zinc-800"
+              : "fill-amber-50 stroke-amber-950"
 
         return (
           <g key={edge.id}>
+            {feature.style === "glass" ? (
+              <line
+                x1={start.x}
+                y1={start.y}
+                x2={end.x}
+                y2={end.y}
+                className="cursor-pointer stroke-sky-200/70"
+                strokeLinecap="round"
+                strokeWidth={selected ? "16" : "13"}
+              />
+            ) : null}
             <line
               x1={start.x}
               y1={start.y}
@@ -331,7 +371,7 @@ function RailingSymbol({
                 cx={post.x}
                 cy={post.y}
                 r={selected ? "5" : "4"}
-                className="fill-white stroke-zinc-800"
+                className={postClass}
                 strokeWidth="2"
               />
             ))}
@@ -471,6 +511,126 @@ function DragHandle({ point }: { point: Point }) {
         strokeWidth="2"
         strokeLinecap="round"
       />
+    </g>
+  )
+}
+
+function SiteObjectSymbol({
+  feature,
+  onPointerDown,
+  onSelect,
+  selected,
+}: {
+  feature: SiteObjectFeature
+  onPointerDown?: (
+    event: ReactPointerEvent<SVGGElement>,
+    feature: SiteObjectFeature
+  ) => void
+  onSelect: () => void
+  selected: boolean
+}) {
+  const radius = Math.max(14, (feature.sizeM * PIXELS_PER_METER) / 2)
+  const rad = degreesToRadians(feature.rotationDeg)
+  const colorClass =
+    feature.kind === "tree"
+      ? "fill-emerald-700/30 stroke-emerald-800"
+      : feature.kind === "bush"
+        ? "fill-lime-600/30 stroke-lime-800"
+        : feature.kind === "planter"
+          ? "fill-stone-200/85 stroke-stone-700"
+          : "fill-yellow-100/80 stroke-amber-700"
+
+  return (
+    <g
+      data-interactive="true"
+      className="cursor-grab active:cursor-grabbing"
+      onClick={stopAnd(onSelect)}
+      onPointerDown={(event) => onPointerDown?.(event, feature)}
+    >
+      {feature.kind === "planter" ? (
+        <g
+          transform={`translate(${feature.x} ${feature.y}) rotate(${feature.rotationDeg})`}
+        >
+          <rect
+            x={-radius}
+            y={-radius * 0.55}
+            width={radius * 2}
+            height={radius * 1.1}
+            rx="5"
+            className={colorClass}
+            strokeWidth={selected ? "4" : "3"}
+          />
+          <circle
+            cx={-radius * 0.42}
+            cy="0"
+            r={radius * 0.32}
+            className="fill-emerald-600/40 stroke-emerald-800/70"
+            strokeWidth="2"
+          />
+          <circle
+            cx={radius * 0.34}
+            cy="0"
+            r={radius * 0.36}
+            className="fill-lime-600/35 stroke-lime-800/70"
+            strokeWidth="2"
+          />
+        </g>
+      ) : feature.kind === "outdoorLight" ? (
+        <g transform={`translate(${feature.x} ${feature.y}) rotate(${feature.rotationDeg})`}>
+          <circle
+            cx="0"
+            cy="0"
+            r={radius * 0.44}
+            className={colorClass}
+            strokeWidth={selected ? "4" : "3"}
+          />
+          <line
+            x1="0"
+            y1={-radius * 0.8}
+            x2="0"
+            y2={radius * 0.8}
+            className="stroke-amber-800/70"
+            strokeLinecap="round"
+            strokeWidth="3"
+          />
+        </g>
+      ) : (
+        <>
+          <circle
+            cx={feature.x}
+            cy={feature.y}
+            r={radius}
+            className={colorClass}
+            strokeWidth={selected ? "4" : "3"}
+          />
+          {feature.kind === "tree" ? (
+            <>
+              {[0, 120, 240].map((angle) => {
+                const a = rad + degreesToRadians(angle)
+                return (
+                  <circle
+                    key={angle}
+                    cx={feature.x + Math.cos(a) * radius * 0.34}
+                    cy={feature.y + Math.sin(a) * radius * 0.34}
+                    r={radius * 0.48}
+                    className="fill-emerald-600/30 stroke-emerald-900/45"
+                    strokeWidth="2"
+                  />
+                )
+              })}
+            </>
+          ) : null}
+        </>
+      )}
+      {selected ? (
+        <>
+          <DragHandle point={feature} />
+          <FeatureLabel
+            point={{ x: feature.x, y: feature.y - radius - 24 }}
+            text={getFeatureLabel(feature)}
+          />
+        </>
+      ) : null}
     </g>
   )
 }

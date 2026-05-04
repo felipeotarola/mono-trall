@@ -34,6 +34,7 @@ import {
   createDefaultPergola,
   createDefaultPrivacyScreen,
   createDefaultRailing,
+  createDefaultSiteObject,
   createDefaultStairs,
   pointInPolygon,
   type BoardDirectionSettings,
@@ -41,6 +42,8 @@ import {
   type FeaturePlacementType,
   type PergolaFeature,
   type RailingFeature,
+  type SiteObjectFeature,
+  type SiteObjectKind,
   type StairFeature,
 } from "@/lib/trall/features"
 import {
@@ -171,6 +174,11 @@ export function PlanSvg({
     pointerStart: Point
     startPoint: Point
   } | null>(null)
+  const [siteObjectDrag, setSiteObjectDrag] = useState<{
+    objectId: string
+    pointerStart: Point
+    startPoint: Point
+  } | null>(null)
   const houseDoors = getHouseDoors(house)
   const houseWindows = getHouseWindows(house)
   const pointBounds = getPointBounds(houseBounds)
@@ -276,6 +284,10 @@ export function PlanSvg({
   }
 
   function handlePointerDown(event: ReactPointerEvent<SVGSVGElement>) {
+    if (placeSiteObjectFromCanvas(event)) {
+      return
+    }
+
     if (placePergolaFromCanvas(event)) {
       return
     }
@@ -294,6 +306,10 @@ export function PlanSvg({
   }
 
   function handlePointerMove(event: ReactPointerEvent<SVGSVGElement>) {
+    if (updateSiteObjectDrag(event)) {
+      return
+    }
+
     if (updatePergolaDrag(event)) {
       return
     }
@@ -326,6 +342,10 @@ export function PlanSvg({
   }
 
   function handlePointerEnd(event: ReactPointerEvent<SVGSVGElement>) {
+    if (finishSiteObjectDrag(event)) {
+      return
+    }
+
     if (finishPergolaDrag(event)) {
       return
     }
@@ -644,6 +664,66 @@ export function PlanSvg({
     return true
   }
 
+  function startSiteObjectDrag(
+    event: ReactPointerEvent<SVGGElement>,
+    object: SiteObjectFeature
+  ) {
+    if (activeTool !== "select" || !svgRef.current) {
+      return
+    }
+
+    event.preventDefault()
+    event.stopPropagation()
+    svgRef.current.focus()
+    svgRef.current.setPointerCapture(event.pointerId)
+    setActivePointIndex(null)
+    setActivePoolPointIndex(null)
+    setSelectedMeasurementId(null)
+    setEditingMeasurement(null)
+    setSelectedFeatureId(object.id)
+    setSiteObjectDrag({
+      objectId: object.id,
+      pointerStart: clientPointToSvgPoint(event, svgRef.current),
+      startPoint: { x: object.x, y: object.y },
+    })
+  }
+
+  function updateSiteObjectDrag(event: ReactPointerEvent<SVGSVGElement>) {
+    if (!siteObjectDrag || !svgRef.current) {
+      return false
+    }
+
+    event.preventDefault()
+    const point = clientPointToSvgPoint(event, svgRef.current)
+    const nextPoint = clampSitePointToBounds({
+      x: siteObjectDrag.startPoint.x + point.x - siteObjectDrag.pointerStart.x,
+      y: siteObjectDrag.startPoint.y + point.y - siteObjectDrag.pointerStart.y,
+    })
+
+    setFeatures((currentFeatures) =>
+      currentFeatures.map((feature) =>
+        feature.id === siteObjectDrag.objectId && feature.type === "siteObject"
+          ? { ...feature, x: nextPoint.x, y: nextPoint.y }
+          : feature
+      )
+    )
+
+    return true
+  }
+
+  function finishSiteObjectDrag(event: ReactPointerEvent<SVGSVGElement>) {
+    if (!siteObjectDrag) {
+      return false
+    }
+
+    if (svgRef.current?.hasPointerCapture(event.pointerId)) {
+      svgRef.current.releasePointerCapture(event.pointerId)
+    }
+
+    setSiteObjectDrag(null)
+    return true
+  }
+
   function startMeasurementCreate(event: ReactPointerEvent<SVGSVGElement>) {
     if (
       activeTool !== "measure" ||
@@ -818,10 +898,52 @@ export function PlanSvg({
     return true
   }
 
+  function placeSiteObjectFromCanvas(event: ReactPointerEvent<SVGSVGElement>) {
+    const kind = getSiteObjectKindFromPlacementMode(placementMode)
+    if (!kind || !svgRef.current || isInteractiveTarget(event.target)) {
+      return false
+    }
+
+    event.preventDefault()
+    svgRef.current.focus()
+    const point = clampSitePointToBounds(
+      clientPointToSvgPoint(event, svgRef.current)
+    )
+    const feature = createDefaultSiteObject({
+      kind,
+      point,
+      rotationDeg: boardDirection.boardDirectionDeg,
+    })
+    setFeatures((currentFeatures) => [...currentFeatures, feature])
+    setActivePointIndex(null)
+    setActivePoolPointIndex(null)
+    setSelectedMeasurementId(null)
+    setEditingMeasurement(null)
+    onFeaturePlaced(feature.id)
+    return true
+  }
+
+  function clampSitePointToBounds(point: Point): Point {
+    const padding = 220
+    return {
+      x: clamp(
+        point.x,
+        contentBounds.left - padding,
+        contentBounds.right + padding
+      ),
+      y: clamp(
+        point.y,
+        contentBounds.top - padding,
+        contentBounds.bottom + padding
+      ),
+    }
+  }
+
   function placeFeatureOnDeckEdge(edgeIndex: number) {
     if (
       !placementMode ||
       placementMode === "pergola" ||
+      getSiteObjectKindFromPlacementMode(placementMode) ||
       placementMode === "boardDirection"
     ) {
       return false
@@ -954,6 +1076,7 @@ export function PlanSvg({
         onDeckEdgeClick={placeFeatureOnDeckEdge}
         onPergolaPointerDown={startPergolaDrag}
         onSelectFeature={selectFeature}
+        onSiteObjectPointerDown={startSiteObjectDrag}
         onStairPointerDown={startStairDrag}
       />
       <MeasurementLayer
@@ -1003,6 +1126,7 @@ function DeckLayer({
   onDeckEdgeClick,
   onPergolaPointerDown,
   onSelectFeature,
+  onSiteObjectPointerDown,
   onStairPointerDown,
 }: {
   activeTool: ActiveTool
@@ -1024,6 +1148,10 @@ function DeckLayer({
     feature: PergolaFeature
   ) => void
   onSelectFeature: (featureId: string) => void
+  onSiteObjectPointerDown: (
+    event: ReactPointerEvent<SVGGElement>,
+    feature: SiteObjectFeature
+  ) => void
   onStairPointerDown: (
     event: ReactPointerEvent<SVGGElement>,
     feature: StairFeature
@@ -1113,16 +1241,6 @@ function DeckLayer({
         />
       ) : null}
 
-      <FeatureRenderer
-        deckPoints={deckPoints}
-        edges={editor.edges}
-        features={features}
-        selectedFeatureId={selectedFeatureId}
-        onPergolaPointerDown={onPergolaPointerDown}
-        onSelectFeature={onSelectFeature}
-        onStairPointerDown={onStairPointerDown}
-      />
-
       {editor.attachedEdges.map((edge) => {
         if (!edge.attached) {
           return null
@@ -1178,15 +1296,15 @@ function DeckLayer({
         d={`M${selectedEdgeStart.x} ${selectedEdgeStart.y} L${selectedEdgeEnd.x} ${selectedEdgeEnd.y}`}
         className={
           selectedEdgeAttached
-            ? trallPlanClasses.deckAttachedEdge
-            : trallPlanClasses.deckSelectedEdge
+            ? `pointer-events-none ${trallPlanClasses.deckAttachedEdge}`
+            : `pointer-events-none ${trallPlanClasses.deckSelectedEdge}`
         }
         strokeLinecap="round"
         strokeWidth={selectedEdgeAttached ? "11" : "9"}
       />
       <path
         d={`M${selectedEdgeStart.x} ${selectedEdgeStart.y} L${selectedEdgeEnd.x} ${selectedEdgeEnd.y}`}
-        className={trallPlanClasses.deckSelectedEdgeInner}
+        className={`pointer-events-none ${trallPlanClasses.deckSelectedEdgeInner}`}
         strokeLinecap="round"
         strokeWidth="3"
       />
@@ -1292,6 +1410,17 @@ function DeckLayer({
           />
         )
       })}
+
+      <FeatureRenderer
+        deckPoints={deckPoints}
+        edges={editor.edges}
+        features={features}
+        selectedFeatureId={selectedFeatureId}
+        onPergolaPointerDown={onPergolaPointerDown}
+        onSelectFeature={onSelectFeature}
+        onSiteObjectPointerDown={onSiteObjectPointerDown}
+        onStairPointerDown={onStairPointerDown}
+      />
 
       {hoveredEdgeLabelPoint ? (
         <EdgeHoverLabel point={hoveredEdgeLabelPoint} />
@@ -1903,6 +2032,28 @@ function setMeasurementLength(
         ((line.end.y - line.start.y) / currentLength) * newLengthPx,
     },
   }
+}
+
+function getSiteObjectKindFromPlacementMode(
+  placementMode: FeaturePlacementType | null
+): SiteObjectKind | null {
+  if (placementMode === "siteTree") {
+    return "tree"
+  }
+
+  if (placementMode === "siteBush") {
+    return "bush"
+  }
+
+  if (placementMode === "sitePlanter") {
+    return "planter"
+  }
+
+  if (placementMode === "siteLight") {
+    return "outdoorLight"
+  }
+
+  return null
 }
 
 function clamp(value: number, min: number, max: number) {

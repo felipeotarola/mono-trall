@@ -7,6 +7,10 @@ export type FeaturePlacementType =
   | "railing"
   | "pergola"
   | "privacyScreen"
+  | "siteTree"
+  | "siteBush"
+  | "sitePlanter"
+  | "siteLight"
   | "boardDirection"
 
 export type BoardDirectionMode =
@@ -63,11 +67,25 @@ export type PrivacyScreenFeature = {
   label: string
 }
 
+export type SiteObjectKind = "tree" | "bush" | "planter" | "outdoorLight"
+
+export type SiteObjectFeature = {
+  id: string
+  type: "siteObject"
+  kind: SiteObjectKind
+  x: number
+  y: number
+  sizeM: number
+  rotationDeg: number
+  label: string
+}
+
 export type DeckFeature =
   | StairFeature
   | RailingFeature
   | PergolaFeature
   | PrivacyScreenFeature
+  | SiteObjectFeature
 
 export const defaultBoardDirection: BoardDirectionSettings = {
   boardDirectionDeg: 0,
@@ -114,7 +132,7 @@ export function createDefaultRailing(edge: GeometryEdge): RailingFeature {
     edgeIds: [edge.id],
     heightCm: 110,
     style: "wood",
-    label: "Railing",
+    label: "Fence",
   }
 }
 
@@ -150,6 +168,27 @@ export function createDefaultPrivacyScreen(
     heightCm: 180,
     style: "slatted",
     label: "Privacy screen",
+  }
+}
+
+export function createDefaultSiteObject({
+  kind,
+  point,
+  rotationDeg = 0,
+}: {
+  kind: SiteObjectKind
+  point: Point
+  rotationDeg?: number
+}): SiteObjectFeature {
+  return {
+    id: createFeatureId(`site-${kind}`),
+    type: "siteObject",
+    kind,
+    x: point.x,
+    y: point.y,
+    sizeM: kind === "tree" ? 2.4 : kind === "outdoorLight" ? 1.2 : 1,
+    rotationDeg: normalizeAngle(rotationDeg),
+    label: getDefaultSiteObjectLabel(kind),
   }
 }
 
@@ -357,7 +396,7 @@ export function normalizeDeckFeatures(value: unknown): DeckFeature[] {
             feature.style === "glass" || feature.style === "metal"
               ? feature.style
               : "wood",
-          label: getPersistedLabel(feature.label, "Railing"),
+          label: getPersistedLabel(feature.label, "Fence"),
         },
       ]
     }
@@ -400,6 +439,34 @@ export function normalizeDeckFeatures(value: unknown): DeckFeature[] {
               ? feature.style
               : "slatted",
           label: getPersistedLabel(feature.label, "Privacy screen"),
+        },
+      ]
+    }
+
+    if (feature.type === "siteObject") {
+      const kind =
+        feature.kind === "tree" ||
+        feature.kind === "bush" ||
+        feature.kind === "planter" ||
+        feature.kind === "outdoorLight"
+          ? feature.kind
+          : "tree"
+
+      return [
+        {
+          id: getPersistedId(feature.id, `site-${kind}`),
+          type: "siteObject",
+          kind,
+          x: clampNumber(feature.x, -10000, 10000, 0),
+          y: clampNumber(feature.y, -10000, 10000, 0),
+          sizeM: clampNumber(feature.sizeM, 0.3, 8, kind === "tree" ? 2.4 : 1),
+          rotationDeg: normalizeAngle(
+            clampNumber(feature.rotationDeg, -360, 360, 0)
+          ),
+          label: getPersistedLabel(
+            feature.label,
+            getDefaultSiteObjectLabel(kind)
+          ),
         },
       ]
     }
@@ -497,6 +564,22 @@ function clampNumber(
 
 function createFeatureId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+function getDefaultSiteObjectLabel(kind: SiteObjectKind) {
+  if (kind === "tree") {
+    return "Tree"
+  }
+
+  if (kind === "bush") {
+    return "Bush"
+  }
+
+  if (kind === "planter") {
+    return "Planter"
+  }
+
+  return "Outdoor light"
 }
 
 function getPersistedId(value: unknown, prefix: string) {

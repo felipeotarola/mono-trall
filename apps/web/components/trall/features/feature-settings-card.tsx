@@ -18,6 +18,7 @@ import type {
   PergolaFeature,
   PrivacyScreenFeature,
   RailingFeature,
+  SiteObjectFeature,
   StairFeature,
 } from "@/lib/trall/features"
 
@@ -53,6 +54,9 @@ export function FeatureSettingsCard({
         ) : null}
         {feature.type === "privacyScreen" ? (
           <PrivacyScreenSettings feature={feature} onUpdate={onUpdate} />
+        ) : null}
+        {feature.type === "siteObject" ? (
+          <SiteObjectSettings feature={feature} onUpdate={onUpdate} />
         ) : null}
         <Button
           className="w-full justify-center"
@@ -169,6 +173,10 @@ function RailingSettings({
         {feature.edgeIds.length} selected edge
         {feature.edgeIds.length === 1 ? "" : "s"}
       </div>
+      <p className="text-[11px] leading-snug text-muted-foreground">
+        Fences follow selected deck edges. Glass uses transparent safety panels
+        with posts in 3D.
+      </p>
       <div className="grid grid-cols-2 gap-2">
         <NumberField
           label="Height"
@@ -187,9 +195,9 @@ function RailingSettings({
         <SelectField
           label="Style"
           options={[
-            { label: "Wood", value: "wood" },
-            { label: "Glass", value: "glass" },
-            { label: "Metal", value: "metal" },
+            { label: "Wood fence", value: "wood" },
+            { label: "Glass fence", value: "glass" },
+            { label: "Metal rail", value: "metal" },
           ]}
           value={feature.style}
           onChange={(value) =>
@@ -332,6 +340,65 @@ function PrivacyScreenSettings({
   )
 }
 
+function SiteObjectSettings({
+  feature,
+  onUpdate,
+}: {
+  feature: SiteObjectFeature
+  onUpdate: (feature: DeckFeature) => void
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      <SelectField
+        label="Type"
+        options={[
+          { label: "Tree", value: "tree" },
+          { label: "Bush", value: "bush" },
+          { label: "Planter", value: "planter" },
+          { label: "Outdoor light", value: "outdoorLight" },
+        ]}
+        value={feature.kind}
+        onChange={(value) =>
+          onUpdate({
+            ...feature,
+            kind:
+              value === "bush" ||
+              value === "planter" ||
+              value === "outdoorLight"
+                ? value
+                : "tree",
+          })
+        }
+      />
+      <NumberField
+        label="Size"
+        max={8}
+        min={0.3}
+        step={0.1}
+        unit="m"
+        value={feature.sizeM}
+        onChange={(value) =>
+          onUpdate({ ...feature, sizeM: clamp(value, 0.3, 8) })
+        }
+      />
+      <NumberField
+        label="Rotation"
+        max={359}
+        min={0}
+        step={1}
+        unit="deg"
+        value={Math.round(feature.rotationDeg)}
+        onChange={(value) =>
+          onUpdate({ ...feature, rotationDeg: clamp(value, 0, 359) })
+        }
+      />
+      <p className="self-end pb-2 text-[11px] leading-snug text-muted-foreground">
+        Decorative only. Site objects do not affect deck quantities.
+      </p>
+    </div>
+  )
+}
+
 function NumberField({
   label,
   max,
@@ -411,11 +478,15 @@ function getFeatureDescription(feature: DeckFeature) {
   }
 
   if (feature.type === "railing") {
-    return "Toggle edge coverage from the canvas."
+    return "Fence/railing coverage on selected deck edges."
   }
 
   if (feature.type === "pergola") {
     return "Placed as a rectangular deck object."
+  }
+
+  if (feature.type === "siteObject") {
+    return "Decorative site object for the 2D plan and 3D preview."
   }
 
   return "Attached to a partial deck edge segment."

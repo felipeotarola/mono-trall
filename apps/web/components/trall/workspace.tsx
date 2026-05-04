@@ -716,7 +716,7 @@ function getModeLabel(
   }
 
   if (placementMode === "railing") {
-    return "Placing railing"
+    return "Placing fence"
   }
 
   if (placementMode === "pergola") {
@@ -725,6 +725,15 @@ function getModeLabel(
 
   if (placementMode === "privacyScreen") {
     return "Placing privacy screen"
+  }
+
+  if (
+    placementMode === "siteTree" ||
+    placementMode === "siteBush" ||
+    placementMode === "sitePlanter" ||
+    placementMode === "siteLight"
+  ) {
+    return "Placing landscape"
   }
 
   if (placementMode === "boardDirection") {

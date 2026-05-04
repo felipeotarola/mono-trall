@@ -19,6 +19,8 @@ import {
   getPlan3DModel,
   type Plan3DLine,
   type Plan3DModel,
+  type Plan3DRailing,
+  type Plan3DSiteObject,
   type Point3D,
 } from "@/lib/trall/plan-3d"
 import type { HouseBounds, HouseModel, Point } from "@/lib/trall/types"
@@ -508,6 +510,7 @@ function Plan3DSceneContent({
       <Stairs materials={materials} model={model} />
       <Pergolas materials={materials} model={model} />
       <PrivacyScreens model={model} />
+      <SiteObjects model={model} />
       {model.elevation.settings.visualization.showHeightMarkers ? (
         <HeightMarkers model={model} />
       ) : null}
@@ -1159,69 +1162,166 @@ function Railings({ model }: { model: Plan3DModel }) {
     <>
       {model.railings.map((railing) => {
         const mid = getMidpoint(railing.edge.start, railing.edge.end)
-        const railColor =
-          railing.style === "metal"
-            ? "#5f6468"
-            : railing.style === "glass"
-              ? "#9fc9d5"
-              : "#775439"
-        const postCount = Math.max(2, Math.ceil(railing.edge.lengthM / 1.2) + 1)
-        const tangent = getHorizontalVector(
-          railing.edge.start,
-          railing.edge.end
-        )
 
         return (
-          <group key={railing.id}>
-            <mesh
-              castShadow
-              position={[mid.x, baseY + railing.heightM, mid.z]}
-              rotation={[0, -railing.edge.angleY, 0]}
-            >
-              <boxGeometry args={[railing.edge.lengthM, 0.08, 0.08]} />
-              <meshStandardMaterial
-                color={railColor}
-                roughness={0.66}
-                transparent={railing.style === "glass"}
-                opacity={railing.style === "glass" ? 0.58 : 1}
-              />
-            </mesh>
-            <mesh
-              castShadow
-              position={[mid.x, baseY + railing.heightM * 0.55, mid.z]}
-              rotation={[0, -railing.edge.angleY, 0]}
-            >
-              <boxGeometry args={[railing.edge.lengthM, 0.055, 0.055]} />
-              <meshStandardMaterial
-                color={railColor}
-                roughness={0.7}
-                transparent={railing.style === "glass"}
-                opacity={railing.style === "glass" ? 0.32 : 1}
-              />
-            </mesh>
-            {Array.from({ length: postCount }, (_, index) => {
-              const t = postCount === 1 ? 0 : index / (postCount - 1)
-              const point = {
-                x: railing.edge.start.x + tangent.x * railing.edge.lengthM * t,
-                z: railing.edge.start.z + tangent.z * railing.edge.lengthM * t,
-              }
-
-              return (
-                <mesh
-                  key={`${railing.id}-post-${index}`}
-                  castShadow
-                  position={[point.x, baseY + railing.heightM / 2, point.z]}
-                >
-                  <boxGeometry args={[0.09, railing.heightM, 0.09]} />
-                  <meshStandardMaterial color={railColor} roughness={0.72} />
-                </mesh>
-              )
-            })}
+          <group
+            key={railing.id}
+            position={[mid.x, baseY, mid.z]}
+            rotation={[0, -railing.edge.angleY, 0]}
+          >
+            {railing.style === "glass" ? (
+              <GlassFence railing={railing} />
+            ) : railing.style === "metal" ? (
+              <MetalFence railing={railing} />
+            ) : (
+              <WoodFence railing={railing} />
+            )}
           </group>
         )
       })}
     </>
   )
+}
+
+function GlassFence({ railing }: { railing: Plan3DRailing }) {
+  const postCount = Math.max(2, Math.ceil(railing.edge.lengthM / 1.45) + 1)
+  const paneHeight = Math.max(0.55, railing.heightM - 0.14)
+
+  return (
+    <>
+      <mesh
+        castShadow
+        receiveShadow
+        renderOrder={3}
+        position={[0, paneHeight / 2 + 0.04, 0]}
+      >
+        <boxGeometry args={[railing.edge.lengthM, paneHeight, 0.035]} />
+        <meshPhysicalMaterial
+          color="#b9e6f2"
+          roughness={0.08}
+          metalness={0}
+          transmission={0.42}
+          transparent
+          opacity={0.42}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+        />
+      </mesh>
+      <mesh castShadow position={[0, railing.heightM, 0]}>
+        <boxGeometry args={[railing.edge.lengthM + 0.08, 0.045, 0.07]} />
+        <meshStandardMaterial color="#59666b" roughness={0.38} metalness={0.35} />
+      </mesh>
+      {getLocalFencePostXs(railing.edge.lengthM, postCount).map((x, index) => (
+        <mesh
+          key={`${railing.id}-glass-post-${index}`}
+          castShadow
+          position={[x, railing.heightM / 2, 0]}
+        >
+          <boxGeometry args={[0.07, railing.heightM, 0.07]} />
+          <meshStandardMaterial
+            color="#667176"
+            roughness={0.34}
+            metalness={0.42}
+          />
+        </mesh>
+      ))}
+    </>
+  )
+}
+
+function MetalFence({ railing }: { railing: Plan3DRailing }) {
+  const postCount = Math.max(2, Math.ceil(railing.edge.lengthM / 1.25) + 1)
+  const balusterCount = Math.min(
+    80,
+    Math.max(0, Math.floor(railing.edge.lengthM / 0.32) - 1)
+  )
+  const color = "#565c61"
+
+  return (
+    <>
+      <mesh castShadow position={[0, railing.heightM, 0]}>
+        <boxGeometry args={[railing.edge.lengthM, 0.06, 0.06]} />
+        <meshStandardMaterial color={color} roughness={0.42} metalness={0.35} />
+      </mesh>
+      <mesh castShadow position={[0, railing.heightM * 0.48, 0]}>
+        <boxGeometry args={[railing.edge.lengthM, 0.04, 0.045]} />
+        <meshStandardMaterial color={color} roughness={0.45} metalness={0.28} />
+      </mesh>
+      {getLocalFencePostXs(railing.edge.lengthM, postCount).map((x, index) => (
+        <mesh
+          key={`${railing.id}-metal-post-${index}`}
+          castShadow
+          position={[x, railing.heightM / 2, 0]}
+        >
+          <boxGeometry args={[0.07, railing.heightM, 0.07]} />
+          <meshStandardMaterial color={color} roughness={0.42} metalness={0.35} />
+        </mesh>
+      ))}
+      {getLocalFencePostXs(railing.edge.lengthM, balusterCount + 2)
+        .slice(1, -1)
+        .map((x, index) => (
+          <mesh
+            key={`${railing.id}-baluster-${index}`}
+            castShadow
+            position={[x, railing.heightM * 0.5, 0]}
+          >
+            <boxGeometry args={[0.035, railing.heightM * 0.82, 0.035]} />
+            <meshStandardMaterial color={color} roughness={0.45} metalness={0.32} />
+          </mesh>
+        ))}
+    </>
+  )
+}
+
+function WoodFence({ railing }: { railing: Plan3DRailing }) {
+  const postCount = Math.max(2, Math.ceil(railing.edge.lengthM / 1.2) + 1)
+  const slatCount = Math.min(
+    70,
+    Math.max(0, Math.floor(railing.edge.lengthM / 0.28) - 1)
+  )
+  const color = "#775439"
+
+  return (
+    <>
+      <mesh castShadow position={[0, railing.heightM, 0]}>
+        <boxGeometry args={[railing.edge.lengthM, 0.08, 0.09]} />
+        <meshStandardMaterial color={color} roughness={0.72} />
+      </mesh>
+      <mesh castShadow position={[0, railing.heightM * 0.46, 0]}>
+        <boxGeometry args={[railing.edge.lengthM, 0.065, 0.08]} />
+        <meshStandardMaterial color={color} roughness={0.74} />
+      </mesh>
+      {getLocalFencePostXs(railing.edge.lengthM, postCount).map((x, index) => (
+        <mesh
+          key={`${railing.id}-wood-post-${index}`}
+          castShadow
+          position={[x, railing.heightM / 2, 0]}
+        >
+          <boxGeometry args={[0.1, railing.heightM, 0.1]} />
+          <meshStandardMaterial color={color} roughness={0.76} />
+        </mesh>
+      ))}
+      {getLocalFencePostXs(railing.edge.lengthM, slatCount + 2)
+        .slice(1, -1)
+        .map((x, index) => (
+          <mesh
+            key={`${railing.id}-wood-slat-${index}`}
+            castShadow
+            position={[x, railing.heightM * 0.46, 0.01]}
+          >
+            <boxGeometry args={[0.055, railing.heightM * 0.78, 0.045]} />
+            <meshStandardMaterial color="#8a6040" roughness={0.78} />
+          </mesh>
+        ))}
+    </>
+  )
+}
+
+function getLocalFencePostXs(lengthM: number, count: number) {
+  return Array.from({ length: count }, (_, index) => {
+    const t = count === 1 ? 0.5 : index / (count - 1)
+    return -lengthM / 2 + lengthM * t
+  })
 }
 
 function Stairs({
@@ -1471,6 +1571,148 @@ function PrivacyScreens({ model }: { model: Plan3DModel }) {
           </group>
         )
       })}
+    </>
+  )
+}
+
+function SiteObjects({ model }: { model: Plan3DModel }) {
+  return (
+    <>
+      {model.siteObjects.map((object) => (
+        <group
+          key={object.id}
+          position={[
+            object.center.x,
+            deckOverlayY(object.baseY),
+            object.center.z,
+          ]}
+          rotation={[0, -object.rotationRad, 0]}
+        >
+          {object.kind === "tree" ? (
+            <TreeObject object={object} />
+          ) : object.kind === "bush" ? (
+            <BushObject object={object} />
+          ) : object.kind === "planter" ? (
+            <PlanterObject object={object} />
+          ) : (
+            <OutdoorLightObject object={object} />
+          )}
+        </group>
+      ))}
+    </>
+  )
+}
+
+function TreeObject({ object }: { object: Plan3DSiteObject }) {
+  const height = object.sizeM
+  const crownRadius = Math.max(0.28, object.sizeM * 0.28)
+
+  return (
+    <>
+      <mesh castShadow position={[0, height * 0.22, 0]}>
+        <cylinderGeometry args={[0.08, 0.12, height * 0.44, 8]} />
+        <meshStandardMaterial color="#6f482a" roughness={0.82} />
+      </mesh>
+      <mesh castShadow position={[0, height * 0.62, 0]}>
+        <sphereGeometry args={[crownRadius, 18, 12]} />
+        <meshStandardMaterial color="#2f6b3a" roughness={0.9} />
+      </mesh>
+      <mesh castShadow position={[-crownRadius * 0.42, height * 0.55, 0.04]}>
+        <sphereGeometry args={[crownRadius * 0.78, 16, 10]} />
+        <meshStandardMaterial color="#3f7b43" roughness={0.92} />
+      </mesh>
+      <mesh castShadow position={[crownRadius * 0.45, height * 0.58, -0.06]}>
+        <sphereGeometry args={[crownRadius * 0.74, 16, 10]} />
+        <meshStandardMaterial color="#346f3d" roughness={0.92} />
+      </mesh>
+    </>
+  )
+}
+
+function BushObject({ object }: { object: Plan3DSiteObject }) {
+  const radius = object.sizeM * 0.38
+  const lobes = [
+    { color: "#4f8a3b", position: [0, radius * 0.55, 0], size: radius },
+    {
+      color: "#5f9b45",
+      position: [-radius * 0.55, radius * 0.42, 0.05],
+      size: radius * 0.72,
+    },
+    {
+      color: "#5f9b45",
+      position: [radius * 0.5, radius * 0.45, -0.08],
+      size: radius * 0.78,
+    },
+  ] as const
+
+  return (
+    <>
+      {lobes.map((lobe, index) => (
+        <mesh key={index} castShadow position={lobe.position}>
+          <sphereGeometry args={[lobe.size, 16, 10]} />
+          <meshStandardMaterial color={lobe.color} roughness={0.94} />
+        </mesh>
+      ))}
+    </>
+  )
+}
+
+function PlanterObject({ object }: { object: Plan3DSiteObject }) {
+  const width = object.sizeM
+  const depth = object.sizeM * 0.55
+
+  return (
+    <>
+      <mesh castShadow receiveShadow position={[0, 0.18, 0]}>
+        <boxGeometry args={[width, 0.36, depth]} />
+        <meshStandardMaterial color="#8a6a45" roughness={0.84} />
+      </mesh>
+      <mesh position={[0, 0.39, 0]}>
+        <boxGeometry args={[width * 0.86, 0.05, depth * 0.72]} />
+        <meshStandardMaterial color="#3f2f23" roughness={0.95} />
+      </mesh>
+      {[-0.28, 0.22].map((offset, index) => (
+        <mesh
+          key={offset}
+          castShadow
+          position={[offset * width, 0.62, index === 0 ? -0.03 : 0.04]}
+        >
+          <sphereGeometry args={[object.sizeM * 0.22, 14, 8]} />
+          <meshStandardMaterial color="#4f8c45" roughness={0.92} />
+        </mesh>
+      ))}
+    </>
+  )
+}
+
+function OutdoorLightObject({ object }: { object: Plan3DSiteObject }) {
+  const height = object.sizeM
+
+  return (
+    <>
+      <mesh castShadow position={[0, height * 0.45, 0]}>
+        <cylinderGeometry args={[0.035, 0.045, height * 0.9, 10]} />
+        <meshStandardMaterial
+          color="#34383b"
+          metalness={0.35}
+          roughness={0.45}
+        />
+      </mesh>
+      <mesh castShadow position={[0, height * 0.92, 0]}>
+        <sphereGeometry args={[0.12, 16, 10]} />
+        <meshStandardMaterial
+          color="#fff1b8"
+          emissive="#f6c85f"
+          emissiveIntensity={0.9}
+          roughness={0.34}
+        />
+      </mesh>
+      <pointLight
+        color="#ffe2a3"
+        distance={3.2}
+        intensity={0.55}
+        position={[0, height * 0.95, 0]}
+      />
     </>
   )
 }
@@ -1900,15 +2142,6 @@ function formatHeightCm(valueM: number) {
   const valueCm = Math.round(mToCm(valueM))
 
   return `${valueCm > 0 ? "+" : ""}${valueCm} cm`
-}
-
-function getHorizontalVector(a: Point3D, b: Point3D) {
-  const length = Math.hypot(b.x - a.x, b.z - a.z) || 1
-
-  return {
-    x: (b.x - a.x) / length,
-    z: (b.z - a.z) / length,
-  }
 }
 
 function validatePlan3DPlacement(model: Plan3DModel) {

@@ -18,6 +18,7 @@ import {
   type PergolaFeature,
   type PrivacyScreenFeature,
   type RailingFeature,
+  type SiteObjectFeature,
 } from "./features.ts"
 import type { EdgeConstraint, GeometryEdge } from "./edge-model"
 import type {
@@ -95,6 +96,16 @@ export type Plan3DPrivacyScreen = {
   lengthM: number
 }
 
+export type Plan3DSiteObject = {
+  id: string
+  kind: SiteObjectFeature["kind"]
+  center: Point3D
+  sizeM: number
+  rotationRad: number
+  baseY: number
+  mountedOn: "deck" | "terrain"
+}
+
 export type Plan3DHouse = {
   center: Point3D
   doors: Plan3DHouseDoor[]
@@ -155,6 +166,7 @@ export type Plan3DModel = {
   stairs: Plan3DStairs[]
   pergolas: Plan3DPergola[]
   privacyScreens: Plan3DPrivacyScreen[]
+  siteObjects: Plan3DSiteObject[]
 }
 
 export const STANDARD_DOOR_WIDTH_M = DEFAULT_HOUSE_DOOR_WIDTH_CM / 100
@@ -280,6 +292,14 @@ export function getPlan3DModel({
     }),
     pergolas: get3DPergolas(features, origin),
     privacyScreens: get3DPrivacyScreens(features, deckEdges, origin),
+    siteObjects: get3DSiteObjects({
+      deckFinishedY,
+      deckPoints,
+      features,
+      origin,
+      terrain: normalizedElevation.terrain,
+      terrainBounds,
+    }),
   }
 }
 
@@ -674,6 +694,48 @@ function get3DPrivacyScreens(
         style: screen.style,
         angleY: Math.atan2(end.z - start.z, end.x - start.x),
         lengthM: Math.hypot(end.x - start.x, end.z - start.z),
+      },
+    ]
+  })
+}
+
+function get3DSiteObjects({
+  deckFinishedY,
+  deckPoints,
+  features,
+  origin,
+  terrain,
+  terrainBounds,
+}: {
+  deckFinishedY: number
+  deckPoints: Point[]
+  features: DeckFeature[]
+  origin: { x: number; y: number }
+  terrain: ElevationSettings["terrain"]
+  terrainBounds: TerrainBounds
+}): Plan3DSiteObject[] {
+  return features.flatMap((feature) => {
+    if (feature.type !== "siteObject") {
+      return []
+    }
+
+    const siteObject = feature as SiteObjectFeature
+    const point = { x: siteObject.x, y: siteObject.y }
+    const center = pointToPlan3D(point, origin)
+    const mountedOn = pointInPolygon(point, deckPoints) ? "deck" : "terrain"
+
+    return [
+      {
+        id: siteObject.id,
+        kind: siteObject.kind,
+        center,
+        sizeM: siteObject.sizeM,
+        rotationRad: (siteObject.rotationDeg * Math.PI) / 180,
+        baseY:
+          mountedOn === "deck"
+            ? deckFinishedY
+            : getTerrainHeightAt(center, terrain, terrainBounds),
+        mountedOn,
       },
     ]
   })

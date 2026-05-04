@@ -215,7 +215,7 @@ function getPlannerInstruction(
   }
 
   if (placementMode === "railing") {
-    return "Railing: click deck edges to toggle railing coverage."
+    return "Fence: click deck edges to toggle wood, glass, or metal fence coverage."
   }
 
   if (placementMode === "pergola") {
@@ -224,6 +224,15 @@ function getPlannerInstruction(
 
   if (placementMode === "privacyScreen") {
     return "Privacy screen: click a deck edge to place a screen segment."
+  }
+
+  if (
+    placementMode === "siteTree" ||
+    placementMode === "siteBush" ||
+    placementMode === "sitePlanter" ||
+    placementMode === "siteLight"
+  ) {
+    return "Landscape: click the plan to place it. Drag in Select mode to move it."
   }
 
   if (placementMode === "boardDirection") {
