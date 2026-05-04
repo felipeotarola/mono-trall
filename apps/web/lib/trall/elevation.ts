@@ -1,3 +1,9 @@
+import {
+  getDefaultAppearanceSettings,
+  normalizeAppearanceSettings,
+  type AppearanceSettings,
+} from "./appearance.ts"
+
 export type ElevationSettings = {
   reference: {
     label: "house_threshold"
@@ -25,6 +31,7 @@ export type ElevationSettings = {
     showHeightMarkers: boolean
     showPoolExcavation: boolean
   }
+  appearance: AppearanceSettings
 }
 
 export type TerrainBounds = {
@@ -75,6 +82,7 @@ export function getDefaultElevationSettings(): ElevationSettings {
       showHeightMarkers: true,
       showPoolExcavation: true,
     },
+    appearance: getDefaultAppearanceSettings(),
   }
 }
 
@@ -161,6 +169,7 @@ export function normalizeElevationSettings(input: unknown): ElevationSettings {
           ? candidate.visualization.showPoolExcavation
           : defaults.visualization.showPoolExcavation,
     },
+    appearance: normalizeAppearanceSettings(candidate.appearance),
   }
 }
 

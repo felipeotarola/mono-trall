@@ -17,7 +17,11 @@ import {
   type DeckFeature,
 } from "@/lib/trall/features"
 import { polygonArea } from "@/lib/trall/geometry"
-import { getHouseBounds } from "@/lib/trall/house"
+import {
+  getHouseBounds,
+  getHouseDoors,
+  getHouseWindows,
+} from "@/lib/trall/house"
 import type {
   HouseModel,
   Material,
@@ -244,8 +248,8 @@ export function createDefaultPlannerProjectState(): PlannerProjectState {
   return {
     house: {
       ...initialHouse,
-      doors: initialHouse.doors?.map((door) => ({ ...door })),
-      windows: initialHouse.windows?.map((window) => ({ ...window })),
+      doors: getHouseDoors(initialHouse).map((door) => ({ ...door })),
+      windows: getHouseWindows(initialHouse).map((window) => ({ ...window })),
     },
     deckPoints,
     deckEdgeConstraints: [],
@@ -274,6 +278,11 @@ export function normalizePlannerProjectState(
 ): PlannerProjectState {
   return {
     ...state,
+    house: {
+      ...state.house,
+      doors: getHouseDoors(state.house),
+      windows: getHouseWindows(state.house),
+    },
     elevationSettings: normalizeElevationSettings(state.elevationSettings),
   }
 }

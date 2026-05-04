@@ -28,6 +28,12 @@ import type {
   Point,
   PlanContentBounds,
 } from "./types.ts"
+import {
+  DEFAULT_HOUSE_DOOR_HEIGHT_CM,
+  DEFAULT_HOUSE_DOOR_WIDTH_CM,
+  getHouseDoors,
+  getHouseWindows,
+} from "./house.ts"
 
 export type Point3D = {
   x: number
@@ -146,8 +152,8 @@ export type Plan3DModel = {
   privacyScreens: Plan3DPrivacyScreen[]
 }
 
-export const STANDARD_DOOR_WIDTH_M = 0.9
-export const STANDARD_DOOR_HEIGHT_M = 2.1
+export const STANDARD_DOOR_WIDTH_M = DEFAULT_HOUSE_DOOR_WIDTH_CM / 100
+export const STANDARD_DOOR_HEIGHT_M = DEFAULT_HOUSE_DOOR_HEIGHT_CM / 100
 export const DEFAULT_HOUSE_WALL_HEIGHT_M = 2.7
 
 export function pointToPlan3D(
@@ -191,9 +197,13 @@ export function getPlan3DModel({
     points: deckPoints,
   })
   const convertedEdges = deckEdges.map((edge) => toPlan3DEdge(edge, origin))
-  const convertedDeckPoints = deckPoints.map((point) => pointToPlan3D(point, origin))
-  const boundsWidthM = (contentBounds.right - contentBounds.left) / PIXELS_PER_METER
-  const boundsDepthM = (contentBounds.bottom - contentBounds.top) / PIXELS_PER_METER
+  const convertedDeckPoints = deckPoints.map((point) =>
+    pointToPlan3D(point, origin)
+  )
+  const boundsWidthM =
+    (contentBounds.right - contentBounds.left) / PIXELS_PER_METER
+  const boundsDepthM =
+    (contentBounds.bottom - contentBounds.top) / PIXELS_PER_METER
   const terrainBounds = getTerrainBounds(contentBounds, 3)
   const deckFinishedY = cmToM(normalizedElevation.deck.finishedHeightCm)
   const deckThicknessM = cmToM(normalizedElevation.deck.thicknessCm)
@@ -241,7 +251,8 @@ export function getPlan3DModel({
       depthM: houseBounds.depthPx / PIXELS_PER_METER,
       windows: get3DHouseWindows(house),
     },
-    poolPoints: poolPoints?.map((point) => pointToPlan3D(point, origin)) ?? null,
+    poolPoints:
+      poolPoints?.map((point) => pointToPlan3D(point, origin)) ?? null,
     railings: get3DRailings(features, convertedEdges),
     supportPosts: normalizedElevation.supports.showPosts
       ? get3DSupportPosts({
@@ -281,49 +292,42 @@ function getTerrainBounds(
 ): TerrainBounds {
   return {
     minX: -((bounds.right - bounds.left) / PIXELS_PER_METER) / 2 - paddingM,
-    maxX: ((bounds.right - bounds.left) / PIXELS_PER_METER) / 2 + paddingM,
+    maxX: (bounds.right - bounds.left) / PIXELS_PER_METER / 2 + paddingM,
     minZ: -((bounds.bottom - bounds.top) / PIXELS_PER_METER) / 2 - paddingM,
-    maxZ: ((bounds.bottom - bounds.top) / PIXELS_PER_METER) / 2 + paddingM,
+    maxZ: (bounds.bottom - bounds.top) / PIXELS_PER_METER / 2 + paddingM,
   }
 }
 
 function get3DHouseDoors(house: HouseModel): Plan3DHouseDoor[] {
-  const doors =
-    house.doors && house.doors.length > 0
-      ? house.doors
-      : [{ id: "door-1", offsetM: house.doorOffsetM ?? 0 }]
-  const widthM = STANDARD_DOOR_WIDTH_M
-  const maxOffsetM = Math.max(0, house.widthM / 2 - widthM / 2)
+  return getHouseDoors(house).map((door: HouseDoor) => {
+    const widthM = (door.widthCm ?? DEFAULT_HOUSE_DOOR_WIDTH_CM) / 100
+    const heightM = (door.heightCm ?? DEFAULT_HOUSE_DOOR_HEIGHT_CM) / 100
+    const maxOffsetM = Math.max(0, house.widthM / 2 - widthM / 2)
 
-  return doors.map((door: HouseDoor) => ({
-    id: door.id,
-    centerX: clamp(door.offsetM, -maxOffsetM, maxOffsetM),
-    widthM,
-    heightM: STANDARD_DOOR_HEIGHT_M,
-  }))
+    return {
+      id: door.id,
+      centerX: clamp(door.offsetM, -maxOffsetM, maxOffsetM),
+      widthM,
+      heightM,
+    }
+  })
 }
 
 function get3DHouseWindows(house: HouseModel): Plan3DHouseWindow[] {
-  const windows =
-    house.windows ??
-    [
-      { id: "window-1", offsetM: -house.widthM * 0.3, row: "upper" as const },
-      { id: "window-2", offsetM: house.widthM * 0.3, row: "upper" as const },
-      { id: "window-3", offsetM: -house.widthM * 0.3, row: "lower" as const },
-      { id: "window-4", offsetM: house.widthM * 0.3, row: "lower" as const },
-    ]
-  const widthM = Math.min(1.75, house.widthM * 0.16)
-  const heightM = 0.72
-  const maxOffsetM = Math.max(0, house.widthM / 2 - widthM / 2)
+  return getHouseWindows(house).map((window: HouseWindow) => {
+    const widthM = (window.widthCm ?? 120) / 100
+    const heightM = (window.heightCm ?? 120) / 100
+    const maxOffsetM = Math.max(0, house.widthM / 2 - widthM / 2)
 
-  return windows.map((window: HouseWindow) => ({
-    id: window.id,
-    centerX: clamp(window.offsetM, -maxOffsetM, maxOffsetM),
-    centerY: window.row === "upper" ? 1.82 : 1.05,
-    widthM,
-    heightM,
-    row: window.row,
-  }))
+    return {
+      id: window.id,
+      centerX: clamp(window.offsetM, -maxOffsetM, maxOffsetM),
+      centerY: window.row === "upper" ? 1.82 : 1.05,
+      widthM,
+      heightM,
+      row: window.row,
+    }
+  })
 }
 
 function get3DSupportPosts({
@@ -467,11 +471,14 @@ function getLineIntersection(
   }
 }
 
-function dedupeIntersections(intersections: Array<{ point: Point; t: number }>) {
+function dedupeIntersections(
+  intersections: Array<{ point: Point; t: number }>
+) {
   return intersections.filter((intersection, index) =>
     intersections.every(
       (candidate, candidateIndex) =>
-        candidateIndex >= index || Math.abs(candidate.t - intersection.t) > 0.0001
+        candidateIndex >= index ||
+        Math.abs(candidate.t - intersection.t) > 0.0001
     )
   )
 }

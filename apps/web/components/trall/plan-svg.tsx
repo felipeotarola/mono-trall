@@ -356,8 +356,10 @@ export function PlanSvg({
     event.preventDefault()
     const point = clientPointToSvgPoint(event, svgRef.current)
     const deltaM = (point.x - doorDrag.pointerStartX) / PIXELS_PER_METER
-    const doorWidthM =
-      Math.min(80, houseBounds.widthPx * 0.22) / PIXELS_PER_METER
+    const draggedDoor = getHouseDoors(house).find(
+      (door) => door.id === doorDrag.doorId
+    )
+    const doorWidthM = (draggedDoor?.widthCm ?? 90) / 100
     const maxOffsetM = Math.max(0, house.widthM / 2 - doorWidthM / 2)
     const nextOffsetM = clamp(
       doorDrag.startOffsetM + deltaM,
@@ -424,8 +426,10 @@ export function PlanSvg({
     event.preventDefault()
     const point = clientPointToSvgPoint(event, svgRef.current)
     const deltaM = (point.x - windowDrag.pointerStartX) / PIXELS_PER_METER
-    const windowWidthM =
-      Math.min(70, houseBounds.widthPx * 0.16) / PIXELS_PER_METER
+    const draggedWindow = getHouseWindows(house).find(
+      (window) => window.id === windowDrag.windowId
+    )
+    const windowWidthM = (draggedWindow?.widthCm ?? 120) / 100
     const maxOffsetM = Math.max(0, house.widthM / 2 - windowWidthM / 2)
     const nextOffsetM = clamp(
       windowDrag.startOffsetM + deltaM,
@@ -1171,7 +1175,6 @@ function DeckLayer({
       {activePoint && deckPoints.length > 3 ? (
         <DeletePointHint point={activePoint} />
       ) : null}
-
     </>
   )
 }

@@ -38,8 +38,10 @@ describe("plan 3D conversion", () => {
       features: [],
       house: initialHouse,
       houseBounds: {
-        left: initialHouse.centerX - (initialHouse.widthM * PIXELS_PER_METER) / 2,
-        right: initialHouse.centerX + (initialHouse.widthM * PIXELS_PER_METER) / 2,
+        left:
+          initialHouse.centerX - (initialHouse.widthM * PIXELS_PER_METER) / 2,
+        right:
+          initialHouse.centerX + (initialHouse.widthM * PIXELS_PER_METER) / 2,
         top: initialHouse.topY,
         bottom: initialHouse.topY + initialHouse.depthM * PIXELS_PER_METER,
         centerX: initialHouse.centerX,
@@ -75,5 +77,88 @@ describe("plan 3D conversion", () => {
       assert.ok(line.end.z >= minZ)
       assert.ok(line.end.z <= maxZ)
     }
+  })
+
+  it("uses configured house window dimensions in the 3D model", () => {
+    const model = getPlan3DModel({
+      boardDirection: defaultBoardDirection,
+      deckEdgeConstraints: [],
+      deckPoints: [
+        { x: 0, y: 0 },
+        { x: PIXELS_PER_METER * 4, y: 0 },
+        { x: PIXELS_PER_METER * 4, y: PIXELS_PER_METER * 3 },
+        { x: 0, y: PIXELS_PER_METER * 3 },
+      ],
+      elevationSettings: getDefaultElevationSettings(),
+      features: [],
+      house: {
+        ...initialHouse,
+        windows: [
+          {
+            id: "custom-window",
+            offsetM: 0,
+            row: "lower",
+            widthCm: 85,
+            heightCm: 145,
+          },
+        ],
+      },
+      houseBounds: {
+        left:
+          initialHouse.centerX - (initialHouse.widthM * PIXELS_PER_METER) / 2,
+        right:
+          initialHouse.centerX + (initialHouse.widthM * PIXELS_PER_METER) / 2,
+        top: initialHouse.topY,
+        bottom: initialHouse.topY + initialHouse.depthM * PIXELS_PER_METER,
+        centerX: initialHouse.centerX,
+        widthPx: initialHouse.widthM * PIXELS_PER_METER,
+        depthPx: initialHouse.depthM * PIXELS_PER_METER,
+      },
+      poolPoints: null,
+    })
+
+    assert.equal(model.house.windows[0]?.widthM, 0.85)
+    assert.equal(model.house.windows[0]?.heightM, 1.45)
+  })
+
+  it("uses configured house door dimensions in the 3D model", () => {
+    const model = getPlan3DModel({
+      boardDirection: defaultBoardDirection,
+      deckEdgeConstraints: [],
+      deckPoints: [
+        { x: 0, y: 0 },
+        { x: PIXELS_PER_METER * 4, y: 0 },
+        { x: PIXELS_PER_METER * 4, y: PIXELS_PER_METER * 3 },
+        { x: 0, y: PIXELS_PER_METER * 3 },
+      ],
+      elevationSettings: getDefaultElevationSettings(),
+      features: [],
+      house: {
+        ...initialHouse,
+        doors: [
+          {
+            id: "custom-door",
+            offsetM: 0,
+            widthCm: 110,
+            heightCm: 220,
+          },
+        ],
+      },
+      houseBounds: {
+        left:
+          initialHouse.centerX - (initialHouse.widthM * PIXELS_PER_METER) / 2,
+        right:
+          initialHouse.centerX + (initialHouse.widthM * PIXELS_PER_METER) / 2,
+        top: initialHouse.topY,
+        bottom: initialHouse.topY + initialHouse.depthM * PIXELS_PER_METER,
+        centerX: initialHouse.centerX,
+        widthPx: initialHouse.widthM * PIXELS_PER_METER,
+        depthPx: initialHouse.depthM * PIXELS_PER_METER,
+      },
+      poolPoints: null,
+    })
+
+    assert.equal(model.house.doors[0]?.widthM, 1.1)
+    assert.equal(model.house.doors[0]?.heightM, 2.2)
   })
 })

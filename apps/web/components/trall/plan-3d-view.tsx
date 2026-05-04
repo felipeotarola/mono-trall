@@ -2,9 +2,9 @@
 
 /* eslint-disable react/no-unknown-property */
 
-import { useEffect, useMemo, useRef, type ElementRef } from "react"
+import { Suspense, useEffect, useMemo, useRef, type ElementRef } from "react"
 import { Canvas, useThree } from "@react-three/fiber"
-import { Html, OrbitControls, PerspectiveCamera } from "@react-three/drei"
+import { Html, OrbitControls, PerspectiveCamera, useTexture } from "@react-three/drei"
 import * as THREE from "three"
 import { RotateCcwIcon } from "lucide-react"
 
@@ -26,8 +26,240 @@ import {
   mToCm,
   type ElevationSettings,
 } from "@/lib/trall/elevation"
+import type { AppearanceSettings } from "@/lib/trall/appearance"
 
 const BOARD_LINE_LIMIT = 72
+
+type SceneMaterials = {
+  boardLineColor: string
+  deckColor: string
+  deckRoughness: number
+  excavationColor: string
+  excavationRimColor: string
+  houseWallColor: string
+  poolBorderColor: string
+  poolWallColor: string
+  poolWaterColor: string
+  roofColor: string
+  stairColor: string
+  supportColor: string
+  terrainColor: string
+  terrainRoughness: number
+}
+
+type SceneTextureMaps = {
+  deck?: THREE.Texture
+  houseWall?: THREE.Texture
+  poolWall?: THREE.Texture
+  roof?: THREE.Texture
+  terrain?: THREE.Texture
+}
+
+type TextureKey =
+  | "deck-treated-wood"
+  | "deck-cedar"
+  | "deck-grey-composite"
+  | "house-light-plaster"
+  | "house-timber-siding"
+  | "house-brick"
+  | "roof-dark-metal"
+  | "roof-red-tile"
+  | "roof-felt"
+  | "pool-white-liner"
+  | "pool-blue-tile"
+  | "pool-concrete"
+  | "terrain-soil"
+  | "terrain-grass"
+  | "terrain-gravel"
+
+const TEXTURE_URL_BY_KEY = {
+  "deck-treated-wood": "/trall/textures/deck-treated-wood.jpg",
+  "deck-cedar": "/trall/textures/deck-cedar.jpg",
+  "deck-grey-composite": "/trall/textures/deck-grey-composite.jpg",
+  "house-light-plaster": "/trall/textures/house-light-plaster.jpg",
+  "house-timber-siding": "/trall/textures/house-timber-siding.jpg",
+  "house-brick": "/trall/textures/house-brick.jpg",
+  "roof-dark-metal": "/trall/textures/roof-dark-metal-alt.jpg",
+  "roof-red-tile": "/trall/textures/roof-red-tile.jpg",
+  "roof-felt": "/trall/textures/roof-felt.jpg",
+  "pool-white-liner": "/trall/textures/pool-white-liner.jpg",
+  "pool-blue-tile": "/trall/textures/pool-blue-tile.jpg",
+  "pool-concrete": "/trall/textures/pool-concrete.jpg",
+  "terrain-soil": "/trall/textures/terrain-soil.jpg",
+  "terrain-grass": "/trall/textures/terrain-grass.jpg",
+  "terrain-gravel": "/trall/textures/terrain-gravel.jpg",
+} as const satisfies Record<TextureKey, string>
+
+type SceneTextureSelection = {
+  deck: TextureKey
+  houseWall: TextureKey
+  poolWall: TextureKey
+  roof: TextureKey
+  terrain: TextureKey
+}
+
+function getSceneMaterials(appearance: AppearanceSettings): SceneMaterials {
+  const realistic = appearance.renderMode === "realistic"
+  const deck = {
+    treated_wood: {
+      color: realistic ? "#9b6f43" : "#a87948",
+      line: "#5f3d24",
+      support: "#60482f",
+      stair: "#aa7d4e",
+    },
+    cedar: {
+      color: realistic ? "#b66f3b" : "#b77a45",
+      line: "#714222",
+      support: "#6f4327",
+      stair: "#bd8050",
+    },
+    grey_composite: {
+      color: realistic ? "#8b8d87" : "#9a9b94",
+      line: "#535650",
+      support: "#5f625c",
+      stair: "#8d8f88",
+    },
+  }[appearance.deckMaterial]
+  const houseWall = {
+    light_plaster: realistic ? "#d8d3ca" : "#ddd8d0",
+    timber_siding: realistic ? "#b78a5d" : "#c09668",
+    brick: realistic ? "#9f5d45" : "#ad6750",
+  }[appearance.houseWallMaterial]
+  const roof = {
+    dark_metal: realistic ? "#5e5b55" : "#77736b",
+    red_tile: realistic ? "#8f4534" : "#a7523e",
+    roofing_felt: realistic ? "#4f504b" : "#62635d",
+  }[appearance.roofMaterial]
+  const poolWall = {
+    white_liner: realistic ? "#d8e3e7" : "#dce8eb",
+    blue_tile: realistic ? "#5fa6c2" : "#6db3cc",
+    concrete: realistic ? "#aaa9a0" : "#b8b6ad",
+  }[appearance.poolWallMaterial]
+  const terrain = {
+    soil: {
+      color: realistic ? "#8d795d" : "#b9b09f",
+      excavation: "#7d674c",
+      rim: "#594733",
+    },
+    grass: {
+      color: realistic ? "#74885d" : "#91a174",
+      excavation: "#76664d",
+      rim: "#52613d",
+    },
+    gravel: {
+      color: realistic ? "#9a978e" : "#b4b1a8",
+      excavation: "#817d73",
+      rim: "#626058",
+    },
+  }[appearance.terrainMaterial]
+
+  return {
+    boardLineColor: deck.line,
+    deckColor: deck.color,
+    deckRoughness: realistic ? 0.86 : 0.78,
+    excavationColor: terrain.excavation,
+    excavationRimColor: terrain.rim,
+    houseWallColor: houseWall,
+    poolBorderColor: appearance.poolWallMaterial === "blue_tile" ? "#d9f4ff" : "#e7f8ff",
+    poolWallColor: poolWall,
+    poolWaterColor: realistic ? "#1f87c9" : "#2b8fd6",
+    roofColor: roof,
+    stairColor: deck.stair,
+    supportColor: deck.support,
+    terrainColor: terrain.color,
+    terrainRoughness: realistic ? 0.98 : 0.96,
+  }
+}
+
+function useSelectedTextureMaps(selection: SceneTextureSelection) {
+  const keys = useMemo(
+    () => [
+      selection.deck,
+      selection.houseWall,
+      selection.roof,
+      selection.poolWall,
+      selection.terrain,
+    ],
+    [selection]
+  )
+  const textures = useTexture(keys.map((key) => TEXTURE_URL_BY_KEY[key]))
+
+  useEffect(() => {
+    textures.forEach((texture, index) => {
+      const key = keys[index]
+      const repeat =
+        key?.startsWith("deck-")
+          ? [6, 6]
+          : key?.startsWith("terrain-")
+            ? [5, 5]
+            : key?.startsWith("roof-")
+              ? [3, 2]
+              : key?.startsWith("house-")
+                ? [3, 1.4]
+                : [2, 2]
+
+      texture.colorSpace = THREE.SRGBColorSpace
+      texture.wrapS = THREE.RepeatWrapping
+      texture.wrapT = THREE.RepeatWrapping
+      texture.repeat.set(repeat[0] ?? 1, repeat[1] ?? 1)
+      texture.anisotropy = 4
+      texture.needsUpdate = true
+    })
+  }, [keys, textures])
+
+  return useMemo(
+    () => ({
+      deck: textures[0],
+      houseWall: textures[1],
+      roof: textures[2],
+      poolWall: textures[3],
+      terrain: textures[4],
+    }),
+    [textures]
+  )
+}
+
+function getSceneTextureSelection(
+  appearance: AppearanceSettings
+): SceneTextureSelection {
+  return {
+    deck: ({
+      treated_wood: "deck-treated-wood",
+      cedar: "deck-cedar",
+      grey_composite: "deck-grey-composite",
+    } satisfies Record<AppearanceSettings["deckMaterial"], TextureKey>)[
+      appearance.deckMaterial
+    ],
+    houseWall: ({
+      light_plaster: "house-light-plaster",
+      timber_siding: "house-timber-siding",
+      brick: "house-brick",
+    } satisfies Record<AppearanceSettings["houseWallMaterial"], TextureKey>)[
+      appearance.houseWallMaterial
+    ],
+    poolWall: ({
+      white_liner: "pool-white-liner",
+      blue_tile: "pool-blue-tile",
+      concrete: "pool-concrete",
+    } satisfies Record<AppearanceSettings["poolWallMaterial"], TextureKey>)[
+      appearance.poolWallMaterial
+    ],
+    roof: ({
+      dark_metal: "roof-dark-metal",
+      red_tile: "roof-red-tile",
+      roofing_felt: "roof-felt",
+    } satisfies Record<AppearanceSettings["roofMaterial"], TextureKey>)[
+      appearance.roofMaterial
+    ],
+    terrain: ({
+      soil: "terrain-soil",
+      grass: "terrain-grass",
+      gravel: "terrain-gravel",
+    } satisfies Record<AppearanceSettings["terrainMaterial"], TextureKey>)[
+      appearance.terrainMaterial
+    ],
+  }
+}
 
 export function Plan3DView({
   boardDirection,
@@ -73,6 +305,10 @@ export function Plan3DView({
     ]
   )
   const cameraDistance = Math.max(7, model.bounds.diagonalM * 0.95)
+  const materials = useMemo(
+    () => getSceneMaterials(model.elevation.settings.appearance),
+    [model.elevation.settings.appearance]
+  )
 
   return (
     <div
@@ -107,27 +343,9 @@ export function Plan3DView({
           shadow-mapSize-height={1024}
           shadow-mapSize-width={1024}
         />
-        <group>
-          <TerrainMesh model={model} />
-          <HouseMass model={model} />
-          <DeckSlab model={model} />
-          <PoolBody model={model} />
-          {model.elevation.settings.visualization.showPoolExcavation ? (
-            <PoolExcavation model={model} />
-          ) : null}
-          <BoardLines
-            deckFinishedY={model.elevation.deckFinishedY}
-            lines={model.boardLines}
-          />
-          <Supports model={model} />
-          <Railings model={model} />
-          <Stairs model={model} />
-          <Pergolas model={model} />
-          <PrivacyScreens model={model} />
-          {model.elevation.settings.visualization.showHeightMarkers ? (
-            <HeightMarkers model={model} />
-          ) : null}
-        </group>
+        <Suspense fallback={null}>
+          <Plan3DSceneObjects materials={materials} model={model} />
+        </Suspense>
         <OrbitControls
           ref={controlsRef}
           enableDamping
@@ -182,17 +400,131 @@ function SceneCameraReset({
   return null
 }
 
-function TerrainMesh({ model }: { model: Plan3DModel }) {
+function Plan3DSceneObjects({
+  materials,
+  model,
+}: {
+  materials: SceneMaterials
+  model: Plan3DModel
+}) {
+  if (model.elevation.settings.appearance.renderMode === "realistic") {
+    return <TexturedPlan3DSceneObjects materials={materials} model={model} />
+  }
+
+  return (
+    <Plan3DSceneContent
+      materials={materials}
+      model={model}
+      textureMaps={{}}
+    />
+  )
+}
+
+function TexturedPlan3DSceneObjects({
+  materials,
+  model,
+}: {
+  materials: SceneMaterials
+  model: Plan3DModel
+}) {
+  const textureSelection = useMemo(
+    () => getSceneTextureSelection(model.elevation.settings.appearance),
+    [model.elevation.settings.appearance]
+  )
+  const textureMaps = useSelectedTextureMaps(textureSelection)
+
+  return (
+    <Plan3DSceneContent
+      materials={materials}
+      model={model}
+      textureMaps={textureMaps}
+    />
+  )
+}
+
+function Plan3DSceneContent({
+  materials,
+  model,
+  textureMaps,
+}: {
+  materials: SceneMaterials
+  model: Plan3DModel
+  textureMaps: SceneTextureMaps
+}) {
+  return (
+    <group>
+      <TerrainMesh
+        materials={materials}
+        model={model}
+        textureMaps={textureMaps}
+      />
+      <HouseMass
+        materials={materials}
+        model={model}
+        textureMaps={textureMaps}
+      />
+      <DeckSlab
+        materials={materials}
+        model={model}
+        textureMaps={textureMaps}
+      />
+      <PoolBody
+        materials={materials}
+        model={model}
+        textureMaps={textureMaps}
+      />
+      {model.elevation.settings.visualization.showPoolExcavation ? (
+        <PoolExcavation materials={materials} model={model} />
+      ) : null}
+      <BoardLines
+        color={materials.boardLineColor}
+        deckFinishedY={model.elevation.deckFinishedY}
+        lines={model.boardLines}
+      />
+      <Supports materials={materials} model={model} />
+      <Railings model={model} />
+      <Stairs materials={materials} model={model} />
+      <Pergolas materials={materials} model={model} />
+      <PrivacyScreens model={model} />
+      {model.elevation.settings.visualization.showHeightMarkers ? (
+        <HeightMarkers model={model} />
+      ) : null}
+    </group>
+  )
+}
+
+function TerrainMesh({
+  materials,
+  model,
+  textureMaps,
+}: {
+  materials: SceneMaterials
+  model: Plan3DModel
+  textureMaps: SceneTextureMaps
+}) {
   const geometry = useMemo(() => createTerrainGeometry(model), [model])
 
   return (
     <mesh receiveShadow geometry={geometry}>
-      <meshStandardMaterial color="#b9b09f" roughness={0.96} />
+      <meshStandardMaterial
+        color={textureMaps.terrain ? "#ffffff" : materials.terrainColor}
+        map={textureMaps.terrain}
+        roughness={materials.terrainRoughness}
+        side={THREE.DoubleSide}
+      />
     </mesh>
   )
 }
 
-function HouseMass({ model }: { model: Plan3DModel }) {
+function HouseMass({
+  materials,
+  model,
+  textureMaps,
+}: {
+  materials: SceneMaterials
+  model: Plan3DModel
+  textureMaps: SceneTextureMaps
+}) {
   const frontZ = model.house.depthM / 2 + 0.018
 
   return (
@@ -201,13 +533,20 @@ function HouseMass({ model }: { model: Plan3DModel }) {
         <boxGeometry
           args={[model.house.widthM, model.house.heightM, model.house.depthM]}
         />
-        <meshStandardMaterial color="#d8d3ca" roughness={0.82} />
+        <meshStandardMaterial
+          color={textureMaps.houseWall ? "#ffffff" : materials.houseWallColor}
+          map={textureMaps.houseWall}
+          roughness={0.82}
+        />
       </mesh>
       <mesh position={[0, model.house.heightM + 0.06, 0]}>
         <boxGeometry
           args={[model.house.widthM + 0.2, 0.12, model.house.depthM + 0.2]}
         />
-        <meshStandardMaterial color="#77736b" roughness={0.75} />
+        <meshStandardMaterial
+          color={materials.roofColor}
+          roughness={0.75}
+        />
       </mesh>
       {model.house.doors.map((door) => (
         <HouseDoor3D key={door.id} door={door} frontZ={frontZ} />
@@ -303,7 +642,15 @@ function HouseWindow3D({
   )
 }
 
-function DeckSlab({ model }: { model: Plan3DModel }) {
+function DeckSlab({
+  materials,
+  model,
+  textureMaps,
+}: {
+  materials: SceneMaterials
+  model: Plan3DModel
+  textureMaps: SceneTextureMaps
+}) {
   const geometry = useMemo(
     () =>
       createPolygonSlabGeometry(
@@ -322,15 +669,24 @@ function DeckSlab({ model }: { model: Plan3DModel }) {
       position={[0, model.elevation.deckFinishedY, 0]}
     >
       <meshStandardMaterial
-        color="#a87948"
-        roughness={0.78}
+        color={textureMaps.deck ? "#ffffff" : materials.deckColor}
+        map={textureMaps.deck}
+        roughness={materials.deckRoughness}
         side={THREE.DoubleSide}
       />
     </mesh>
   )
 }
 
-function PoolBody({ model }: { model: Plan3DModel }) {
+function PoolBody({
+  materials,
+  model,
+  textureMaps,
+}: {
+  materials: SceneMaterials
+  model: Plan3DModel
+  textureMaps: SceneTextureMaps
+}) {
   const points = model.poolPoints
   const geometry = useMemo(
     () =>
@@ -359,14 +715,15 @@ function PoolBody({ model }: { model: Plan3DModel }) {
     <group position={[0, model.elevation.poolTopY, 0]}>
       <mesh castShadow receiveShadow geometry={geometry}>
         <meshStandardMaterial
-          color="#d8e3e7"
+          color={textureMaps.poolWall ? "#ffffff" : materials.poolWallColor}
+          map={textureMaps.poolWall}
           roughness={0.72}
           side={THREE.DoubleSide}
         />
       </mesh>
       <mesh geometry={waterGeometry} position={[0, -0.045, 0]}>
         <meshStandardMaterial
-          color="#2b8fd6"
+          color={materials.poolWaterColor}
           metalness={0.05}
           roughness={0.24}
           side={THREE.DoubleSide}
@@ -375,13 +732,19 @@ function PoolBody({ model }: { model: Plan3DModel }) {
         />
       </mesh>
       <lineSegments geometry={borderGeometry} position={[0, -model.elevation.poolTopY, 0]}>
-        <lineBasicMaterial color="#e7f8ff" linewidth={1} />
+        <lineBasicMaterial color={materials.poolBorderColor} linewidth={1} />
       </lineSegments>
     </group>
   )
 }
 
-function PoolExcavation({ model }: { model: Plan3DModel }) {
+function PoolExcavation({
+  materials,
+  model,
+}: {
+  materials: SceneMaterials
+  model: Plan3DModel
+}) {
   const geometry = useMemo(() => createPoolExcavationGeometry(model), [model])
   const rimGeometry = useMemo(
     () => createPoolExcavationRimGeometry(model),
@@ -396,7 +759,7 @@ function PoolExcavation({ model }: { model: Plan3DModel }) {
     <>
       <mesh receiveShadow geometry={geometry}>
         <meshStandardMaterial
-          color="#7d674c"
+          color={materials.excavationColor}
           polygonOffset
           polygonOffsetFactor={-1}
           roughness={0.98}
@@ -404,13 +767,23 @@ function PoolExcavation({ model }: { model: Plan3DModel }) {
         />
       </mesh>
       <lineSegments geometry={rimGeometry}>
-        <lineBasicMaterial color="#594733" transparent opacity={0.86} />
+        <lineBasicMaterial
+          color={materials.excavationRimColor}
+          transparent
+          opacity={0.86}
+        />
       </lineSegments>
     </>
   )
 }
 
-function Supports({ model }: { model: Plan3DModel }) {
+function Supports({
+  materials,
+  model,
+}: {
+  materials: SceneMaterials
+  model: Plan3DModel
+}) {
   return (
     <>
       {model.supportPosts.map((post) => (
@@ -425,7 +798,7 @@ function Supports({ model }: { model: Plan3DModel }) {
           ]}
         >
           <boxGeometry args={[0.11, post.heightM, 0.11]} />
-          <meshStandardMaterial color="#6f5437" roughness={0.84} />
+          <meshStandardMaterial color={materials.supportColor} roughness={0.84} />
         </mesh>
       ))}
     </>
@@ -524,9 +897,11 @@ function HeightMarker({
 }
 
 function BoardLines({
+  color,
   deckFinishedY,
   lines,
 }: {
+  color: string
   deckFinishedY: number
   lines: Plan3DLine[]
 }) {
@@ -538,7 +913,7 @@ function BoardLines({
 
   return (
     <lineSegments geometry={geometry}>
-      <lineBasicMaterial color="#6f4b2f" transparent opacity={0.32} />
+      <lineBasicMaterial color={color} transparent opacity={0.36} />
     </lineSegments>
   )
 }
@@ -597,7 +972,13 @@ function Railings({ model }: { model: Plan3DModel }) {
   )
 }
 
-function Stairs({ model }: { model: Plan3DModel }) {
+function Stairs({
+  materials,
+  model,
+}: {
+  materials: SceneMaterials
+  model: Plan3DModel
+}) {
   const deckBottomY =
     model.elevation.deckFinishedY - model.elevation.deckThicknessM
 
@@ -627,7 +1008,7 @@ function Stairs({ model }: { model: Plan3DModel }) {
                   rotation={[0, -stairs.angleY, 0]}
                 >
                   <boxGeometry args={[stairs.widthM, height, depth]} />
-                  <meshStandardMaterial color="#b58a5d" roughness={0.82} />
+                  <meshStandardMaterial color={materials.stairColor} roughness={0.82} />
                 </mesh>
               )
             })}
@@ -638,7 +1019,13 @@ function Stairs({ model }: { model: Plan3DModel }) {
   )
 }
 
-function Pergolas({ model }: { model: Plan3DModel }) {
+function Pergolas({
+  materials,
+  model,
+}: {
+  materials: SceneMaterials
+  model: Plan3DModel
+}) {
   const deckY = model.elevation.deckFinishedY
 
   return (
@@ -662,21 +1049,21 @@ function Pergolas({ model }: { model: Plan3DModel }) {
             {postPositions.map(([postX, postZ], index) => (
               <mesh key={`${pergola.id}-post-${index}`} castShadow position={[postX ?? 0, 1.15, postZ ?? 0]}>
                 <boxGeometry args={[0.12, 2.3, 0.12]} />
-                <meshStandardMaterial color="#7c5a39" roughness={0.78} />
+                <meshStandardMaterial color={materials.supportColor} roughness={0.78} />
               </mesh>
             ))}
             <mesh castShadow position={[0, 2.35, -z]}>
               <boxGeometry args={[pergola.widthM + 0.18, 0.12, 0.16]} />
-              <meshStandardMaterial color="#6f4d31" roughness={0.74} />
+              <meshStandardMaterial color={materials.supportColor} roughness={0.74} />
             </mesh>
             <mesh castShadow position={[0, 2.35, z]}>
               <boxGeometry args={[pergola.widthM + 0.18, 0.12, 0.16]} />
-              <meshStandardMaterial color="#6f4d31" roughness={0.74} />
+              <meshStandardMaterial color={materials.supportColor} roughness={0.74} />
             </mesh>
             {[-0.36, 0, 0.36].map((offset) => (
               <mesh key={`${pergola.id}-beam-${offset}`} castShadow position={[offset * pergola.widthM, 2.52, 0]}>
                 <boxGeometry args={[0.1, 0.1, pergola.depthM + 0.36]} />
-                <meshStandardMaterial color="#8b663f" roughness={0.74} />
+                <meshStandardMaterial color={materials.deckColor} roughness={0.74} />
               </mesh>
             ))}
           </group>
@@ -785,6 +1172,7 @@ function createPoolExcavationGeometry(model: Plan3DModel) {
 
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3))
+  setPlanarUvAttribute(geometry)
   geometry.computeVertexNormals()
 
   return geometry
@@ -866,6 +1254,7 @@ function createTerrainGeometry(model: Plan3DModel) {
 
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3))
+  setPlanarUvAttribute(geometry)
   geometry.computeVertexNormals()
 
   return geometry
@@ -907,6 +1296,7 @@ function createPolygonSlabGeometry(
 
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3))
+  setPlanarUvAttribute(geometry)
   geometry.computeVertexNormals()
 
   return geometry
@@ -1003,6 +1393,36 @@ function createLineSegmentsGeometry(lines: Plan3DLine[], y: number) {
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3))
 
   return geometry
+}
+
+function setPlanarUvAttribute(geometry: THREE.BufferGeometry) {
+  const position = geometry.getAttribute("position")
+  const uvs: number[] = []
+  let minX = Number.POSITIVE_INFINITY
+  let maxX = Number.NEGATIVE_INFINITY
+  let minZ = Number.POSITIVE_INFINITY
+  let maxZ = Number.NEGATIVE_INFINITY
+
+  for (let index = 0; index < position.count; index += 1) {
+    const x = position.getX(index)
+    const z = position.getZ(index)
+    minX = Math.min(minX, x)
+    maxX = Math.max(maxX, x)
+    minZ = Math.min(minZ, z)
+    maxZ = Math.max(maxZ, z)
+  }
+
+  const width = maxX - minX || 1
+  const depth = maxZ - minZ || 1
+
+  for (let index = 0; index < position.count; index += 1) {
+    uvs.push(
+      (position.getX(index) - minX) / width,
+      (position.getZ(index) - minZ) / depth
+    )
+  }
+
+  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2))
 }
 
 function createLineLoopGeometry(points: Point3D[], y: number) {

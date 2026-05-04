@@ -68,12 +68,16 @@ export type HouseModel = {
 export type HouseDoor = {
   id: string
   offsetM: number
+  widthCm?: number
+  heightCm?: number
 }
 
 export type HouseWindow = {
   id: string
   offsetM: number
   row: "upper" | "lower"
+  widthCm?: number
+  heightCm?: number
 }
 
 export type HouseBounds = {

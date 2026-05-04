@@ -28,7 +28,13 @@ import {
   normalizeElevationSettings,
   type ElevationSettings,
 } from "@/lib/trall/elevation"
-import type { HouseModel, Material, Metric } from "@/lib/trall/types"
+import type {
+  HouseDoor,
+  HouseModel,
+  HouseWindow,
+  Material,
+  Metric,
+} from "@/lib/trall/types"
 import { clamp } from "@/lib/trall/geometry"
 import type {
   BoardDirectionSettings,
@@ -36,12 +42,33 @@ import type {
   FeaturePlacementType,
 } from "@/lib/trall/features"
 import { formatCurrency } from "@/lib/trall/format"
-import { getHouseDoors, getHouseWindows } from "@/lib/trall/house"
+import {
+  MAX_HOUSE_DOOR_HEIGHT_CM,
+  MAX_HOUSE_DOOR_WIDTH_CM,
+  MAX_HOUSE_WINDOW_HEIGHT_CM,
+  MAX_HOUSE_WINDOW_WIDTH_CM,
+  MIN_HOUSE_DOOR_HEIGHT_CM,
+  MIN_HOUSE_DOOR_WIDTH_CM,
+  MIN_HOUSE_WINDOW_HEIGHT_CM,
+  MIN_HOUSE_WINDOW_WIDTH_CM,
+  createDefaultHouseDoor,
+  createDefaultHouseWindow,
+  getHouseDoors,
+  getHouseWindows,
+} from "@/lib/trall/house"
 import {
   emptyMaterialTotals,
   type ProjectMaterialSummary,
 } from "@/lib/trall/materials"
 import type { SupportLayout } from "@/lib/trall/supports"
+import {
+  deckMaterialOptions,
+  houseWallMaterialOptions,
+  poolWallMaterialOptions,
+  roofMaterialOptions,
+  terrainMaterialOptions,
+  type AppearanceSettings,
+} from "@/lib/trall/appearance"
 
 export function CalculatorPanel({
   boardDirection,
@@ -150,6 +177,11 @@ export function CalculatorPanel({
         setElevationSettings={setElevationSettings}
       />
 
+      <AppearanceSettingsCard
+        elevationSettings={elevationSettings}
+        setElevationSettings={setElevationSettings}
+      />
+
       <HouseDimensionsCard house={house} setHouse={setHouse} />
 
       <Card size="sm">
@@ -178,6 +210,138 @@ function MetricRow({ label, value }: Metric) {
   )
 }
 
+function AppearanceSettingsCard({
+  elevationSettings,
+  setElevationSettings,
+}: {
+  elevationSettings: ElevationSettings
+  setElevationSettings: Dispatch<SetStateAction<ElevationSettings>>
+}) {
+  const normalizedElevationSettings =
+    normalizeElevationSettings(elevationSettings)
+  const appearance = normalizedElevationSettings.appearance
+
+  function updateAppearance<Key extends keyof AppearanceSettings>(
+    key: Key,
+    value: AppearanceSettings[Key]
+  ) {
+    setElevationSettings((current) => {
+      const normalized = normalizeElevationSettings(current)
+
+      return {
+        ...normalized,
+        appearance: {
+          ...normalized.appearance,
+          [key]: value,
+        },
+      }
+    })
+  }
+
+  return (
+    <Card size="sm">
+      <CardHeader>
+        <CardTitle>3D appearance</CardTitle>
+        <CardDescription>
+          Visual presets only. Geometry and quantities stay unchanged.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid gap-1.5">
+          <span className="text-xs text-muted-foreground">Render mode</span>
+          <div className="grid grid-cols-2 rounded-lg border bg-muted/25 p-1">
+            <Button
+              size="sm"
+              type="button"
+              variant={
+                appearance.renderMode === "construction" ? "secondary" : "ghost"
+              }
+              onClick={() => updateAppearance("renderMode", "construction")}
+            >
+              Construction
+            </Button>
+            <Button
+              size="sm"
+              type="button"
+              variant={
+                appearance.renderMode === "realistic" ? "secondary" : "ghost"
+              }
+              onClick={() => updateAppearance("renderMode", "realistic")}
+            >
+              Realistic
+            </Button>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <AppearanceSelect
+            label="Deck"
+            options={deckMaterialOptions}
+            value={appearance.deckMaterial}
+            onChange={(value) => updateAppearance("deckMaterial", value)}
+          />
+          <AppearanceSelect
+            label="House wall"
+            options={houseWallMaterialOptions}
+            value={appearance.houseWallMaterial}
+            onChange={(value) => updateAppearance("houseWallMaterial", value)}
+          />
+          <AppearanceSelect
+            label="Roof"
+            options={roofMaterialOptions}
+            value={appearance.roofMaterial}
+            onChange={(value) => updateAppearance("roofMaterial", value)}
+          />
+          <AppearanceSelect
+            label="Pool wall"
+            options={poolWallMaterialOptions}
+            value={appearance.poolWallMaterial}
+            onChange={(value) => updateAppearance("poolWallMaterial", value)}
+          />
+          <AppearanceSelect
+            label="Ground"
+            options={terrainMaterialOptions}
+            value={appearance.terrainMaterial}
+            onChange={(value) => updateAppearance("terrainMaterial", value)}
+          />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function AppearanceSelect<T extends string>({
+  label,
+  onChange,
+  options,
+  value,
+}: {
+  label: string
+  onChange: (value: T) => void
+  options: ReadonlyArray<{ value: T; label: string }>
+  value: T
+}) {
+  return (
+    <div className="grid gap-1.5">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <Select
+        value={value}
+        onValueChange={(nextValue) => onChange(nextValue as T)}
+      >
+        <SelectTrigger className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  )
+}
+
 function ElevationSettingsCard({
   elevationSettings,
   setElevationSettings,
@@ -185,7 +349,8 @@ function ElevationSettingsCard({
   elevationSettings: ElevationSettings
   setElevationSettings: Dispatch<SetStateAction<ElevationSettings>>
 }) {
-  const normalizedElevationSettings = normalizeElevationSettings(elevationSettings)
+  const normalizedElevationSettings =
+    normalizeElevationSettings(elevationSettings)
 
   function updateNumber(path: ElevationNumberPath, value: string) {
     const numericValue = Number.parseFloat(value)
@@ -193,7 +358,9 @@ function ElevationSettingsCard({
       return
     }
 
-    setElevationSettings((current) => setElevationNumber(current, path, numericValue))
+    setElevationSettings((current) =>
+      setElevationNumber(current, path, numericValue)
+    )
   }
 
   return (
@@ -208,15 +375,19 @@ function ElevationSettingsCard({
         <div className="grid gap-1.5">
           <span className="text-xs text-muted-foreground">Terrain mode</span>
           <Select
-            value={elevationSettings.terrain.mode}
+            value={normalizedElevationSettings.terrain.mode}
             onValueChange={(value) =>
-              setElevationSettings((current) => ({
-                ...current,
-                terrain: {
-                  ...current.terrain,
-                  mode: value === "flat" ? "flat" : "single_slope",
-                },
-              }))
+              setElevationSettings((current) => {
+                const normalized = normalizeElevationSettings(current)
+
+                return {
+                  ...normalized,
+                  terrain: {
+                    ...normalized.terrain,
+                    mode: value === "flat" ? "flat" : "single_slope",
+                  },
+                }
+              })
             }
           >
             <SelectTrigger className="w-full">
@@ -231,62 +402,72 @@ function ElevationSettingsCard({
         <div className="grid grid-cols-2 gap-2">
           <CentimeterInput
             label="Deck height"
-            value={elevationSettings.deck.finishedHeightCm}
+            value={normalizedElevationSettings.deck.finishedHeightCm}
             onChange={(value) => updateNumber("deck.finishedHeightCm", value)}
           />
           <CentimeterInput
             label="Deck thickness"
             min={8}
-            value={elevationSettings.deck.thicknessCm}
+            value={normalizedElevationSettings.deck.thicknessCm}
             onChange={(value) => updateNumber("deck.thicknessCm", value)}
           />
           <CentimeterInput
             label="Pool top"
-            value={elevationSettings.pool.topHeightCm}
+            value={normalizedElevationSettings.pool.topHeightCm}
             onChange={(value) => updateNumber("pool.topHeightCm", value)}
           />
           <CentimeterInput
             label="Pool body"
             min={20}
-            value={elevationSettings.pool.bodyHeightCm}
+            value={normalizedElevationSettings.pool.bodyHeightCm}
             onChange={(value) => updateNumber("pool.bodyHeightCm", value)}
           />
           <CentimeterInput
             label="Ground house"
-            value={elevationSettings.terrain.heightAtHouseCm}
+            value={normalizedElevationSettings.terrain.heightAtHouseCm}
             onChange={(value) => updateNumber("terrain.heightAtHouseCm", value)}
           />
           <CentimeterInput
             label="Ground front"
-            value={elevationSettings.terrain.heightAtFarEdgeCm}
-            onChange={(value) => updateNumber("terrain.heightAtFarEdgeCm", value)}
+            value={normalizedElevationSettings.terrain.heightAtFarEdgeCm}
+            onChange={(value) =>
+              updateNumber("terrain.heightAtFarEdgeCm", value)
+            }
           />
           <NumberInput
             label="Slope direction"
             suffix="deg"
-            value={elevationSettings.terrain.slopeDirectionDeg}
-            onChange={(value) => updateNumber("terrain.slopeDirectionDeg", value)}
+            value={normalizedElevationSettings.terrain.slopeDirectionDeg}
+            onChange={(value) =>
+              updateNumber("terrain.slopeDirectionDeg", value)
+            }
           />
           <NumberInput
             label="Post spacing"
             min={0.8}
             step={0.1}
             suffix="m"
-            value={elevationSettings.supports.maxPostSpacingM}
-            onChange={(value) => updateNumber("supports.maxPostSpacingM", value)}
+            value={normalizedElevationSettings.supports.maxPostSpacingM}
+            onChange={(value) =>
+              updateNumber("supports.maxPostSpacingM", value)
+            }
           />
         </div>
         <label className="flex items-center gap-2 rounded-lg border bg-muted/25 px-3 py-2 text-sm">
           <Checkbox
-            checked={elevationSettings.supports.showPosts}
+            checked={normalizedElevationSettings.supports.showPosts}
             onCheckedChange={(checked) =>
-              setElevationSettings((current) => ({
-                ...current,
-                supports: {
-                  ...current.supports,
-                  showPosts: checked === true,
-                },
-              }))
+              setElevationSettings((current) => {
+                const normalized = normalizeElevationSettings(current)
+
+                return {
+                  ...normalized,
+                  supports: {
+                    ...normalized.supports,
+                    showPosts: checked === true,
+                  },
+                }
+              })
             }
           />
           Show deck support posts
@@ -347,40 +528,45 @@ function setElevationNumber(
   path: ElevationNumberPath,
   value: number
 ): ElevationSettings {
+  const normalized = normalizeElevationSettings(current)
+
   if (path === "deck.finishedHeightCm") {
-    return { ...current, deck: { ...current.deck, finishedHeightCm: value } }
+    return {
+      ...normalized,
+      deck: { ...normalized.deck, finishedHeightCm: value },
+    }
   }
   if (path === "deck.thicknessCm") {
-    return { ...current, deck: { ...current.deck, thicknessCm: value } }
+    return { ...normalized, deck: { ...normalized.deck, thicknessCm: value } }
   }
   if (path === "pool.topHeightCm") {
-    return { ...current, pool: { ...current.pool, topHeightCm: value } }
+    return { ...normalized, pool: { ...normalized.pool, topHeightCm: value } }
   }
   if (path === "pool.bodyHeightCm") {
-    return { ...current, pool: { ...current.pool, bodyHeightCm: value } }
+    return { ...normalized, pool: { ...normalized.pool, bodyHeightCm: value } }
   }
   if (path === "terrain.heightAtHouseCm") {
     return {
-      ...current,
-      terrain: { ...current.terrain, heightAtHouseCm: value },
+      ...normalized,
+      terrain: { ...normalized.terrain, heightAtHouseCm: value },
     }
   }
   if (path === "terrain.heightAtFarEdgeCm") {
     return {
-      ...current,
-      terrain: { ...current.terrain, heightAtFarEdgeCm: value },
+      ...normalized,
+      terrain: { ...normalized.terrain, heightAtFarEdgeCm: value },
     }
   }
   if (path === "terrain.slopeDirectionDeg") {
     return {
-      ...current,
-      terrain: { ...current.terrain, slopeDirectionDeg: value },
+      ...normalized,
+      terrain: { ...normalized.terrain, slopeDirectionDeg: value },
     }
   }
 
   return {
-    ...current,
-    supports: { ...current.supports, maxPostSpacingM: value },
+    ...normalized,
+    supports: { ...normalized.supports, maxPostSpacingM: value },
   }
 }
 
@@ -462,6 +648,9 @@ function HouseDimensionsCard({
   }
   const doors = getHouseDoors(house)
   const windows = getHouseWindows(house)
+  const openingWidthM =
+    doors.reduce((total, door) => total + (door.widthCm ?? 90) / 100, 0) +
+    windows.reduce((total, window) => total + (window.widthCm ?? 120) / 100, 0)
 
   function addDoor() {
     setHouse((current) => {
@@ -469,19 +658,49 @@ function HouseDimensionsCard({
       const nextIndex = currentDoors.length + 1
       const offsetStepM = Math.min(1.2, current.widthM / 6)
       const rawOffsetM = (nextIndex % 2 === 0 ? 1 : -1) * offsetStepM
-      const maxOffsetM = Math.max(0, current.widthM / 2 - 1)
+      const maxOffsetM = Math.max(0, current.widthM / 2 - 0.45)
 
       return {
         ...current,
         doors: [
           ...currentDoors,
-          {
-            id: `door-${Date.now()}`,
-            offsetM: clamp(rawOffsetM, -maxOffsetM, maxOffsetM),
-          },
+          createDefaultHouseDoor(
+            `door-${Date.now()}`,
+            clamp(rawOffsetM, -maxOffsetM, maxOffsetM)
+          ),
         ],
       }
     })
+  }
+
+  function updateDoor(doorId: string, updater: (door: HouseDoor) => HouseDoor) {
+    setHouse((current) => ({
+      ...current,
+      doors: getHouseDoors(current).map((door) =>
+        door.id === doorId ? updater(door) : door
+      ),
+    }))
+  }
+
+  function updateDoorDimension(
+    doorId: string,
+    key: "widthCm" | "heightCm",
+    value: string
+  ) {
+    const numericValue = Number.parseFloat(value)
+    if (!Number.isFinite(numericValue)) {
+      return
+    }
+
+    const bounds =
+      key === "widthCm"
+        ? { min: MIN_HOUSE_DOOR_WIDTH_CM, max: MAX_HOUSE_DOOR_WIDTH_CM }
+        : { min: MIN_HOUSE_DOOR_HEIGHT_CM, max: MAX_HOUSE_DOOR_HEIGHT_CM }
+
+    updateDoor(doorId, (door) => ({
+      ...door,
+      [key]: clamp(numericValue, bounds.min, bounds.max),
+    }))
   }
 
   function addWindow() {
@@ -496,14 +715,51 @@ function HouseDimensionsCard({
         ...current,
         windows: [
           ...currentWindows,
-          {
-            id: `window-${Date.now()}`,
-            offsetM: clamp(rawOffsetM, -maxOffsetM, maxOffsetM),
-            row: nextIndex % 2 === 0 ? "upper" : "lower",
-          },
+          createDefaultHouseWindow(
+            `window-${Date.now()}`,
+            clamp(rawOffsetM, -maxOffsetM, maxOffsetM),
+            nextIndex % 2 === 0 ? "upper" : "lower"
+          ),
         ],
       }
     })
+  }
+
+  function updateWindow(
+    windowId: string,
+    updater: (window: HouseWindow) => HouseWindow
+  ) {
+    setHouse((current) => ({
+      ...current,
+      windows: getHouseWindows(current).map((window) =>
+        window.id === windowId ? updater(window) : window
+      ),
+    }))
+  }
+
+  function updateWindowDimension(
+    windowId: string,
+    key: "widthCm" | "heightCm",
+    value: string
+  ) {
+    const numericValue = Number.parseFloat(value)
+    if (!Number.isFinite(numericValue)) {
+      return
+    }
+
+    const bounds =
+      key === "widthCm"
+        ? { min: MIN_HOUSE_WINDOW_WIDTH_CM, max: MAX_HOUSE_WINDOW_WIDTH_CM }
+        : { min: MIN_HOUSE_WINDOW_HEIGHT_CM, max: MAX_HOUSE_WINDOW_HEIGHT_CM }
+
+    updateWindow(windowId, (window) => ({
+      ...window,
+      [key]: clamp(numericValue, bounds.min, bounds.max),
+    }))
+  }
+
+  function updateWindowRow(windowId: string, row: HouseWindow["row"]) {
+    updateWindow(windowId, (window) => ({ ...window, row }))
   }
 
   function removeWindow(windowId: string) {
@@ -512,6 +768,13 @@ function HouseDimensionsCard({
       windows: getHouseWindows(current).filter(
         (window) => window.id !== windowId
       ),
+    }))
+  }
+
+  function removeDoor(doorId: string) {
+    setHouse((current) => ({
+      ...current,
+      doors: getHouseDoors(current).filter((door) => door.id !== doorId),
     }))
   }
 
@@ -569,6 +832,89 @@ function HouseDimensionsCard({
               Add door
             </Button>
           </div>
+          <p className="text-[11px] leading-snug text-muted-foreground">
+            House width: {house.widthM.toFixed(1)} m · openings:{" "}
+            {openingWidthM.toFixed(1)} m
+          </p>
+          {doors.length > 0 ? (
+            <div className="grid gap-1">
+              {doors.map((door, index) => (
+                <div
+                  key={door.id}
+                  className="grid gap-2 rounded-md bg-background p-2"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="min-w-0 truncate text-xs">
+                      Door {index + 1}
+                    </span>
+                    <Button
+                      aria-label={`Remove door ${index + 1}`}
+                      size="icon-xs"
+                      title="Remove door"
+                      variant="ghost"
+                      onClick={() => removeDoor(door.id)}
+                    >
+                      <Trash2Icon />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="space-y-1">
+                      <span className="text-[11px] text-muted-foreground">
+                        Width
+                      </span>
+                      <div className="flex h-8 items-center gap-1 rounded-lg border bg-background px-2">
+                        <Input
+                          className="h-7 border-0 px-0 text-xs shadow-none focus-visible:ring-0"
+                          inputMode="decimal"
+                          max={MAX_HOUSE_DOOR_WIDTH_CM}
+                          min={MIN_HOUSE_DOOR_WIDTH_CM}
+                          step={5}
+                          type="number"
+                          value={door.widthCm}
+                          onChange={(event) =>
+                            updateDoorDimension(
+                              door.id,
+                              "widthCm",
+                              event.target.value
+                            )
+                          }
+                        />
+                        <span className="text-[11px] text-muted-foreground">
+                          cm
+                        </span>
+                      </div>
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-[11px] text-muted-foreground">
+                        Height
+                      </span>
+                      <div className="flex h-8 items-center gap-1 rounded-lg border bg-background px-2">
+                        <Input
+                          className="h-7 border-0 px-0 text-xs shadow-none focus-visible:ring-0"
+                          inputMode="decimal"
+                          max={MAX_HOUSE_DOOR_HEIGHT_CM}
+                          min={MIN_HOUSE_DOOR_HEIGHT_CM}
+                          step={5}
+                          type="number"
+                          value={door.heightCm}
+                          onChange={(event) =>
+                            updateDoorDimension(
+                              door.id,
+                              "heightCm",
+                              event.target.value
+                            )
+                          }
+                        />
+                        <span className="text-[11px] text-muted-foreground">
+                          cm
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs text-muted-foreground">
               Windows: {windows.length}
@@ -582,20 +928,98 @@ function HouseDimensionsCard({
               {windows.map((window, index) => (
                 <div
                   key={window.id}
-                  className="flex items-center justify-between gap-2 rounded-md bg-background px-2 py-1"
+                  className="grid gap-2 rounded-md bg-background p-2"
                 >
-                  <span className="min-w-0 truncate text-xs">
-                    Window {index + 1} · {window.row}
-                  </span>
-                  <Button
-                    aria-label={`Remove window ${index + 1}`}
-                    size="icon-xs"
-                    title="Remove window"
-                    variant="ghost"
-                    onClick={() => removeWindow(window.id)}
-                  >
-                    <Trash2Icon />
-                  </Button>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="min-w-0 truncate text-xs">
+                      Window {index + 1}
+                    </span>
+                    <Button
+                      aria-label={`Remove window ${index + 1}`}
+                      size="icon-xs"
+                      title="Remove window"
+                      variant="ghost"
+                      onClick={() => removeWindow(window.id)}
+                    >
+                      <Trash2Icon />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <label className="space-y-1">
+                      <span className="text-[11px] text-muted-foreground">
+                        Row
+                      </span>
+                      <Select
+                        value={window.row}
+                        onValueChange={(value) =>
+                          updateWindowRow(
+                            window.id,
+                            value as HouseWindow["row"]
+                          )
+                        }
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="lower">Lower</SelectItem>
+                          <SelectItem value="upper">Upper</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-[11px] text-muted-foreground">
+                        Width
+                      </span>
+                      <div className="flex h-8 items-center gap-1 rounded-lg border bg-background px-2">
+                        <Input
+                          className="h-7 border-0 px-0 text-xs shadow-none focus-visible:ring-0"
+                          inputMode="decimal"
+                          max={MAX_HOUSE_WINDOW_WIDTH_CM}
+                          min={MIN_HOUSE_WINDOW_WIDTH_CM}
+                          step={5}
+                          type="number"
+                          value={window.widthCm}
+                          onChange={(event) =>
+                            updateWindowDimension(
+                              window.id,
+                              "widthCm",
+                              event.target.value
+                            )
+                          }
+                        />
+                        <span className="text-[11px] text-muted-foreground">
+                          cm
+                        </span>
+                      </div>
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-[11px] text-muted-foreground">
+                        Height
+                      </span>
+                      <div className="flex h-8 items-center gap-1 rounded-lg border bg-background px-2">
+                        <Input
+                          className="h-7 border-0 px-0 text-xs shadow-none focus-visible:ring-0"
+                          inputMode="decimal"
+                          max={MAX_HOUSE_WINDOW_HEIGHT_CM}
+                          min={MIN_HOUSE_WINDOW_HEIGHT_CM}
+                          step={5}
+                          type="number"
+                          value={window.heightCm}
+                          onChange={(event) =>
+                            updateWindowDimension(
+                              window.id,
+                              "heightCm",
+                              event.target.value
+                            )
+                          }
+                        />
+                        <span className="text-[11px] text-muted-foreground">
+                          cm
+                        </span>
+                      </div>
+                    </label>
+                  </div>
                 </div>
               ))}
             </div>

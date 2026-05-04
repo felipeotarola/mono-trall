@@ -37,11 +37,6 @@ export function HouseLayer({
   ) => void
   windows: HouseWindow[]
 }) {
-  const doorWidth = Math.min(80, houseBounds.widthPx * 0.22)
-  const doorHeight = Math.min(98, houseBounds.depthPx * 0.4)
-  const doorY = houseBounds.bottom - doorHeight
-  const windowWidth = Math.min(70, houseBounds.widthPx * 0.16)
-  const windowHeight = Math.min(34, houseBounds.depthPx * 0.16)
   const roofPeakY = houseBounds.top - Math.min(82, houseBounds.widthPx * 0.2)
   const upperWindowY = houseBounds.top + houseBounds.depthPx * 0.25
   const lowerWindowY = houseBounds.top + houseBounds.depthPx * 0.55
@@ -65,6 +60,9 @@ export function HouseLayer({
         strokeWidth="5"
       />
       {doors.map((door) => {
+        const doorWidth = ((door.widthCm ?? 90) / 100) * PIXELS_PER_METER
+        const doorHeight = ((door.heightCm ?? 210) / 100) * PIXELS_PER_METER
+        const doorY = houseBounds.bottom - doorHeight
         const doorCenterX = clamp(
           houseBounds.centerX + door.offsetM * PIXELS_PER_METER,
           houseBounds.left + doorWidth / 2,
@@ -87,6 +85,8 @@ export function HouseLayer({
         )
       })}
       {windows.map((window) => {
+        const windowWidth = ((window.widthCm ?? 120) / 100) * PIXELS_PER_METER
+        const windowHeight = ((window.heightCm ?? 120) / 100) * PIXELS_PER_METER
         const windowCenterX = clamp(
           houseBounds.centerX + window.offsetM * PIXELS_PER_METER,
           houseBounds.left + windowWidth / 2,
