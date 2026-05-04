@@ -49,6 +49,7 @@ import type {
   Material,
   MeasurementLine,
   Metric,
+  PlannerViewMode,
   Point,
   Tool,
   ViewBox,
@@ -77,6 +78,7 @@ export function Workspace({
   const requestedProjectId = searchParams.get("projectId")
   const [calculatorOpen, setCalculatorOpen] = useState(true)
   const [plannerToolsCollapsed, setPlannerToolsCollapsed] = useState(true)
+  const [viewMode, setViewMode] = useState<PlannerViewMode>("top")
   const [activeTool, setActiveTool] = useState<ActiveTool>("select")
   const [viewBox, setViewBox] = useState<ViewBox>(INITIAL_VIEW_BOX)
   const [viewAspectRatio, setViewAspectRatio] = useState(
@@ -486,20 +488,24 @@ export function Workspace({
               extraTool={expandTool}
               modeLabel={modeLabel}
               onSaveProject={handleSaveProject}
+              onViewModeChange={setViewMode}
               saveStatus={saveStatus}
+              viewMode={viewMode}
             />
-            <FeatureToolList
-              activeTool={activeTool}
-              className="absolute top-24 left-3 z-30 sm:top-20"
-              collapsed={plannerToolsCollapsed}
-              placementMode={placementMode}
-              onAddPool={handleAddPool}
-              onSelectFeatureTool={handleSelectFeatureTool}
-              onSelectTool={handleSelectTool}
-              onToggleCollapsed={() =>
-                setPlannerToolsCollapsed((currentValue) => !currentValue)
-              }
-            />
+            {viewMode === "top" ? (
+              <FeatureToolList
+                activeTool={activeTool}
+                className="absolute top-24 left-3 z-30 sm:top-20"
+                collapsed={plannerToolsCollapsed}
+                placementMode={placementMode}
+                onAddPool={handleAddPool}
+                onSelectFeatureTool={handleSelectFeatureTool}
+                onSelectTool={handleSelectTool}
+                onToggleCollapsed={() =>
+                  setPlannerToolsCollapsed((currentValue) => !currentValue)
+                }
+              />
+            ) : null}
             <PlanningSurface
               activeTool={activeTool}
               activePointIndex={activePointIndex}
@@ -532,16 +538,19 @@ export function Workspace({
               onFeaturePlaced={handleFeaturePlaced}
               onResetView={fitViewBox}
               viewBox={viewBox}
+              viewMode={viewMode}
               zoomPercent={zoomPercent}
             />
-            <MapControlsPanel
-              activeTool={activeTool}
-              onResetView={fitViewBox}
-              onZoomIn={zoomIn}
-              onZoomOut={zoomOut}
-              setActiveTool={handleSelectTool}
-              zoomPercent={zoomPercent}
-            />
+            {viewMode === "top" ? (
+              <MapControlsPanel
+                activeTool={activeTool}
+                onResetView={fitViewBox}
+                onZoomIn={zoomIn}
+                onZoomOut={zoomOut}
+                setActiveTool={handleSelectTool}
+                zoomPercent={zoomPercent}
+              />
+            ) : null}
           </section>
         </div>
 

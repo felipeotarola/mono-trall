@@ -16,18 +16,22 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu"
-import type { Tool } from "@/lib/trall/types"
+import type { PlannerViewMode, Tool } from "@/lib/trall/types"
 
 export function CanvasToolbar({
   extraTool,
   modeLabel,
   onSaveProject,
+  onViewModeChange,
   saveStatus,
+  viewMode,
 }: {
   extraTool: Tool
   modeLabel: string
   onSaveProject: () => void
+  onViewModeChange: (mode: PlannerViewMode) => void
   saveStatus: string
+  viewMode: PlannerViewMode
 }) {
   return (
     <div className="absolute top-3 left-3 z-20 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-2 rounded-xl border border-stone-200 bg-white/92 p-2 shadow-sm backdrop-blur">
@@ -38,6 +42,29 @@ export function CanvasToolbar({
         <span className="rounded-md bg-stone-950 px-2.5 py-1 text-xs font-semibold text-white">
           {modeLabel}
         </span>
+      </div>
+
+      <div
+        aria-label="Planner view"
+        className="flex h-10 items-center rounded-lg border border-stone-200 bg-stone-100 p-1"
+        role="group"
+      >
+        <button
+          aria-pressed={viewMode === "top"}
+          className={getViewModeButtonClass(viewMode === "top")}
+          type="button"
+          onClick={() => onViewModeChange("top")}
+        >
+          Top
+        </button>
+        <button
+          aria-pressed={viewMode === "3d"}
+          className={getViewModeButtonClass(viewMode === "3d")}
+          type="button"
+          onClick={() => onViewModeChange("3d")}
+        >
+          3D
+        </button>
       </div>
 
       <Button
@@ -90,6 +117,12 @@ export function CanvasToolbar({
       </DropdownMenu>
     </div>
   )
+}
+
+function getViewModeButtonClass(active: boolean) {
+  return active
+    ? "h-8 rounded-md bg-stone-950 px-3 text-xs font-semibold text-white shadow-sm"
+    : "h-8 rounded-md px-3 text-xs font-semibold text-stone-600 hover:bg-white/75 hover:text-stone-950"
 }
 
 function ProjectAction({

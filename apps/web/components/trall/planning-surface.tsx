@@ -3,6 +3,7 @@
 import type { Dispatch, SetStateAction } from "react"
 import { useEffect, useRef } from "react"
 
+import { Plan3DView } from "@/components/trall/plan-3d-view"
 import { PlanSvg } from "@/components/trall/plan-svg"
 import { ScaleIndicator } from "@/components/trall/svg/scale-indicator"
 import type { EdgeConstraint } from "@/lib/trall/edge-model"
@@ -16,6 +17,7 @@ import type {
   HouseBounds,
   HouseModel,
   MeasurementLine,
+  PlannerViewMode,
   Point,
   ViewBox,
 } from "@/lib/trall/types"
@@ -54,6 +56,7 @@ export function PlanningSurface({
   onFeaturePlaced,
   onResetView,
   viewBox,
+  viewMode,
   zoomPercent,
 }: {
   activeTool: ActiveTool
@@ -87,6 +90,7 @@ export function PlanningSurface({
   onFeaturePlaced: (featureId: string, keepPlacement?: boolean) => void
   onResetView: () => void
   viewBox: ViewBox
+  viewMode: PlannerViewMode
   zoomPercent: number
 }) {
   const canvasFrameRef = useRef<HTMLDivElement>(null)
@@ -125,59 +129,74 @@ export function PlanningSurface({
         x 0, y 0
       </div>
 
-      <p className={`absolute top-28 right-4 max-w-[min(24rem,calc(100%-2rem))] md:top-24 2xl:top-20 ${trallPlanClasses.floatingLabel}`}>
-        {getPlannerInstruction(activeTool, placementMode)}
+      <p className={`absolute top-28 right-4 z-10 max-w-[min(24rem,calc(100%-2rem))] md:top-24 2xl:top-20 ${trallPlanClasses.floatingLabel}`}>
+        {viewMode === "3d"
+          ? "3D preview: orbit, pan, zoom. Edit geometry in Top view."
+          : getPlannerInstruction(activeTool, placementMode)}
       </p>
 
       <div className="relative flex h-[calc(100svh-13.5rem)] min-h-[520px] items-stretch justify-center px-3 py-8 md:h-[calc(100svh-10rem)]">
         <div ref={canvasFrameRef} className="h-full w-full">
-          <PlanSvg
-            activeTool={activeTool}
-            activePointIndex={activePointIndex}
-            activePoolPointIndex={activePoolPointIndex}
-            boardDirection={boardDirection}
-            deckEdgeConstraints={deckEdgeConstraints}
-            deckPoints={deckPoints}
-            features={features}
-            house={house}
-            houseBounds={houseBounds}
-            measurements={measurements}
-            placementMode={placementMode}
-            poolEdgeConstraints={poolEdgeConstraints}
-            poolPoints={poolPoints}
-            selectedFeatureId={selectedFeatureId}
-            setActivePointIndex={setActivePointIndex}
-            setDeckEdgeConstraints={setDeckEdgeConstraints}
-            setDeckPoints={setDeckPoints}
-            setActivePoolPointIndex={setActivePoolPointIndex}
-            setFeatures={setFeatures}
-            setHouse={setHouse}
-            setMeasurements={setMeasurements}
-            setPoolEdgeConstraints={setPoolEdgeConstraints}
-            setPoolPoints={setPoolPoints}
-            setSelectedFeatureId={setSelectedFeatureId}
-            setViewBox={setViewBox}
-            supportSegments={supportSegments}
-            onDeleteFeature={onDeleteFeature}
-            onFeaturePlaced={onFeaturePlaced}
-            onResetView={onResetView}
-            viewBox={viewBox}
-          />
+          {viewMode === "3d" ? (
+            <Plan3DView
+              boardDirection={boardDirection}
+              deckEdgeConstraints={deckEdgeConstraints}
+              deckPoints={deckPoints}
+              features={features}
+              houseBounds={houseBounds}
+              poolPoints={poolPoints}
+            />
+          ) : (
+            <PlanSvg
+              activeTool={activeTool}
+              activePointIndex={activePointIndex}
+              activePoolPointIndex={activePoolPointIndex}
+              boardDirection={boardDirection}
+              deckEdgeConstraints={deckEdgeConstraints}
+              deckPoints={deckPoints}
+              features={features}
+              house={house}
+              houseBounds={houseBounds}
+              measurements={measurements}
+              placementMode={placementMode}
+              poolEdgeConstraints={poolEdgeConstraints}
+              poolPoints={poolPoints}
+              selectedFeatureId={selectedFeatureId}
+              setActivePointIndex={setActivePointIndex}
+              setDeckEdgeConstraints={setDeckEdgeConstraints}
+              setDeckPoints={setDeckPoints}
+              setActivePoolPointIndex={setActivePoolPointIndex}
+              setFeatures={setFeatures}
+              setHouse={setHouse}
+              setMeasurements={setMeasurements}
+              setPoolEdgeConstraints={setPoolEdgeConstraints}
+              setPoolPoints={setPoolPoints}
+              setSelectedFeatureId={setSelectedFeatureId}
+              setViewBox={setViewBox}
+              supportSegments={supportSegments}
+              onDeleteFeature={onDeleteFeature}
+              onFeaturePlaced={onFeaturePlaced}
+              onResetView={onResetView}
+              viewBox={viewBox}
+            />
+          )}
         </div>
       </div>
 
-      <div
-        className={`pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between ${trallPlanClasses.bottomLegend}`}
-      >
-        <ScaleIndicator />
-        <span>
-          Scale 1:100 · 1 grid square = 0.5 m · Cmd/Ctrl snaps angle · Alt
-          disables grid · Shift locks axis · Space pans · Zoom {zoomPercent}% ·
-          Drag pool body to move it · Click a dimension to edit length ·
-          Double-click an edge to add a node · Select an edge to add/remove
-          nodes · When edge snaps to house, it becomes attached
-        </span>
-      </div>
+      {viewMode === "top" ? (
+        <div
+          className={`pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between ${trallPlanClasses.bottomLegend}`}
+        >
+          <ScaleIndicator />
+          <span>
+            Scale 1:100 · 1 grid square = 0.5 m · Cmd/Ctrl snaps angle · Alt
+            disables grid · Shift locks axis · Space pans · Zoom {zoomPercent}% ·
+            Drag pool body to move it · Click a dimension to edit length ·
+            Double-click an edge to add a node · Select an edge to add/remove
+            nodes · When edge snaps to house, it becomes attached
+          </span>
+        </div>
+      ) : null}
     </div>
   )
 }
