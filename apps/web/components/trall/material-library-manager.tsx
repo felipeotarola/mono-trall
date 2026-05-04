@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import Image from "next/image"
 import {
   CheckIcon,
   LibraryIcon,
@@ -362,12 +361,11 @@ function MaterialImage({ material }: { material: MaterialRecord }) {
   }
 
   return (
-    <Image
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
       alt={material.name}
       className="size-12 rounded-md border object-cover"
-      height={48}
       src={material.image_url}
-      width={48}
     />
   )
 }

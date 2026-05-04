@@ -76,6 +76,7 @@ export function Workspace({
   const searchParams = useSearchParams()
   const requestedProjectId = searchParams.get("projectId")
   const [calculatorOpen, setCalculatorOpen] = useState(true)
+  const [plannerToolsCollapsed, setPlannerToolsCollapsed] = useState(true)
   const [activeTool, setActiveTool] = useState<ActiveTool>("select")
   const [viewBox, setViewBox] = useState<ViewBox>(INITIAL_VIEW_BOX)
   const [viewAspectRatio, setViewAspectRatio] = useState(
@@ -479,29 +480,25 @@ export function Workspace({
             : "flex flex-1 flex-col gap-3 p-3 pb-24 transition-[padding] duration-200 sm:p-4 lg:pb-4 xl:p-5"
         }
       >
-        <div
-          className={
-            calculatorOpen
-              ? "grid min-w-0 flex-1 gap-3 xl:grid-cols-[230px_minmax(0,1fr)]"
-              : "min-w-0 flex-1"
-          }
-        >
-          {calculatorOpen ? (
-            <FeatureToolList
-              activeTool={activeTool}
-              className="order-2 xl:order-1 xl:self-start"
-              placementMode={placementMode}
-              onAddPool={handleAddPool}
-              onSelectFeatureTool={handleSelectFeatureTool}
-              onSelectTool={handleSelectTool}
-            />
-          ) : null}
-          <section className="relative order-1 min-w-0 flex-1 overflow-hidden rounded-lg border bg-stone-50 shadow-sm dark:bg-zinc-950 xl:order-2">
+        <div className="min-w-0 flex-1">
+          <section className="relative min-w-0 flex-1 overflow-hidden rounded-lg border bg-stone-50 shadow-sm dark:bg-zinc-950">
             <CanvasToolbar
               extraTool={expandTool}
               modeLabel={modeLabel}
               onSaveProject={handleSaveProject}
               saveStatus={saveStatus}
+            />
+            <FeatureToolList
+              activeTool={activeTool}
+              className="absolute top-24 left-3 z-30 sm:top-20"
+              collapsed={plannerToolsCollapsed}
+              placementMode={placementMode}
+              onAddPool={handleAddPool}
+              onSelectFeatureTool={handleSelectFeatureTool}
+              onSelectTool={handleSelectTool}
+              onToggleCollapsed={() =>
+                setPlannerToolsCollapsed((currentValue) => !currentValue)
+              }
             />
             <PlanningSurface
               activeTool={activeTool}

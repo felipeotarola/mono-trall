@@ -1,0 +1,231 @@
+- generic [active] [ref=e1]:
+  - main [ref=e3]:
+    - generic [ref=e5]:
+      - button "Toggle Sidebar" [ref=e6]:
+        - img
+        - generic [ref=e7]: Toggle Sidebar
+      - heading "Deck planner" [level=1] [ref=e8]
+    - main [ref=e9]:
+      - generic [ref=e10]:
+        - generic [ref=e12]:
+          - generic [ref=e13]:
+            - generic [ref=e15]: Select
+            - button "Save project" [ref=e16]:
+              - img
+            - button "More project actions" [ref=e17]:
+              - img
+          - generic [ref=e18]:
+            - generic [ref=e19]:
+              - generic [ref=e20]: Planner tools
+              - button "Expand planner tools" [ref=e21]:
+                - img
+            - generic [ref=e22]:
+              - generic [ref=e23]:
+                - paragraph [ref=e24]: Edit
+                - generic [ref=e25]:
+                  - button "Select / Edit" [pressed] [ref=e26]:
+                    - img
+                    - generic [ref=e27]: Select / Edit
+                  - button "Draw deck" [ref=e28]:
+                    - img
+                    - generic [ref=e29]: Draw deck
+                  - button "Measure" [ref=e30]:
+                    - img
+                    - generic [ref=e31]: Measure
+                  - button "Pan" [ref=e32]:
+                    - img
+                    - generic [ref=e33]: Pan
+                  - button "Add pool" [ref=e34]:
+                    - img
+                    - generic [ref=e35]: Add pool
+              - generic [ref=e36]:
+                - paragraph [ref=e37]: Features
+                - generic [ref=e38]:
+                  - button "Stairs" [ref=e39]:
+                    - img
+                    - generic [ref=e40]: Stairs
+                  - button "Railing" [ref=e41]:
+                    - img
+                    - generic [ref=e42]: Railing
+                  - button "Pergola" [ref=e43]:
+                    - img
+                    - generic [ref=e44]: Pergola
+                  - button "Privacy screen" [ref=e45]:
+                    - img
+                    - generic [ref=e46]: Privacy screen
+                  - button "Board direction" [ref=e47]:
+                    - img
+                    - generic [ref=e48]: Board direction
+          - generic [ref=e49]:
+            - paragraph [ref=e55]: "Select mode: drag highlighted points to adjust the deck shape. Double-click an edge to add a node."
+            - img "Deck plan with house outline, deck polygon, dimensions, and draggable corner handles" [ref=e58]:
+              - generic [ref=e70]: House
+              - generic [ref=e74]: 10.5 m
+              - generic [ref=e78]: 6 m
+              - generic [ref=e86]: 12.4 m
+              - generic [ref=e91]: 5.092 m
+              - generic [ref=e96]: 14.218 m
+              - generic [ref=e101]: 5.954 m
+              - generic [ref=e102]:
+                - generic: P1
+              - generic [ref=e107]:
+                - generic: P2
+              - generic [ref=e112]:
+                - generic: P3
+              - generic [ref=e117]:
+                - generic: P4
+            - generic:
+              - generic:
+                - generic: 2 m
+              - generic: Scale 1:100 · 1 grid square = 0.5 m · Cmd/Ctrl snaps angle · Alt disables grid · Shift locks axis · Space pans · Zoom 100% · Drag pool body to move it · Click a dimension to edit length · Double-click an edge to add a node · Select an edge to add/remove nodes · When edge snaps to house, it becomes attached
+          - generic [ref=e124]:
+            - button "Zoom in" [ref=e125]:
+              - img
+              - generic [ref=e126]: Zoom in
+            - button "Zoom out" [ref=e127]:
+              - img
+              - generic [ref=e128]: Zoom out
+            - button "Fit view" [ref=e129]:
+              - img
+              - generic [ref=e130]: Fit view
+            - button "Pan canvas" [ref=e131]:
+              - img
+              - generic [ref=e132]: Pan canvas
+        - generic [ref=e134]:
+          - generic [ref=e135]:
+            - generic [ref=e136]:
+              - generic [ref=e137]: Board direction
+              - generic [ref=e138]: Controls the visible direction of deck boards in the plan.
+            - generic [ref=e139]:
+              - generic [ref=e140]:
+                - button "Parallel" [pressed] [ref=e141]
+                - button "Perp." [ref=e142]
+                - button "Custom" [ref=e143]
+              - generic [ref=e144]:
+                - generic [ref=e145]:
+                  - text: Angle
+                  - generic [ref=e146]:
+                    - spinbutton "Angle deg" [ref=e147]: "0"
+                    - generic [ref=e148]: deg
+                - button "90 deg" [ref=e149]:
+                  - img
+                  - text: 90 deg
+          - generic [ref=e152]:
+            - paragraph [ref=e153]: Estimated material price
+            - paragraph [ref=e154]: No materials
+            - paragraph [ref=e155]: Add project materials before creating a quote
+          - generic [ref=e156]:
+            - generic [ref=e158]: Measurements
+            - generic [ref=e159]:
+              - generic [ref=e160]:
+                - generic [ref=e161]: Deck area
+                - generic [ref=e162]: 72.1 m²
+              - generic [ref=e163]:
+                - generic [ref=e164]: Perimeter
+                - generic [ref=e165]: 37.7 m
+              - generic [ref=e166]:
+                - generic [ref=e167]: Board run
+                - generic [ref=e168]: 601 lm
+              - generic [ref=e169]:
+                - generic [ref=e170]: Waste factor
+                - generic [ref=e171]: 10%
+          - generic [ref=e172]:
+            - generic [ref=e173]:
+              - generic [ref=e174]: Project materials
+              - generic [ref=e175]: Only materials assigned to this deck.
+            - generic [ref=e176]:
+              - generic [ref=e178]:
+                - generic [ref=e179]: Project total
+                - generic [ref=e180]: 0 kr
+              - paragraph [ref=e182]: No materials assigned to this project yet.
+              - generic [ref=e183]:
+                - generic [ref=e184]:
+                  - generic [ref=e185]:
+                    - paragraph [ref=e186]: Bärlina c/c 600
+                    - paragraph [ref=e187]: 121.2 lpm
+                  - generic [ref=e188]: 24 runs
+                - paragraph [ref=e189]: 45 x 145 mm support runs at 600 mm centres.
+                - button "Add support material" [disabled]:
+                  - img
+                  - text: Add support material
+              - generic [ref=e190]:
+                - generic [ref=e191]:
+                  - img [ref=e192]
+                  - text: Add from library
+                - generic [ref=e193]:
+                  - generic [ref=e194]: Board spacing
+                  - generic [ref=e195]:
+                    - spinbutton "Board spacing mm" [ref=e196]: "5"
+                    - generic [ref=e197]: mm
+                - generic [ref=e198]:
+                  - combobox [ref=e199]:
+                    - generic: Loading...
+                    - img
+                  - spinbutton "Quantity" [ref=e200]: "1"
+                - button "Add to project" [disabled]:
+                  - img
+                  - text: Add to project
+          - generic [ref=e201]:
+            - generic [ref=e202]:
+              - generic [ref=e203]: House dimensions
+              - generic [ref=e204]: Set house size first, then snap deck points to the wall.
+            - generic [ref=e205]:
+              - generic [ref=e206]:
+                - text: Width
+                - generic [ref=e207]:
+                  - spinbutton "Width m" [ref=e208]: "10.5"
+                  - generic [ref=e209]: m
+              - generic [ref=e210]:
+                - text: Depth
+                - generic [ref=e211]:
+                  - spinbutton "Depth m" [ref=e212]: "6"
+                  - generic [ref=e213]: m
+              - generic [ref=e214]:
+                - generic [ref=e215]:
+                  - generic [ref=e216]: "Doors: 1"
+                  - button "Add door" [ref=e217]
+                - generic [ref=e218]:
+                  - generic [ref=e219]: "Windows: 4"
+                  - button "Add window" [ref=e220]
+                - generic [ref=e221]:
+                  - generic [ref=e222]:
+                    - generic [ref=e223]: Window 1 · upper
+                    - button "Remove window 1" [ref=e224]:
+                      - img
+                  - generic [ref=e225]:
+                    - generic [ref=e226]: Window 2 · upper
+                    - button "Remove window 2" [ref=e227]:
+                      - img
+                  - generic [ref=e228]:
+                    - generic [ref=e229]: Window 3 · lower
+                    - button "Remove window 3" [ref=e230]:
+                      - img
+                  - generic [ref=e231]:
+                    - generic [ref=e232]: Window 4 · lower
+                    - button "Remove window 4" [ref=e233]:
+                      - img
+          - generic [ref=e234]:
+            - generic [ref=e235]:
+              - generic [ref=e236]: Project summary
+              - generic [ref=e237]: Untitled
+            - generic [ref=e238]:
+              - generic [ref=e239]:
+                - generic [ref=e240]: House template
+                - generic [ref=e241]: Single family house
+              - generic [ref=e242]:
+                - generic [ref=e243]: Deck type
+                - generic [ref=e244]: Attached angled edge
+              - generic [ref=e245]:
+                - generic [ref=e246]: Last saved
+                - generic [ref=e247]: Mock draft · 2 min ago
+      - generic [ref=e249]:
+        - generic [ref=e250]:
+          - paragraph [ref=e251]: 25 782 kr
+          - paragraph [ref=e252]: 72.1 m² deck · 601 lm boards
+        - button "Summary" [ref=e253]:
+          - img
+          - text: Summary
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e259] [cursor=pointer]:
+    - img [ref=e260]
+  - alert [ref=e263]

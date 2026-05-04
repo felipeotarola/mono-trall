@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import Image from "next/image"
 import { ArchiveIcon, PlusIcon } from "lucide-react"
 import { toast } from "sonner"
 
@@ -651,12 +650,11 @@ function MaterialThumbnail({ material }: { material: MaterialRecord }) {
   }
 
   return (
-    <Image
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
       alt={material.name}
       className="size-10 rounded-md border object-cover"
-      height={40}
       src={material.image_url}
-      width={40}
     />
   )
 }

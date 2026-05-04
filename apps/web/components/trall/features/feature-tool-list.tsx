@@ -3,6 +3,8 @@
 import type { ReactNode } from "react"
 import {
   BlindsIcon,
+  ChevronsLeftIcon,
+  ChevronsRightIcon,
   ConstructionIcon,
   FenceIcon,
   HandIcon,
@@ -28,16 +30,20 @@ import type { ActiveTool } from "@/lib/trall/types"
 export function FeatureToolList({
   activeTool,
   className,
+  collapsed = false,
   onAddPool,
   onSelectFeatureTool,
   onSelectTool,
+  onToggleCollapsed,
   placementMode,
 }: {
   activeTool: ActiveTool
   className?: string
+  collapsed?: boolean
   onAddPool: () => void
   onSelectFeatureTool: (featureType: FeaturePlacementType) => void
   onSelectTool: (tool: ActiveTool) => void
+  onToggleCollapsed?: () => void
   placementMode: FeaturePlacementType | null
 }) {
   const plannerTools: ToolAction[] = [
@@ -108,16 +114,50 @@ export function FeatureToolList({
     <Card
       size="sm"
       className={cn(
-        "min-w-0 border-stone-200 bg-white/92 shadow-sm backdrop-blur",
+        "min-w-0 border-stone-200 bg-white/94 shadow-lg shadow-black/10 backdrop-blur transition-[width] duration-200",
+        collapsed
+          ? "w-[calc(100vw-2rem)] sm:w-[4.25rem]"
+          : "w-[min(17rem,calc(100vw-2rem))]",
         className
       )}
     >
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm">Planner tools</CardTitle>
+      <CardHeader
+        className={cn(
+          "flex flex-row items-center gap-2 pb-2",
+          collapsed ? "justify-center px-2" : "justify-between"
+        )}
+      >
+        <CardTitle className={cn("text-sm", collapsed && "sr-only")}>
+          Planner tools
+        </CardTitle>
+        {onToggleCollapsed ? (
+          <Button
+            aria-label={collapsed ? "Expand planner tools" : "Collapse planner tools"}
+            className="size-8 shrink-0"
+            size="icon-sm"
+            title={collapsed ? "Expand planner tools" : "Collapse planner tools"}
+            variant="ghost"
+            onClick={onToggleCollapsed}
+          >
+            {collapsed ? <ChevronsRightIcon /> : <ChevronsLeftIcon />}
+          </Button>
+        ) : null}
       </CardHeader>
-      <CardContent className="grid gap-3">
-        <ToolSection label="Edit">{plannerTools}</ToolSection>
-        <ToolSection label="Features">{featureTools}</ToolSection>
+      <CardContent className={cn("grid gap-3", collapsed && "px-2")}>
+        {collapsed ? (
+          <ToolSection collapsed label="Planner tools">
+            {[...plannerTools, ...featureTools]}
+          </ToolSection>
+        ) : (
+          <>
+            <ToolSection collapsed={false} label="Edit">
+              {plannerTools}
+            </ToolSection>
+            <ToolSection collapsed={false} label="Features">
+              {featureTools}
+            </ToolSection>
+          </>
+        )}
       </CardContent>
     </Card>
   )
@@ -132,40 +172,64 @@ type ToolAction = {
 
 function ToolSection({
   children,
+  collapsed,
   label,
 }: {
   children: ToolAction[]
+  collapsed: boolean
   label: string
 }) {
   return (
     <section className="grid gap-1.5">
-      <p className="px-1 text-[10px] font-semibold tracking-[0.14em] text-stone-500 uppercase">
+      <p
+        className={cn(
+          "px-1 text-[10px] font-semibold tracking-[0.14em] text-stone-500 uppercase",
+          collapsed && "sr-only"
+        )}
+      >
         {label}
       </p>
-      <div className="grid grid-flow-col auto-cols-[minmax(8.5rem,1fr)] gap-1.5 overflow-x-auto pb-1 xl:grid-flow-row xl:grid-cols-1 xl:overflow-visible xl:pb-0">
+      <div
+        className={cn(
+          "grid gap-1.5",
+          collapsed
+            ? "grid-flow-col auto-cols-9 overflow-x-auto pb-1 sm:grid-flow-row sm:grid-cols-1 sm:overflow-visible sm:pb-0"
+            : "grid-flow-col auto-cols-[minmax(8.5rem,1fr)] overflow-x-auto pb-1 md:grid-flow-row md:grid-cols-1 md:overflow-visible md:pb-0"
+        )}
+      >
         {children.map((tool) => (
-          <ToolButton key={tool.label} {...tool} />
+          <ToolButton key={tool.label} collapsed={collapsed} {...tool} />
         ))}
       </div>
     </section>
   )
 }
 
-function ToolButton({ active, icon, label, onClick }: ToolAction) {
+function ToolButton({
+  active,
+  collapsed,
+  icon,
+  label,
+  onClick,
+}: ToolAction & { collapsed: boolean }) {
   return (
     <Button
       aria-pressed={active}
+      aria-label={label}
       className={cn(
-        "h-10 justify-start gap-2 px-3 text-left text-sm",
+        "h-10 gap-2 text-sm",
+        collapsed
+          ? "w-full justify-center px-0"
+          : "justify-start px-3 text-left",
         active && "border-stone-900 bg-stone-950 text-white hover:bg-stone-900"
       )}
-      size="lg"
+      size={collapsed ? "icon-lg" : "lg"}
       title={label}
       variant={active ? "default" : "ghost"}
       onClick={onClick}
     >
       {icon}
-      <span className="truncate">{label}</span>
+      <span className={cn("truncate", collapsed && "sr-only")}>{label}</span>
     </Button>
   )
 }
