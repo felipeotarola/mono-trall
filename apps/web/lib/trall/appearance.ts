@@ -1,7 +1,12 @@
 export type RenderMode = "construction" | "realistic"
 
 export type DeckMaterialId = "treated_wood" | "cedar" | "grey_composite"
-export type HouseWallMaterialId = "light_plaster" | "timber_siding" | "brick"
+export type HouseWallMaterialId =
+  | "light_plaster"
+  | "painted_wood"
+  | "timber_siding"
+  | "concrete"
+  | "brick"
 export type RoofMaterialId = "dark_metal" | "red_tile" | "roofing_felt"
 export type PoolWallMaterialId = "white_liner" | "blue_tile" | "concrete"
 export type TerrainMaterialId = "soil" | "grass" | "gravel"
@@ -10,6 +15,7 @@ export type AppearanceSettings = {
   renderMode: RenderMode
   deckMaterial: DeckMaterialId
   houseWallMaterial: HouseWallMaterialId
+  houseWallColor: string
   roofMaterial: RoofMaterialId
   poolWallMaterial: PoolWallMaterialId
   terrainMaterial: TerrainMaterialId
@@ -23,9 +29,35 @@ export const deckMaterialOptions = [
 
 export const houseWallMaterialOptions = [
   { value: "light_plaster", label: "Light plaster" },
+  { value: "painted_wood", label: "Painted wood" },
   { value: "timber_siding", label: "Timber siding" },
+  { value: "concrete", label: "Concrete" },
   { value: "brick", label: "Brick" },
-] as const satisfies ReadonlyArray<{ value: HouseWallMaterialId; label: string }>
+] as const satisfies ReadonlyArray<{
+  value: HouseWallMaterialId
+  label: string
+}>
+
+export const houseWallColorPresets = [
+  { value: "#ddd8d0", label: "Warm white" },
+  { value: "#f3f0e8", label: "White" },
+  { value: "#b8b6ad", label: "Concrete grey" },
+  { value: "#c09668", label: "Natural wood" },
+  { value: "#8f2f24", label: "Falu red" },
+  { value: "#2f3437", label: "Charcoal" },
+] as const satisfies ReadonlyArray<{ value: string; label: string }>
+
+export function getDefaultHouseWallColor(
+  material: HouseWallMaterialId
+): string {
+  return {
+    light_plaster: "#ddd8d0",
+    painted_wood: "#f3f0e8",
+    timber_siding: "#c09668",
+    concrete: "#b8b6ad",
+    brick: "#ad6750",
+  }[material]
+}
 
 export const roofMaterialOptions = [
   { value: "dark_metal", label: "Dark metal" },
@@ -50,13 +82,16 @@ export function getDefaultAppearanceSettings(): AppearanceSettings {
     renderMode: "construction",
     deckMaterial: "treated_wood",
     houseWallMaterial: "light_plaster",
+    houseWallColor: getDefaultHouseWallColor("light_plaster"),
     roofMaterial: "dark_metal",
     poolWallMaterial: "white_liner",
     terrainMaterial: "soil",
   }
 }
 
-export function normalizeAppearanceSettings(input: unknown): AppearanceSettings {
+export function normalizeAppearanceSettings(
+  input: unknown
+): AppearanceSettings {
   const defaults = getDefaultAppearanceSettings()
   if (!input || typeof input !== "object") {
     return defaults
@@ -80,6 +115,10 @@ export function normalizeAppearanceSettings(input: unknown): AppearanceSettings 
       houseWallMaterialOptions,
       defaults.houseWallMaterial
     ),
+    houseWallColor: normalizeHexColor(
+      candidate.houseWallColor,
+      defaults.houseWallColor
+    ),
     roofMaterial: getOptionValue(
       candidate.roofMaterial,
       roofMaterialOptions,
@@ -98,10 +137,21 @@ export function normalizeAppearanceSettings(input: unknown): AppearanceSettings 
   }
 }
 
+function normalizeHexColor(value: unknown, fallback: string) {
+  if (typeof value !== "string") {
+    return fallback
+  }
+
+  const trimmed = value.trim()
+  return /^#[0-9a-fA-F]{6}$/.test(trimmed) ? trimmed : fallback
+}
+
 function getOptionValue<T extends string>(
   value: unknown,
   options: ReadonlyArray<{ value: T }>,
   fallback: T
 ) {
-  return options.some((option) => option.value === value) ? (value as T) : fallback
+  return options.some((option) => option.value === value)
+    ? (value as T)
+    : fallback
 }

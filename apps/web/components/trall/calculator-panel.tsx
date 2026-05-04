@@ -66,6 +66,8 @@ import {
 import type { SupportLayout } from "@/lib/trall/supports"
 import {
   deckMaterialOptions,
+  getDefaultHouseWallColor,
+  houseWallColorPresets,
   houseWallMaterialOptions,
   poolWallMaterialOptions,
   roofMaterialOptions,
@@ -241,6 +243,23 @@ function AppearanceSettingsCard({
     })
   }
 
+  function updateHouseWallMaterial(
+    value: AppearanceSettings["houseWallMaterial"]
+  ) {
+    setElevationSettings((current) => {
+      const normalized = normalizeElevationSettings(current)
+
+      return {
+        ...normalized,
+        appearance: {
+          ...normalized.appearance,
+          houseWallMaterial: value,
+          houseWallColor: getDefaultHouseWallColor(value),
+        },
+      }
+    })
+  }
+
   return (
     <Card size="sm">
       <CardHeader>
@@ -286,7 +305,11 @@ function AppearanceSettingsCard({
             label="House wall"
             options={houseWallMaterialOptions}
             value={appearance.houseWallMaterial}
-            onChange={(value) => updateAppearance("houseWallMaterial", value)}
+            onChange={updateHouseWallMaterial}
+          />
+          <HouseColorControl
+            value={appearance.houseWallColor}
+            onChange={(value) => updateAppearance("houseWallColor", value)}
           />
           <AppearanceSelect
             label="Roof"
@@ -341,6 +364,52 @@ function AppearanceSelect<T extends string>({
           ))}
         </SelectContent>
       </Select>
+    </div>
+  )
+}
+
+function HouseColorControl({
+  onChange,
+  value,
+}: {
+  onChange: (value: string) => void
+  value: string
+}) {
+  return (
+    <div className="grid gap-1.5">
+      <span className="text-xs text-muted-foreground">House color</span>
+      <div className="flex items-center gap-2">
+        <Input
+          aria-label="House color"
+          className="h-10 w-12 shrink-0 cursor-pointer rounded-lg border p-1"
+          type="color"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <Input
+          className="h-10 min-w-0 text-xs"
+          inputMode="text"
+          value={value}
+          onChange={(event) => {
+            if (/^#[0-9a-fA-F]{6}$/.test(event.target.value)) {
+              onChange(event.target.value)
+            }
+          }}
+        />
+      </div>
+      <div className="grid grid-cols-6 gap-1">
+        {houseWallColorPresets.map((preset) => (
+          <button
+            key={preset.value}
+            aria-label={preset.label}
+            className="h-6 rounded-md border shadow-sm"
+            style={{ backgroundColor: preset.value }}
+            title={preset.label}
+            type="button"
+            onClick={() => onChange(preset.value)}
+          />
+        ))}
+      </div>
     </div>
   )
 }

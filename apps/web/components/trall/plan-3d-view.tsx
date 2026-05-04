@@ -28,7 +28,10 @@ import {
   mToCm,
   type ElevationSettings,
 } from "@/lib/trall/elevation"
-import type { AppearanceSettings } from "@/lib/trall/appearance"
+import {
+  getDefaultHouseWallColor,
+  type AppearanceSettings,
+} from "@/lib/trall/appearance"
 
 const BOARD_LINE_LIMIT = 72
 
@@ -124,7 +127,9 @@ function getSceneMaterials(appearance: AppearanceSettings): SceneMaterials {
   }[appearance.deckMaterial]
   const houseWall = {
     light_plaster: realistic ? "#d8d3ca" : "#ddd8d0",
+    painted_wood: realistic ? "#d6d1c5" : "#ded8cb",
     timber_siding: realistic ? "#b78a5d" : "#c09668",
+    concrete: realistic ? "#aaa9a0" : "#b8b6ad",
     brick: realistic ? "#9f5d45" : "#ad6750",
   }[appearance.houseWallMaterial]
   const roof = {
@@ -161,7 +166,10 @@ function getSceneMaterials(appearance: AppearanceSettings): SceneMaterials {
     deckRoughness: realistic ? 0.86 : 0.78,
     excavationColor: terrain.excavation,
     excavationRimColor: terrain.rim,
-    houseWallColor: houseWall,
+    houseWallColor:
+      appearance.houseWallColor ||
+      getDefaultHouseWallColor(appearance.houseWallMaterial) ||
+      houseWall,
     poolBorderColor:
       appearance.poolWallMaterial === "blue_tile" ? "#d9f4ff" : "#e7f8ff",
     poolWallColor: poolWall,
@@ -235,7 +243,9 @@ function getSceneTextureSelection(
     houseWall: (
       {
         light_plaster: "house-light-plaster",
+        painted_wood: "house-timber-siding",
         timber_siding: "house-timber-siding",
+        concrete: "pool-concrete",
         brick: "house-brick",
       } satisfies Record<AppearanceSettings["houseWallMaterial"], TextureKey>
     )[appearance.houseWallMaterial],
@@ -531,7 +541,7 @@ function HouseMass({
           args={[model.house.widthM, model.house.heightM, model.house.depthM]}
         />
         <meshStandardMaterial
-          color={textureMaps.houseWall ? "#ffffff" : materials.houseWallColor}
+          color={materials.houseWallColor}
           map={textureMaps.houseWall}
           roughness={0.82}
         />
