@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
+import { createClient } from "@/lib/supabase/client"
 import {
   Sidebar,
   SidebarContent,
@@ -21,11 +22,6 @@ import {
 } from "lucide-react"
 
 const data = {
-  user: {
-    name: "TrallAI",
-    email: "planner@trall.ai",
-    avatar: "",
-  },
   navMain: [
     {
       title: "Dashboard",
@@ -45,8 +41,21 @@ const data = {
   ],
 }
 
+type SidebarUser = {
+  avatar: string
+  email: string
+  name: string
+}
+
+const fallbackUser: SidebarUser = {
+  name: "TrallAI",
+  email: "",
+  avatar: "",
+}
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
+  const [user, setUser] = React.useState<SidebarUser>(fallbackUser)
   const items = data.navMain.map((item) => ({
     ...item,
     isActive:
@@ -54,6 +63,33 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         ? pathname === "/"
         : item.url !== "#" && pathname.startsWith(item.url),
   }))
+
+  React.useEffect(() => {
+    const supabase = createClient()
+
+    async function loadUser() {
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser()
+
+      if (!authUser) {
+        setUser(fallbackUser)
+        return
+      }
+
+      setUser(getSidebarUser(authUser))
+    }
+
+    void loadUser()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ? getSidebarUser(session.user) : fallbackUser)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -77,8 +113,46 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
     </Sidebar>
   )
+}
+
+function getSidebarUser(authUser: {
+  email?: string
+  user_metadata?: Record<string, unknown>
+}): SidebarUser {
+  const metadata = authUser.user_metadata ?? {}
+  const email = authUser.email ?? ""
+  const name =
+    getStringMetadata(metadata, "full_name") ??
+    getStringMetadata(metadata, "name") ??
+    getStringMetadata(metadata, "display_name") ??
+    getNameFromEmail(email) ??
+    fallbackUser.name
+
+  return {
+    name,
+    email,
+    avatar:
+      getStringMetadata(metadata, "avatar_url") ??
+      getStringMetadata(metadata, "picture") ??
+      "",
+  }
+}
+
+function getNameFromEmail(email: string) {
+  const [localPart] = email.split("@")
+
+  return localPart || null
+}
+
+function getStringMetadata(
+  metadata: Record<string, unknown>,
+  key: string
+): string | null {
+  const value = metadata[key]
+
+  return typeof value === "string" && value.trim() ? value : null
 }
