@@ -74,6 +74,9 @@ export const defaultBoardDirection: BoardDirectionSettings = {
   boardDirectionMode: "parallel-house",
 }
 
+export const STAIR_WIDTH_MIN_M = 0.6
+export const STAIR_WIDTH_MAX_M = 30
+
 export function getDeckEdges({
   constraints,
   points,
@@ -327,7 +330,12 @@ export function normalizeDeckFeatures(value: unknown): DeckFeature[] {
           type: "stairs",
           edgeId: feature.edgeId,
           positionT: clampNumber(feature.positionT, 0, 1, 0.5),
-          widthM: clampNumber(feature.widthM, 0.6, 5, 1.2),
+          widthM: clampNumber(
+            feature.widthM,
+            STAIR_WIDTH_MIN_M,
+            STAIR_WIDTH_MAX_M,
+            1.2
+          ),
           depthM: clampNumber(feature.depthM, 0.5, 5, 0.9),
           stepCount: Math.round(clampNumber(feature.stepCount, 1, 16, 2)),
           direction: feature.direction === "inward" ? "inward" : "outward",

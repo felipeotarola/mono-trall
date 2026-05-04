@@ -32,6 +32,14 @@ import {
   getDefaultHouseWallColor,
   type AppearanceSettings,
 } from "@/lib/trall/appearance"
+import {
+  centerYFromBottom,
+  deckAccessoryBaseY,
+  deckOverlayY,
+  PLAN_3D_LAYERS,
+  PLAN_3D_SCALE,
+  terrainOverlayY,
+} from "@/lib/trall/plan-3d-layers"
 
 const BOARD_LINE_LIMIT = 72
 
@@ -322,6 +330,10 @@ export function Plan3DView({
     [model.elevation.settings.appearance]
   )
 
+  useEffect(() => {
+    validatePlan3DPlacement(model)
+  }, [model])
+
   return (
     <div
       className="relative h-full w-full overflow-hidden rounded-md bg-stone-200"
@@ -340,8 +352,11 @@ export function Plan3DView({
         <PerspectiveCamera
           makeDefault
           fov={42}
-          near={0.1}
-          far={250}
+          near={PLAN_3D_SCALE.cameraNearM}
+          far={Math.max(
+            PLAN_3D_SCALE.cameraFarMinM,
+            cameraDistance * PLAN_3D_SCALE.cameraFarMultiplier
+          )}
           position={[
             cameraDistance * 0.6,
             cameraDistance * 0.6,
@@ -532,7 +547,7 @@ function HouseMass({
   model: Plan3DModel
   textureMaps: SceneTextureMaps
 }) {
-  const frontZ = model.house.depthM / 2 + 0.018
+  const frontZ = model.house.depthM / 2 + PLAN_3D_LAYERS.wallProjectionM
 
   return (
     <group position={[model.house.center.x, 0, model.house.center.z]}>
@@ -792,7 +807,13 @@ function HouseWindow3D({
   const frameColor = window.row === "upper" ? "#eef5f8" : "#edf1f1"
 
   return (
-    <group position={[window.centerX, window.centerY, frontZ + 0.006]}>
+    <group
+      position={[
+        window.centerX,
+        window.centerY,
+        frontZ + PLAN_3D_LAYERS.renderEpsilonM,
+      ]}
+    >
       <mesh position={[0, 0, 0]}>
         <boxGeometry args={[window.widthM, window.heightM, 0.035]} />
         <meshStandardMaterial
@@ -890,12 +911,10 @@ function PoolBody({
     () => (points ? createFlatPolygonGeometry(points) : null),
     [points]
   )
+  const poolBorderY = model.elevation.poolTopY + PLAN_3D_LAYERS.trimLiftM
   const borderGeometry = useMemo(
-    () =>
-      points
-        ? createLineLoopGeometry(points, model.elevation.poolTopY + 0.018)
-        : null,
-    [model.elevation.poolTopY, points]
+    () => (points ? createLineLoopGeometry(points, poolBorderY) : null),
+    [points, poolBorderY]
   )
 
   if (!geometry || !waterGeometry || !borderGeometry) {
@@ -912,7 +931,10 @@ function PoolBody({
           side={THREE.DoubleSide}
         />
       </mesh>
-      <mesh geometry={waterGeometry} position={[0, -0.045, 0]}>
+      <mesh
+        geometry={waterGeometry}
+        position={[0, -PLAN_3D_LAYERS.waterBelowPoolTopM, 0]}
+      >
         <meshStandardMaterial
           color={materials.poolWaterColor}
           metalness={0.05}
@@ -925,6 +947,7 @@ function PoolBody({
       <lineSegments
         geometry={borderGeometry}
         position={[0, -model.elevation.poolTopY, 0]}
+        renderOrder={2}
       >
         <lineBasicMaterial color={materials.poolBorderColor} linewidth={1} />
       </lineSegments>
@@ -981,24 +1004,38 @@ function Supports({
   return (
     <>
       {model.supportPosts.map((post) => (
-        <mesh
-          key={post.id}
-          castShadow
-          receiveShadow
-          position={[
-            post.point.x,
-            post.terrainY + post.heightM / 2,
-            post.point.z,
-          ]}
-        >
-          <boxGeometry args={[0.11, post.heightM, 0.11]} />
-          <meshStandardMaterial
-            color={materials.supportColor}
-            roughness={0.84}
-          />
-        </mesh>
+        <SupportPost key={post.id} materials={materials} post={post} />
       ))}
     </>
+  )
+}
+
+function SupportPost({
+  materials,
+  post,
+}: {
+  materials: SceneMaterials
+  post: Plan3DModel["supportPosts"][number]
+}) {
+  const bottomY = terrainOverlayY(post.terrainY)
+  const heightM = Math.max(
+    0.02,
+    post.deckBottomY - bottomY - PLAN_3D_LAYERS.supportClearanceM
+  )
+
+  return (
+    <mesh
+      castShadow
+      receiveShadow
+      position={[
+        post.point.x,
+        centerYFromBottom(bottomY, heightM),
+        post.point.z,
+      ]}
+    >
+      <boxGeometry args={[0.11, heightM, 0.11]} />
+      <meshStandardMaterial color={materials.supportColor} roughness={0.84} />
+    </mesh>
   )
 }
 
@@ -1018,7 +1055,7 @@ function HeightMarkers({ model }: { model: Plan3DModel }) {
         color="#6f4b2f"
         label={`Deck ${formatHeightCm(model.elevation.deckFinishedY)}`}
         point={deckPoint}
-        y={model.elevation.deckFinishedY + 0.08}
+        y={model.elevation.deckFinishedY + PLAN_3D_LAYERS.labelLiftM}
       />
       {poolPoint ? (
         <HeightMarker
@@ -1026,7 +1063,7 @@ function HeightMarkers({ model }: { model: Plan3DModel }) {
           color="#1d79b7"
           label={`Pool top ${formatHeightCm(model.elevation.poolTopY)}`}
           point={poolPoint}
-          y={model.elevation.poolTopY + 0.1}
+          y={model.elevation.poolTopY + PLAN_3D_LAYERS.labelLiftM}
         />
       ) : null}
       <HeightMarker
@@ -1034,7 +1071,7 @@ function HeightMarkers({ model }: { model: Plan3DModel }) {
         color="#645846"
         label={`Ground ${formatHeightCm(groundPoint.y)}`}
         point={groundPoint}
-        y={groundPoint.y + 0.12}
+        y={groundPoint.y + PLAN_3D_LAYERS.labelLiftM}
       />
     </>
   )
@@ -1104,19 +1141,19 @@ function BoardLines({
 }) {
   const visibleLines = lines.slice(0, BOARD_LINE_LIMIT)
   const geometry = useMemo(
-    () => createLineSegmentsGeometry(visibleLines, deckFinishedY + 0.026),
+    () => createLineSegmentsGeometry(visibleLines, deckOverlayY(deckFinishedY)),
     [deckFinishedY, visibleLines]
   )
 
   return (
-    <lineSegments geometry={geometry}>
+    <lineSegments geometry={geometry} renderOrder={2}>
       <lineBasicMaterial color={color} transparent opacity={0.36} />
     </lineSegments>
   )
 }
 
 function Railings({ model }: { model: Plan3DModel }) {
-  const deckY = model.elevation.deckFinishedY
+  const baseY = deckAccessoryBaseY(model.elevation.deckFinishedY)
 
   return (
     <>
@@ -1138,7 +1175,7 @@ function Railings({ model }: { model: Plan3DModel }) {
           <group key={railing.id}>
             <mesh
               castShadow
-              position={[mid.x, deckY + railing.heightM, mid.z]}
+              position={[mid.x, baseY + railing.heightM, mid.z]}
               rotation={[0, -railing.edge.angleY, 0]}
             >
               <boxGeometry args={[railing.edge.lengthM, 0.08, 0.08]} />
@@ -1151,7 +1188,7 @@ function Railings({ model }: { model: Plan3DModel }) {
             </mesh>
             <mesh
               castShadow
-              position={[mid.x, deckY + railing.heightM * 0.55, mid.z]}
+              position={[mid.x, baseY + railing.heightM * 0.55, mid.z]}
               rotation={[0, -railing.edge.angleY, 0]}
             >
               <boxGeometry args={[railing.edge.lengthM, 0.055, 0.055]} />
@@ -1173,7 +1210,7 @@ function Railings({ model }: { model: Plan3DModel }) {
                 <mesh
                   key={`${railing.id}-post-${index}`}
                   castShadow
-                  position={[point.x, deckY + railing.heightM / 2, point.z]}
+                  position={[point.x, baseY + railing.heightM / 2, point.z]}
                 >
                   <boxGeometry args={[0.09, railing.heightM, 0.09]} />
                   <meshStandardMaterial color={railColor} roughness={0.72} />
@@ -1199,9 +1236,13 @@ function Stairs({
       {model.stairs.map((stairs) => {
         const stepCount = Math.max(1, stairs.stepCount)
         const stepDepth = stairs.depthM / stepCount
-        const stepRise = stairs.totalHeightM / stepCount
+        const bottomY = terrainOverlayY(stairs.terrainY)
+        const topY =
+          model.elevation.deckFinishedY - PLAN_3D_LAYERS.renderEpsilonM
+        const effectiveHeight = Math.max(0.12, topY - bottomY)
+        const stepRise = effectiveHeight / stepCount
         const treadThickness = Math.min(0.09, stepRise * 0.45)
-        const stringerY = stairs.terrainY + stairs.totalHeightM / 2
+        const stringerY = bottomY + effectiveHeight / 2
         const tangent = {
           x: Math.cos(stairs.angleY),
           z: Math.sin(stairs.angleY),
@@ -1211,8 +1252,8 @@ function Stairs({
           <group key={stairs.id}>
             {Array.from({ length: stepCount }, (_, index) => {
               const distance = stepDepth * (index + 0.5)
-              const treadY =
-                stairs.terrainY + stepRise * (index + 1) - treadThickness / 2
+              const stepLevel = stepCount - index
+              const treadY = bottomY + stepRise * stepLevel - treadThickness / 2
               const center = {
                 x: stairs.anchor.x + stairs.normal.x * distance,
                 z: stairs.anchor.z + stairs.normal.z * distance,
@@ -1239,10 +1280,10 @@ function Stairs({
                     receiveShadow
                     position={[
                       stairs.anchor.x +
-                        stairs.normal.x * (distance - stepDepth / 2),
-                      stairs.terrainY + stepRise * (index + 0.5),
+                        stairs.normal.x * (distance + stepDepth / 2),
+                      bottomY + stepRise * (stepLevel - 0.5),
                       stairs.anchor.z +
-                        stairs.normal.z * (distance - stepDepth / 2),
+                        stairs.normal.z * (distance + stepDepth / 2),
                     ]}
                     rotation={[0, -stairs.angleY, 0]}
                   >
@@ -1285,7 +1326,7 @@ function Stairs({
                   <boxGeometry
                     args={[
                       0.08,
-                      Math.max(0.08, stairs.totalHeightM),
+                      Math.max(0.08, effectiveHeight),
                       stairs.depthM,
                     ]}
                   />
@@ -1310,7 +1351,7 @@ function Pergolas({
   materials: SceneMaterials
   model: Plan3DModel
 }) {
-  const deckY = model.elevation.deckFinishedY
+  const baseY = deckAccessoryBaseY(model.elevation.deckFinishedY)
 
   return (
     <>
@@ -1327,7 +1368,7 @@ function Pergolas({
         return (
           <group
             key={pergola.id}
-            position={[pergola.center.x, deckY, pergola.center.z]}
+            position={[pergola.center.x, baseY, pergola.center.z]}
             rotation={[0, -pergola.rotationRad, 0]}
           >
             {postPositions.map(([postX, postZ], index) => (
@@ -1378,7 +1419,7 @@ function Pergolas({
 }
 
 function PrivacyScreens({ model }: { model: Plan3DModel }) {
-  const deckY = model.elevation.deckFinishedY
+  const baseY = deckAccessoryBaseY(model.elevation.deckFinishedY)
 
   return (
     <>
@@ -1409,7 +1450,7 @@ function PrivacyScreens({ model }: { model: Plan3DModel }) {
                   <mesh
                     key={`${screen.id}-slat-${index}`}
                     castShadow
-                    position={[point.x, deckY + screen.heightM / 2, point.z]}
+                    position={[point.x, baseY + screen.heightM / 2, point.z]}
                     rotation={[0, -screen.angleY, 0]}
                   >
                     <boxGeometry args={[0.06, screen.heightM, 0.08]} />
@@ -1420,7 +1461,7 @@ function PrivacyScreens({ model }: { model: Plan3DModel }) {
             ) : (
               <mesh
                 castShadow
-                position={[mid.x, deckY + screen.heightM / 2, mid.z]}
+                position={[mid.x, baseY + screen.heightM / 2, mid.z]}
                 rotation={[0, -screen.angleY, 0]}
               >
                 <boxGeometry args={[screen.lengthM, screen.heightM, 0.08]} />
@@ -1443,7 +1484,9 @@ function createPoolExcavationGeometry(model: Plan3DModel) {
   const terrain = model.elevation.settings.terrain
   const terrainBounds = model.elevation.terrainBounds
   const poolBottomY =
-    model.elevation.poolTopY - model.elevation.poolBodyHeightM - 0.015
+    model.elevation.poolTopY -
+    model.elevation.poolBodyHeightM -
+    PLAN_3D_LAYERS.surfaceLiftM
   const center = getLabelPoint(points)
   const positions: number[] = []
 
@@ -1467,16 +1510,16 @@ function createPoolExcavationGeometry(model: Plan3DModel) {
 
     positions.push(
       start.x,
-      startTerrainY + 0.01,
+      terrainOverlayY(startTerrainY),
       start.z,
       end.x,
-      endTerrainY + 0.01,
+      terrainOverlayY(endTerrainY),
       end.z,
       end.x,
       poolBottomY,
       end.z,
       start.x,
-      startTerrainY + 0.01,
+      terrainOverlayY(startTerrainY),
       start.z,
       end.x,
       poolBottomY,
@@ -1524,10 +1567,12 @@ function createPoolExcavationRimGeometry(model: Plan3DModel) {
 
     positions.push(
       start.x,
-      getTerrainHeightAt(start, terrain, terrainBounds) + 0.035,
+      getTerrainHeightAt(start, terrain, terrainBounds) +
+        PLAN_3D_LAYERS.lineLiftM,
       start.z,
       end.x,
-      getTerrainHeightAt(end, terrain, terrainBounds) + 0.035,
+      getTerrainHeightAt(end, terrain, terrainBounds) +
+        PLAN_3D_LAYERS.lineLiftM,
       end.z
     )
   })
@@ -1863,6 +1908,47 @@ function getHorizontalVector(a: Point3D, b: Point3D) {
   return {
     x: (b.x - a.x) / length,
     z: (b.z - a.z) / length,
+  }
+}
+
+function validatePlan3DPlacement(model: Plan3DModel) {
+  if (
+    typeof window === "undefined" ||
+    !["localhost", "127.0.0.1"].includes(window.location.hostname)
+  ) {
+    return
+  }
+
+  const deckTopY = model.elevation.deckFinishedY
+  const deckBottomY = deckTopY - model.elevation.deckThicknessM
+  const warnings: string[] = []
+
+  for (const post of model.supportPosts) {
+    if (post.terrainY >= post.deckBottomY - PLAN_3D_LAYERS.renderEpsilonM) {
+      warnings.push(`support ${post.id} has no clearance below deck`)
+    }
+  }
+
+  for (const stairs of model.stairs) {
+    if (stairs.totalHeightM <= PLAN_3D_LAYERS.surfaceLiftM) {
+      warnings.push(`stairs ${stairs.id} has near-zero height`)
+    }
+  }
+
+  for (const point of model.deckPoints) {
+    const terrainY = getTerrainHeightAt(
+      point,
+      model.elevation.settings.terrain,
+      model.elevation.terrainBounds
+    )
+    if (terrainY > deckBottomY - PLAN_3D_LAYERS.surfaceLiftM) {
+      warnings.push("terrain is close to or above deck underside")
+      break
+    }
+  }
+
+  if (warnings.length > 0) {
+    console.warn("[Plan3D placement]", [...new Set(warnings)])
   }
 }
 

@@ -12,6 +12,7 @@ import {
 } from "@workspace/ui/components/card"
 import { Input } from "@workspace/ui/components/input"
 import { clamp } from "@/lib/trall/geometry"
+import { STAIR_WIDTH_MAX_M, STAIR_WIDTH_MIN_M } from "@/lib/trall/features"
 import type {
   DeckFeature,
   PergolaFeature,
@@ -98,13 +99,16 @@ function StairSettings({
     <div className="grid grid-cols-2 gap-2">
       <NumberField
         label="Width"
-        max={5}
-        min={0.6}
+        max={STAIR_WIDTH_MAX_M}
+        min={STAIR_WIDTH_MIN_M}
         step={0.1}
         unit="m"
         value={feature.widthM}
         onChange={(value) =>
-          onUpdate({ ...feature, widthM: clamp(value, 0.6, 5) })
+          onUpdate({
+            ...feature,
+            widthM: clamp(value, STAIR_WIDTH_MIN_M, STAIR_WIDTH_MAX_M),
+          })
         }
       />
       <NumberField

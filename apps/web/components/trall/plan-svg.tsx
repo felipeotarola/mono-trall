@@ -39,7 +39,9 @@ import {
   type BoardDirectionSettings,
   type DeckFeature,
   type FeaturePlacementType,
+  type PergolaFeature,
   type RailingFeature,
+  type StairFeature,
 } from "@/lib/trall/features"
 import {
   getHouseAttachEdge,
@@ -157,6 +159,17 @@ export function PlanSvg({
     pointerStartX: number
     startOffsetM: number
     windowId: string
+  } | null>(null)
+  const [stairDrag, setStairDrag] = useState<{
+    edge: GeometryEdge
+    pointerStart: Point
+    stairId: string
+    startPositionT: number
+  } | null>(null)
+  const [pergolaDrag, setPergolaDrag] = useState<{
+    pergolaId: string
+    pointerStart: Point
+    startPoint: Point
   } | null>(null)
   const houseDoors = getHouseDoors(house)
   const houseWindows = getHouseWindows(house)
@@ -281,6 +294,14 @@ export function PlanSvg({
   }
 
   function handlePointerMove(event: ReactPointerEvent<SVGSVGElement>) {
+    if (updatePergolaDrag(event)) {
+      return
+    }
+
+    if (updateStairDrag(event)) {
+      return
+    }
+
     if (updateDoorDrag(event)) {
       return
     }
@@ -305,6 +326,14 @@ export function PlanSvg({
   }
 
   function handlePointerEnd(event: ReactPointerEvent<SVGSVGElement>) {
+    if (finishPergolaDrag(event)) {
+      return
+    }
+
+    if (finishStairDrag(event)) {
+      return
+    }
+
     if (finishDoorDrag(event)) {
       return
     }
@@ -460,6 +489,158 @@ export function PlanSvg({
     }
 
     setWindowDrag(null)
+    return true
+  }
+
+  function startStairDrag(
+    event: ReactPointerEvent<SVGGElement>,
+    stair: StairFeature
+  ) {
+    if (activeTool !== "select" || !svgRef.current) {
+      return
+    }
+
+    const edge = editor.edges.find((item) => item.id === stair.edgeId)
+    if (!edge) {
+      return
+    }
+
+    event.preventDefault()
+    event.stopPropagation()
+    svgRef.current.focus()
+    svgRef.current.setPointerCapture(event.pointerId)
+    setActivePointIndex(null)
+    setActivePoolPointIndex(null)
+    setSelectedMeasurementId(null)
+    setEditingMeasurement(null)
+    setSelectedFeatureId(stair.id)
+    setStairDrag({
+      edge,
+      pointerStart: clientPointToSvgPoint(event, svgRef.current),
+      stairId: stair.id,
+      startPositionT: stair.positionT,
+    })
+  }
+
+  function updateStairDrag(event: ReactPointerEvent<SVGSVGElement>) {
+    if (!stairDrag || !svgRef.current) {
+      return false
+    }
+
+    event.preventDefault()
+    const point = clientPointToSvgPoint(event, svgRef.current)
+    const tangent = {
+      x: stairDrag.edge.end.x - stairDrag.edge.start.x,
+      y: stairDrag.edge.end.y - stairDrag.edge.start.y,
+    }
+    const edgeLengthPx = Math.hypot(tangent.x, tangent.y) || 1
+    const deltaPx = {
+      x: point.x - stairDrag.pointerStart.x,
+      y: point.y - stairDrag.pointerStart.y,
+    }
+    const deltaAlongEdgeT =
+      (deltaPx.x * tangent.x + deltaPx.y * tangent.y) /
+      (edgeLengthPx * edgeLengthPx)
+
+    setFeatures((currentFeatures) =>
+      currentFeatures.map((feature) => {
+        if (feature.id !== stairDrag.stairId || feature.type !== "stairs") {
+          return feature
+        }
+
+        const halfWidthT = Math.min(
+          0.49,
+          (feature.widthM * PIXELS_PER_METER) / 2 / edgeLengthPx
+        )
+
+        return {
+          ...feature,
+          positionT: clamp(
+            stairDrag.startPositionT + deltaAlongEdgeT,
+            halfWidthT,
+            1 - halfWidthT
+          ),
+        }
+      })
+    )
+
+    return true
+  }
+
+  function finishStairDrag(event: ReactPointerEvent<SVGSVGElement>) {
+    if (!stairDrag) {
+      return false
+    }
+
+    if (svgRef.current?.hasPointerCapture(event.pointerId)) {
+      svgRef.current.releasePointerCapture(event.pointerId)
+    }
+
+    setStairDrag(null)
+    return true
+  }
+
+  function startPergolaDrag(
+    event: ReactPointerEvent<SVGGElement>,
+    pergola: PergolaFeature
+  ) {
+    if (activeTool !== "select" || !svgRef.current) {
+      return
+    }
+
+    event.preventDefault()
+    event.stopPropagation()
+    svgRef.current.focus()
+    svgRef.current.setPointerCapture(event.pointerId)
+    setActivePointIndex(null)
+    setActivePoolPointIndex(null)
+    setSelectedMeasurementId(null)
+    setEditingMeasurement(null)
+    setSelectedFeatureId(pergola.id)
+    setPergolaDrag({
+      pergolaId: pergola.id,
+      pointerStart: clientPointToSvgPoint(event, svgRef.current),
+      startPoint: { x: pergola.x, y: pergola.y },
+    })
+  }
+
+  function updatePergolaDrag(event: ReactPointerEvent<SVGSVGElement>) {
+    if (!pergolaDrag || !svgRef.current) {
+      return false
+    }
+
+    event.preventDefault()
+    const point = clientPointToSvgPoint(event, svgRef.current)
+    const nextPoint = {
+      x: pergolaDrag.startPoint.x + point.x - pergolaDrag.pointerStart.x,
+      y: pergolaDrag.startPoint.y + point.y - pergolaDrag.pointerStart.y,
+    }
+
+    if (!pointInPolygon(nextPoint, deckPoints)) {
+      return true
+    }
+
+    setFeatures((currentFeatures) =>
+      currentFeatures.map((feature) =>
+        feature.id === pergolaDrag.pergolaId && feature.type === "pergola"
+          ? { ...feature, x: nextPoint.x, y: nextPoint.y }
+          : feature
+      )
+    )
+
+    return true
+  }
+
+  function finishPergolaDrag(event: ReactPointerEvent<SVGSVGElement>) {
+    if (!pergolaDrag) {
+      return false
+    }
+
+    if (svgRef.current?.hasPointerCapture(event.pointerId)) {
+      svgRef.current.releasePointerCapture(event.pointerId)
+    }
+
+    setPergolaDrag(null)
     return true
   }
 
@@ -771,7 +952,9 @@ export function PlanSvg({
         selectedFeatureId={selectedFeatureId}
         supportSegments={supportSegments}
         onDeckEdgeClick={placeFeatureOnDeckEdge}
+        onPergolaPointerDown={startPergolaDrag}
         onSelectFeature={selectFeature}
+        onStairPointerDown={startStairDrag}
       />
       <MeasurementLayer
         editingMeasurement={editingMeasurement}
@@ -818,7 +1001,9 @@ function DeckLayer({
   selectedFeatureId,
   supportSegments,
   onDeckEdgeClick,
+  onPergolaPointerDown,
   onSelectFeature,
+  onStairPointerDown,
 }: {
   activeTool: ActiveTool
   activePointIndex: number | null
@@ -834,7 +1019,15 @@ function DeckLayer({
   selectedFeatureId: string | null
   supportSegments: SupportSegment[]
   onDeckEdgeClick: (edgeIndex: number) => boolean
+  onPergolaPointerDown: (
+    event: ReactPointerEvent<SVGGElement>,
+    feature: PergolaFeature
+  ) => void
   onSelectFeature: (featureId: string) => void
+  onStairPointerDown: (
+    event: ReactPointerEvent<SVGGElement>,
+    feature: StairFeature
+  ) => void
 }) {
   const polygonPoints = getPolygonPoints(deckPoints)
   const p1 = deckPoints[0] ?? initialDeckPoints[0]
@@ -925,7 +1118,9 @@ function DeckLayer({
         edges={editor.edges}
         features={features}
         selectedFeatureId={selectedFeatureId}
+        onPergolaPointerDown={onPergolaPointerDown}
         onSelectFeature={onSelectFeature}
+        onStairPointerDown={onStairPointerDown}
       />
 
       {editor.attachedEdges.map((edge) => {

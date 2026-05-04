@@ -44,7 +44,7 @@ test("clamps persisted feature settings", () => {
       id: "stairs-1",
       type: "stairs",
       edgeId: "deck-edge-2",
-      widthM: 10,
+      widthM: 40,
       depthM: -2,
       stepCount: 20,
       direction: "inward",
@@ -54,7 +54,7 @@ test("clamps persisted feature settings", () => {
 
   assert.equal(stairs?.type, "stairs")
   if (stairs?.type === "stairs") {
-    assert.equal(stairs.widthM, 5)
+    assert.equal(stairs.widthM, 30)
     assert.equal(stairs.depthM, 0.5)
     assert.equal(stairs.stepCount, 16)
     assert.equal(stairs.label, "Stairs")

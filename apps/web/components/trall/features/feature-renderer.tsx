@@ -1,6 +1,9 @@
 "use client"
 
-import type { MouseEvent as ReactMouseEvent } from "react"
+import type {
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent,
+} from "react"
 
 import { PIXELS_PER_METER } from "@/lib/trall/constants"
 import type { GeometryEdge } from "@/lib/trall/edge-model"
@@ -54,12 +57,22 @@ export function FeatureRenderer({
   deckPoints,
   edges,
   features,
+  onPergolaPointerDown,
+  onStairPointerDown,
   onSelectFeature,
   selectedFeatureId,
 }: {
   deckPoints: Point[]
   edges: GeometryEdge[]
   features: DeckFeature[]
+  onPergolaPointerDown?: (
+    event: ReactPointerEvent<SVGGElement>,
+    feature: PergolaFeature
+  ) => void
+  onStairPointerDown?: (
+    event: ReactPointerEvent<SVGGElement>,
+    feature: StairFeature
+  ) => void
   onSelectFeature: (featureId: string) => void
   selectedFeatureId: string | null
 }) {
@@ -72,6 +85,8 @@ export function FeatureRenderer({
           edges={edges}
           feature={feature}
           selected={feature.id === selectedFeatureId}
+          onPergolaPointerDown={onPergolaPointerDown}
+          onStairPointerDown={onStairPointerDown}
           onSelect={() => onSelectFeature(feature.id)}
         />
       ))}
@@ -83,12 +98,22 @@ function FeatureSymbol({
   deckPoints,
   edges,
   feature,
+  onPergolaPointerDown,
+  onStairPointerDown,
   onSelect,
   selected,
 }: {
   deckPoints: Point[]
   edges: GeometryEdge[]
   feature: DeckFeature
+  onPergolaPointerDown?: (
+    event: ReactPointerEvent<SVGGElement>,
+    feature: PergolaFeature
+  ) => void
+  onStairPointerDown?: (
+    event: ReactPointerEvent<SVGGElement>,
+    feature: StairFeature
+  ) => void
   onSelect: () => void
   selected: boolean
 }) {
@@ -99,6 +124,7 @@ function FeatureSymbol({
         edges={edges}
         feature={feature}
         selected={selected}
+        onPointerDown={onStairPointerDown}
         onSelect={onSelect}
       />
     )
@@ -120,6 +146,7 @@ function FeatureSymbol({
     return (
       <PergolaSymbol
         feature={feature}
+        onPointerDown={onPergolaPointerDown}
         selected={selected}
         onSelect={onSelect}
       />
@@ -141,12 +168,17 @@ function StairsSymbol({
   deckPoints,
   edges,
   feature,
+  onPointerDown,
   onSelect,
   selected,
 }: {
   deckPoints: Point[]
   edges: GeometryEdge[]
   feature: StairFeature
+  onPointerDown?: (
+    event: ReactPointerEvent<SVGGElement>,
+    feature: StairFeature
+  ) => void
   onSelect: () => void
   selected: boolean
 }) {
@@ -180,13 +212,18 @@ function StairsSymbol({
   )
 
   return (
-    <g data-interactive="true" onClick={stopAnd(onSelect)}>
+    <g
+      data-interactive="true"
+      className="cursor-ew-resize"
+      onClick={stopAnd(onSelect)}
+      onPointerDown={(event) => onPointerDown?.(event, feature)}
+    >
       <polygon
         points={toPoints([a, b, c, d])}
         className={
           selected
-            ? "cursor-pointer fill-amber-100/85 stroke-amber-800"
-            : "cursor-pointer fill-amber-100/70 stroke-amber-700/70"
+            ? "fill-amber-100/85 stroke-amber-800"
+            : "fill-amber-100/70 stroke-amber-700/70"
         }
         strokeLinejoin="round"
         strokeWidth={selected ? "4" : "3"}
@@ -214,13 +251,16 @@ function StairsSymbol({
         )
       })}
       {selected ? (
-        <FeatureLabel
-          point={{
-            x: anchor.x + normal.x * (depth + 22),
-            y: anchor.y + normal.y * (depth + 22),
-          }}
-          text={getFeatureLabel(feature)}
-        />
+        <>
+          <DragHandle point={anchor} />
+          <FeatureLabel
+            point={{
+              x: anchor.x + normal.x * (depth + 22),
+              y: anchor.y + normal.y * (depth + 22),
+            }}
+            text={getFeatureLabel(feature)}
+          />
+        </>
       ) : null}
     </g>
   )
@@ -310,10 +350,15 @@ function RailingSymbol({
 
 function PergolaSymbol({
   feature,
+  onPointerDown,
   onSelect,
   selected,
 }: {
   feature: PergolaFeature
+  onPointerDown?: (
+    event: ReactPointerEvent<SVGGElement>,
+    feature: PergolaFeature
+  ) => void
   onSelect: () => void
   selected: boolean
 }) {
@@ -336,13 +381,18 @@ function PergolaSymbol({
   })
 
   return (
-    <g data-interactive="true" onClick={stopAnd(onSelect)}>
+    <g
+      data-interactive="true"
+      className="cursor-ew-resize"
+      onClick={stopAnd(onSelect)}
+      onPointerDown={(event) => onPointerDown?.(event, feature)}
+    >
       <polygon
         points={toPoints(corners)}
         className={
           selected
-            ? "cursor-pointer fill-orange-100/35 stroke-orange-700"
-            : "cursor-pointer fill-orange-100/25 stroke-orange-700/70"
+            ? "fill-orange-100/35 stroke-orange-700"
+            : "fill-orange-100/25 stroke-orange-700/70"
         }
         strokeDasharray="10 6"
         strokeLinejoin="round"
@@ -372,11 +422,55 @@ function PergolaSymbol({
         />
       ))}
       {selected ? (
-        <FeatureLabel
-          point={{ x: feature.x, y: feature.y - depth / 2 - 22 }}
-          text={getFeatureLabel(feature)}
-        />
+        <>
+          <DragHandle point={feature} />
+          <FeatureLabel
+            point={{ x: feature.x, y: feature.y - depth / 2 - 22 }}
+            text={getFeatureLabel(feature)}
+          />
+        </>
       ) : null}
+    </g>
+  )
+}
+
+function DragHandle({ point }: { point: Point }) {
+  return (
+    <g className="pointer-events-none">
+      <circle
+        cx={point.x}
+        cy={point.y}
+        r="14"
+        className="fill-white/95 stroke-stone-700"
+        strokeWidth="2"
+      />
+      <line
+        x1={point.x - 6}
+        x2={point.x + 6}
+        y1={point.y - 4}
+        y2={point.y - 4}
+        className="stroke-stone-700"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <line
+        x1={point.x - 6}
+        x2={point.x + 6}
+        y1={point.y}
+        y2={point.y}
+        className="stroke-stone-700"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <line
+        x1={point.x - 6}
+        x2={point.x + 6}
+        y1={point.y + 4}
+        y2={point.y + 4}
+        className="stroke-stone-700"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
     </g>
   )
 }
