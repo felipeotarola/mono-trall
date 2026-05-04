@@ -8,7 +8,6 @@ import {
   ChevronsRightIcon,
   ConstructionIcon,
   FenceIcon,
-  HandIcon,
   LightbulbIcon,
   PencilRulerIcon,
   PointerIcon,
@@ -68,12 +67,6 @@ export function FeatureToolList({
       icon: <RulerIcon />,
       active: !placementMode && activeTool === "measure",
       onClick: () => onSelectTool("measure"),
-    },
-    {
-      label: "Pan",
-      icon: <HandIcon />,
-      active: !placementMode && activeTool === "pan",
-      onClick: () => onSelectTool("pan"),
     },
     {
       label: "Add pool",

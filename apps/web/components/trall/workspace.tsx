@@ -6,7 +6,6 @@ import { useSearchParams } from "next/navigation"
 import { Maximize2Icon, Minimize2Icon, PanelRightIcon } from "lucide-react"
 
 import { CalculatorPanel } from "@/components/trall/calculator-panel"
-import { MapControlsPanel } from "@/components/trall/canvas/map-controls"
 import { CanvasToolbar } from "@/components/trall/canvas-toolbar"
 import { FeatureToolList } from "@/components/trall/features/feature-tool-list"
 import { MobileSummary } from "@/components/trall/mobile-summary"
@@ -498,17 +497,23 @@ export function Workspace({
         <div className="min-w-0 flex-1">
           <section className="relative min-w-0 flex-1 overflow-hidden rounded-lg border bg-stone-50 shadow-sm dark:bg-zinc-950">
             <CanvasToolbar
+              activeTool={activeTool}
               extraTool={expandTool}
               modeLabel={modeLabel}
+              onResetView={fitViewBox}
               onSaveProject={handleSaveProject}
               onViewModeChange={setViewMode}
+              onZoomIn={zoomIn}
+              onZoomOut={zoomOut}
               saveStatus={saveStatus}
+              setActiveTool={handleSelectTool}
               viewMode={viewMode}
+              zoomPercent={zoomPercent}
             />
             {viewMode === "top" ? (
               <FeatureToolList
                 activeTool={activeTool}
-                className="absolute top-24 left-3 z-30 sm:top-20"
+                className="absolute top-36 left-3 z-30 sm:top-32 xl:top-20"
                 collapsed={plannerToolsCollapsed}
                 placementMode={placementMode}
                 onAddPool={handleAddPool}
@@ -555,16 +560,6 @@ export function Workspace({
               viewMode={viewMode}
               zoomPercent={zoomPercent}
             />
-            {viewMode === "top" ? (
-              <MapControlsPanel
-                activeTool={activeTool}
-                onResetView={fitViewBox}
-                onZoomIn={zoomIn}
-                onZoomOut={zoomOut}
-                setActiveTool={handleSelectTool}
-                zoomPercent={zoomPercent}
-              />
-            ) : null}
           </section>
         </div>
 
