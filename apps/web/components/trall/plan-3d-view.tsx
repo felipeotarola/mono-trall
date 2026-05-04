@@ -1194,45 +1194,108 @@ function Stairs({
   materials: SceneMaterials
   model: Plan3DModel
 }) {
-  const deckBottomY =
-    model.elevation.deckFinishedY - model.elevation.deckThicknessM
-
   return (
     <>
       {model.stairs.map((stairs) => {
-        const stepDepth = stairs.depthM / Math.max(1, stairs.stepCount)
-        const stepHeight =
-          model.elevation.deckThicknessM / Math.max(1, stairs.stepCount)
+        const stepCount = Math.max(1, stairs.stepCount)
+        const stepDepth = stairs.depthM / stepCount
+        const stepRise = stairs.totalHeightM / stepCount
+        const treadThickness = Math.min(0.09, stepRise * 0.45)
+        const stringerY = stairs.terrainY + stairs.totalHeightM / 2
+        const tangent = {
+          x: Math.cos(stairs.angleY),
+          z: Math.sin(stairs.angleY),
+        }
 
         return (
           <group key={stairs.id}>
-            {Array.from(
-              { length: Math.max(1, stairs.stepCount) },
-              (_, index) => {
-                const depth = stepDepth * (index + 1)
-                const height = stepHeight * (index + 1)
-                const center = {
-                  x: stairs.anchor.x + stairs.normal.x * (depth / 2),
-                  z: stairs.anchor.z + stairs.normal.z * (depth / 2),
-                }
+            {Array.from({ length: stepCount }, (_, index) => {
+              const distance = stepDepth * (index + 0.5)
+              const treadY =
+                stairs.terrainY + stepRise * (index + 1) - treadThickness / 2
+              const center = {
+                x: stairs.anchor.x + stairs.normal.x * distance,
+                z: stairs.anchor.z + stairs.normal.z * distance,
+              }
 
-                return (
+              return (
+                <group key={`${stairs.id}-step-${index}`}>
                   <mesh
-                    key={`${stairs.id}-step-${index}`}
                     castShadow
                     receiveShadow
-                    position={[center.x, deckBottomY + height / 2, center.z]}
+                    position={[center.x, treadY, center.z]}
                     rotation={[0, -stairs.angleY, 0]}
                   >
-                    <boxGeometry args={[stairs.widthM, height, depth]} />
+                    <boxGeometry
+                      args={[stairs.widthM, treadThickness, stepDepth * 0.96]}
+                    />
                     <meshStandardMaterial
                       color={materials.stairColor}
                       roughness={0.82}
                     />
                   </mesh>
-                )
+                  <mesh
+                    castShadow
+                    receiveShadow
+                    position={[
+                      stairs.anchor.x +
+                        stairs.normal.x * (distance - stepDepth / 2),
+                      stairs.terrainY + stepRise * (index + 0.5),
+                      stairs.anchor.z +
+                        stairs.normal.z * (distance - stepDepth / 2),
+                    ]}
+                    rotation={[0, -stairs.angleY, 0]}
+                  >
+                    <boxGeometry
+                      args={[
+                        stairs.widthM,
+                        stepRise,
+                        Math.min(0.06, stepDepth),
+                      ]}
+                    />
+                    <meshStandardMaterial
+                      color={materials.supportColor}
+                      roughness={0.84}
+                    />
+                  </mesh>
+                </group>
+              )
+            })}
+            {[-1, 1].map((side) => {
+              const sideOffset = side * (stairs.widthM / 2 - 0.04)
+              const center = {
+                x:
+                  stairs.anchor.x +
+                  stairs.normal.x * (stairs.depthM / 2) +
+                  tangent.x * sideOffset,
+                z:
+                  stairs.anchor.z +
+                  stairs.normal.z * (stairs.depthM / 2) +
+                  tangent.z * sideOffset,
               }
-            )}
+
+              return (
+                <mesh
+                  key={`${stairs.id}-stringer-${side}`}
+                  castShadow
+                  receiveShadow
+                  position={[center.x, stringerY, center.z]}
+                  rotation={[0, -stairs.angleY, 0]}
+                >
+                  <boxGeometry
+                    args={[
+                      0.08,
+                      Math.max(0.08, stairs.totalHeightM),
+                      stairs.depthM,
+                    ]}
+                  />
+                  <meshStandardMaterial
+                    color={materials.supportColor}
+                    roughness={0.86}
+                  />
+                </mesh>
+              )
+            })}
           </group>
         )
       })}

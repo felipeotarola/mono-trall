@@ -64,6 +64,9 @@ export type Plan3DStairs = {
   depthM: number
   stepCount: number
   normal: Point3D
+  landing: Point3D
+  terrainY: number
+  totalHeightM: number
 }
 
 export type Plan3DRailing = {
@@ -266,7 +269,15 @@ export function getPlan3DModel({
           terrainBounds,
         })
       : [],
-    stairs: get3DStairs(features, deckEdges, deckPoints, origin),
+    stairs: get3DStairs({
+      deckFinishedY,
+      deckPoints,
+      edges: deckEdges,
+      features,
+      origin,
+      terrain: normalizedElevation.terrain,
+      terrainBounds,
+    }),
     pergolas: get3DPergolas(features, origin),
     privacyScreens: get3DPrivacyScreens(features, deckEdges, origin),
   }
@@ -554,12 +565,23 @@ function get3DRailings(
   })
 }
 
-function get3DStairs(
-  features: DeckFeature[],
-  edges: GeometryEdge[],
-  deckPoints: Point[],
+function get3DStairs({
+  deckFinishedY,
+  deckPoints,
+  edges,
+  features,
+  origin,
+  terrain,
+  terrainBounds,
+}: {
+  deckFinishedY: number
+  deckPoints: Point[]
+  edges: GeometryEdge[]
+  features: DeckFeature[]
   origin: { x: number; y: number }
-): Plan3DStairs[] {
+  terrain: ElevationSettings["terrain"]
+  terrainBounds: TerrainBounds
+}): Plan3DStairs[] {
   return features.flatMap((feature) => {
     if (feature.type !== "stairs") {
       return []
@@ -577,6 +599,12 @@ function get3DStairs(
         : normalBase
     const tangent = getEdgeTangent(edge)
     const anchor = pointToPlan3D(getPointAtT(edge, feature.positionT), origin)
+    const normal3D = { x: normal.x, z: normal.y }
+    const landing = {
+      x: anchor.x + normal3D.x * feature.depthM,
+      z: anchor.z + normal3D.z * feature.depthM,
+    }
+    const terrainY = getTerrainHeightAt(landing, terrain, terrainBounds)
 
     return [
       {
@@ -586,7 +614,10 @@ function get3DStairs(
         widthM: feature.widthM,
         depthM: feature.depthM,
         stepCount: feature.stepCount,
-        normal: { x: normal.x, z: normal.y },
+        normal: normal3D,
+        landing,
+        terrainY,
+        totalHeightM: Math.max(0.12, deckFinishedY - terrainY),
       },
     ]
   })

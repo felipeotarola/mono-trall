@@ -54,9 +54,9 @@ test("clamps persisted feature settings", () => {
 
   assert.equal(stairs?.type, "stairs")
   if (stairs?.type === "stairs") {
-    assert.equal(stairs.widthM, 3)
-    assert.equal(stairs.depthM, 0.3)
-    assert.equal(stairs.stepCount, 8)
+    assert.equal(stairs.widthM, 5)
+    assert.equal(stairs.depthM, 0.5)
+    assert.equal(stairs.stepCount, 16)
     assert.equal(stairs.label, "Stairs")
   }
 })

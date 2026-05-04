@@ -195,4 +195,60 @@ describe("plan 3D conversion", () => {
 
     assert.equal(model.house.roofStyle, "shed")
   })
+
+  it("models stairs from deck height down to local terrain", () => {
+    const elevationSettings = {
+      ...getDefaultElevationSettings(),
+      deck: { finishedHeightCm: 0, thicknessCm: 18 },
+      terrain: {
+        mode: "flat" as const,
+        heightAtHouseCm: -90,
+        heightAtFarEdgeCm: -90,
+        slopeDirectionDeg: 90,
+      },
+    }
+    const model = getPlan3DModel({
+      boardDirection: defaultBoardDirection,
+      deckEdgeConstraints: [],
+      deckPoints: [
+        { x: 0, y: 0 },
+        { x: PIXELS_PER_METER * 4, y: 0 },
+        { x: PIXELS_PER_METER * 4, y: PIXELS_PER_METER * 3 },
+        { x: 0, y: PIXELS_PER_METER * 3 },
+      ],
+      elevationSettings,
+      features: [
+        {
+          id: "stairs-1",
+          type: "stairs",
+          edgeId: "deck-edge-1",
+          positionT: 0.5,
+          widthM: 1.4,
+          depthM: 1.8,
+          stepCount: 6,
+          direction: "outward",
+          label: "Stairs",
+        },
+      ],
+      house: initialHouse,
+      houseBounds: {
+        left:
+          initialHouse.centerX - (initialHouse.widthM * PIXELS_PER_METER) / 2,
+        right:
+          initialHouse.centerX + (initialHouse.widthM * PIXELS_PER_METER) / 2,
+        top: initialHouse.topY,
+        bottom: initialHouse.topY + initialHouse.depthM * PIXELS_PER_METER,
+        centerX: initialHouse.centerX,
+        widthPx: initialHouse.widthM * PIXELS_PER_METER,
+        depthPx: initialHouse.depthM * PIXELS_PER_METER,
+      },
+      poolPoints: null,
+    })
+
+    assert.equal(model.stairs[0]?.widthM, 1.4)
+    assert.equal(model.stairs[0]?.depthM, 1.8)
+    assert.equal(model.stairs[0]?.stepCount, 6)
+    assert.equal(model.stairs[0]?.terrainY, -0.9)
+    assert.equal(model.stairs[0]?.totalHeightM, 0.9)
+  })
 })

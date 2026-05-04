@@ -98,35 +98,35 @@ function StairSettings({
     <div className="grid grid-cols-2 gap-2">
       <NumberField
         label="Width"
-        max={3}
+        max={5}
         min={0.6}
         step={0.1}
         unit="m"
         value={feature.widthM}
         onChange={(value) =>
-          onUpdate({ ...feature, widthM: clamp(value, 0.6, 3) })
+          onUpdate({ ...feature, widthM: clamp(value, 0.6, 5) })
         }
       />
       <NumberField
-        label="Depth"
-        max={2.5}
-        min={0.3}
+        label="Total run"
+        max={5}
+        min={0.5}
         step={0.1}
         unit="m"
         value={feature.depthM}
         onChange={(value) =>
-          onUpdate({ ...feature, depthM: clamp(value, 0.3, 2.5) })
+          onUpdate({ ...feature, depthM: clamp(value, 0.5, 5) })
         }
       />
       <NumberField
         label="Steps"
-        max={8}
+        max={16}
         min={1}
         step={1}
         unit=""
         value={feature.stepCount}
         onChange={(value) =>
-          onUpdate({ ...feature, stepCount: Math.round(clamp(value, 1, 8)) })
+          onUpdate({ ...feature, stepCount: Math.round(clamp(value, 1, 16)) })
         }
       />
       <SelectField
@@ -143,6 +143,11 @@ function StairSettings({
           })
         }
       />
+      <p className="col-span-2 text-[11px] leading-snug text-muted-foreground">
+        Tread depth:{" "}
+        {(feature.depthM / Math.max(1, feature.stepCount)).toFixed(2)} m. 3D
+        stair height follows terrain and deck level.
+      </p>
     </div>
   )
 }
@@ -169,7 +174,10 @@ function RailingSettings({
           unit="cm"
           value={feature.heightCm}
           onChange={(value) =>
-            onUpdate({ ...feature, heightCm: Math.round(clamp(value, 80, 140)) })
+            onUpdate({
+              ...feature,
+              heightCm: Math.round(clamp(value, 80, 140)),
+            })
           }
         />
         <SelectField
@@ -183,8 +191,7 @@ function RailingSettings({
           onChange={(value) =>
             onUpdate({
               ...feature,
-              style:
-                value === "glass" || value === "metal" ? value : "wood",
+              style: value === "glass" || value === "metal" ? value : "wood",
             })
           }
         />
@@ -286,9 +293,7 @@ function PrivacyScreenSettings({
             onUpdate({
               ...feature,
               style:
-                value === "solid" || value === "greenery"
-                  ? value
-                  : "slatted",
+                value === "solid" || value === "greenery" ? value : "slatted",
             })
           }
         />
@@ -359,7 +364,9 @@ function NumberField({
             }
           }}
         />
-        {unit ? <span className="text-xs text-muted-foreground">{unit}</span> : null}
+        {unit ? (
+          <span className="text-xs text-muted-foreground">{unit}</span>
+        ) : null}
       </div>
     </label>
   )
