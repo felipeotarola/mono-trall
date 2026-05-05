@@ -77,7 +77,10 @@ const copy = {
         title: "Estimate real material quantities",
         description:
           "TrallAI calculates linear metres from the deck geometry and selected boards, so material choices can produce a practical price estimate instead of a rough guess.",
-        image: "/trall/landing/planner.png",
+        image: "/trall/landing/calculator-sidebar.png",
+        imageFit: "contain",
+        imageHeight: 1000,
+        imageWidth: 360,
         icon: CalculatorIcon,
       },
       {
@@ -197,7 +200,10 @@ const copy = {
         title: "Räkna fram riktiga materialmängder",
         description:
           "TrallAI räknar ut löpmeter från altanens geometri och valda brädor, så materialvalen kan ge en praktisk prisuppskattning istället för en grov gissning.",
-        image: "/trall/landing/planner.png",
+        image: "/trall/landing/calculator-sidebar.png",
+        imageFit: "contain",
+        imageHeight: 1000,
+        imageWidth: 360,
         icon: CalculatorIcon,
       },
       {
@@ -563,6 +569,9 @@ function WorkflowStep({
   gallery,
   icon: Icon,
   image,
+  imageFit = "cover",
+  imageHeight = 1000,
+  imageWidth = 1440,
   index,
   stepLabel,
   title,
@@ -575,6 +584,9 @@ function WorkflowStep({
   }[]
   icon: typeof Layers3Icon
   image?: string
+  imageFit?: "contain" | "cover"
+  imageHeight?: number
+  imageWidth?: number
   index: number
   stepLabel: string
   title: string
@@ -623,9 +635,13 @@ function WorkflowStep({
           <Image
             src={image}
             alt={`${title} screenshot`}
-            width={1440}
-            height={1000}
-            className="max-h-[32rem] w-full rounded-md object-cover object-left-top"
+            width={imageWidth}
+            height={imageHeight}
+            className={
+              imageFit === "contain"
+                ? "mx-auto h-auto max-h-[44rem] w-auto max-w-full rounded-md object-contain object-center"
+                : "max-h-[32rem] w-full rounded-md object-cover object-left-top"
+            }
           />
         ) : null}
       </div>
