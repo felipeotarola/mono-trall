@@ -83,6 +83,8 @@ export function CalculatorPanel({
   boardDirection,
   calculations,
   deckPoints,
+  demoMode = false,
+  demoOpenAIKey = "",
   elevationSettings,
   ensureProject,
   features,
@@ -93,6 +95,7 @@ export function CalculatorPanel({
   projectName,
   selectedFeature,
   setBoardDirection,
+  setDemoOpenAIKey,
   setElevationSettings,
   setHouse,
   viewMode,
@@ -108,6 +111,8 @@ export function CalculatorPanel({
     materials: Material[]
   }
   deckPoints: Point[]
+  demoMode?: boolean
+  demoOpenAIKey?: string
   elevationSettings: ElevationSettings
   ensureProject: () => Promise<string>
   features: DeckFeature[]
@@ -118,6 +123,7 @@ export function CalculatorPanel({
   projectName: string
   selectedFeature: DeckFeature | null
   setBoardDirection: (settings: BoardDirectionSettings) => void
+  setDemoOpenAIKey?: (key: string) => void
   setElevationSettings: Dispatch<SetStateAction<ElevationSettings>>
   setHouse: Dispatch<SetStateAction<HouseModel>>
   viewMode: PlannerViewMode
@@ -192,6 +198,7 @@ export function CalculatorPanel({
 
       <MaterialsManager
         deckAreaM2={calculations.areaM2}
+        demoMode={demoMode}
         ensureProject={ensureProject}
         onSummaryChange={handleProjectMaterialSummaryChange}
         projectId={projectId}
@@ -209,9 +216,12 @@ export function CalculatorPanel({
       />
 
       <AIVisualizationPanel
+        demoMode={demoMode}
+        demoOpenAIKey={demoOpenAIKey}
         ensureProject={ensureProject}
         planSummary={aiPlanSummary}
         projectId={projectId}
+        setDemoOpenAIKey={setDemoOpenAIKey}
         viewMode={viewMode}
       />
 

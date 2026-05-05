@@ -52,12 +52,14 @@ import {
 
 export function MaterialsManager({
   deckAreaM2,
+  demoMode = false,
   ensureProject,
   onSummaryChange,
   projectId,
   supportLayout,
 }: {
   deckAreaM2: number
+  demoMode?: boolean
   ensureProject: () => Promise<string>
   onSummaryChange: (summary: ProjectMaterialSummary) => void
   projectId: string | null
@@ -146,7 +148,7 @@ export function MaterialsManager({
   }, [calculatedProjectMaterials.length, onSummaryChange, totals])
 
   useEffect(() => {
-    if (!projectId) {
+    if (!projectId || demoMode) {
       return
     }
 
@@ -203,6 +205,7 @@ export function MaterialsManager({
   }, [
     boardGapMm,
     deckAreaM2,
+    demoMode,
     projectId,
     projectMaterials,
     supportLayout.totalLengthM,
@@ -214,7 +217,9 @@ export function MaterialsManager({
     async function loadMaterials() {
       setLoading(true)
       try {
-        const nextMaterials = await listMaterials()
+        const nextMaterials = demoMode
+          ? await listDemoMaterials()
+          : await listMaterials()
         if (!cancelled) {
           setMaterials(nextMaterials)
         }
@@ -232,7 +237,7 @@ export function MaterialsManager({
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [demoMode])
 
   useEffect(() => {
     let cancelled = false
@@ -248,7 +253,7 @@ export function MaterialsManager({
       }
     }
 
-    if (!projectId) {
+    if (!projectId || demoMode) {
       setProjectMaterials([])
       return
     }
@@ -258,11 +263,16 @@ export function MaterialsManager({
     return () => {
       cancelled = true
     }
-  }, [projectId])
+  }, [demoMode, projectId])
 
   async function handleAddSelectedMaterial() {
     if (!selectedMaterialId) {
       toast.error("Choose a material to add.")
+      return
+    }
+
+    if (!selectedMaterial) {
+      toast.error("Selected material is not available.")
       return
     }
 
@@ -276,11 +286,17 @@ export function MaterialsManager({
     setSaving(true)
     try {
       const nextProjectId = await ensureProject()
-      const item = await upsertProjectMaterial({
-        materialId: selectedMaterialId,
-        projectId: nextProjectId,
-        quantity,
-      })
+      const item = demoMode
+        ? createLocalProjectMaterial({
+            material: selectedMaterial,
+            projectId: nextProjectId,
+            quantity,
+          })
+        : await upsertProjectMaterial({
+            materialId: selectedMaterialId,
+            projectId: nextProjectId,
+            quantity,
+          })
       upsertProjectItem(item)
       setSelectedQuantity("1")
       toast.success(
@@ -309,11 +325,17 @@ export function MaterialsManager({
     setSaving(true)
     try {
       const nextProjectId = await ensureProject()
-      const item = await upsertProjectMaterial({
-        materialId: supportMaterial.id,
-        projectId: nextProjectId,
-        quantity: supportLayout.totalLengthM,
-      })
+      const item = demoMode
+        ? createLocalProjectMaterial({
+            material: supportMaterial,
+            projectId: nextProjectId,
+            quantity: supportLayout.totalLengthM,
+          })
+        : await upsertProjectMaterial({
+            materialId: supportMaterial.id,
+            projectId: nextProjectId,
+            quantity: supportLayout.totalLengthM,
+          })
       upsertProjectItem(item)
       toast.success("Support material updated")
     } catch (error) {
@@ -324,7 +346,7 @@ export function MaterialsManager({
   }
 
   async function handleQuantityCommit(item: ProjectMaterialItem) {
-    if (!projectId) {
+    if (!projectId || demoMode) {
       return
     }
 
@@ -351,6 +373,14 @@ export function MaterialsManager({
     }
 
     try {
+      if (demoMode) {
+        setProjectMaterials((current) =>
+          current.filter((material) => material.material_id !== item.material_id)
+        )
+        toast.success("Material removed from demo project")
+        return
+      }
+
       await removeProjectMaterial({
         materialId: item.material_id,
         projectId,
@@ -386,7 +416,11 @@ export function MaterialsManager({
     <Card size="sm">
       <CardHeader>
         <CardTitle>Project materials</CardTitle>
-        <CardDescription>Only materials assigned to this deck.</CardDescription>
+        <CardDescription>
+          {demoMode
+            ? "Demo materials are local to this browser session."
+            : "Only materials assigned to this deck."}
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="rounded-lg border bg-muted/25 p-2">
@@ -568,6 +602,45 @@ export function MaterialsManager({
       </CardContent>
     </Card>
   )
+}
+
+async function listDemoMaterials() {
+  const response = await fetch("/api/trall/demo/materials")
+  const payload = (await response.json().catch(() => null)) as
+    | { error?: string }
+    | MaterialRecord[]
+    | null
+
+  if (!response.ok || !Array.isArray(payload)) {
+    throw new Error(
+      payload && !Array.isArray(payload) && payload.error
+        ? payload.error
+        : "Could not load demo materials."
+    )
+  }
+
+  return payload
+}
+
+function createLocalProjectMaterial({
+  material,
+  projectId,
+  quantity,
+}: {
+  material: MaterialRecord
+  projectId: string
+  quantity: number
+}): ProjectMaterialItem {
+  const now = new Date().toISOString()
+
+  return {
+    project_id: projectId,
+    material_id: material.id,
+    quantity,
+    created_at: now,
+    updated_at: now,
+    material,
+  }
 }
 
 function ProjectMaterialRow({

@@ -52,16 +52,22 @@ type UploadedReference = {
 type ExpansionMode = "wide" | "vertical" | "square"
 
 type AIVisualizationPanelProps = {
+  demoMode?: boolean
+  demoOpenAIKey?: string
   ensureProject: () => Promise<string>
   planSummary: string
   projectId: string | null
+  setDemoOpenAIKey?: (key: string) => void
   viewMode: PlannerViewMode
 }
 
 export function AIVisualizationPanel({
+  demoMode = false,
+  demoOpenAIKey = "",
   ensureProject,
   planSummary,
   projectId,
+  setDemoOpenAIKey,
   viewMode,
 }: AIVisualizationPanelProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -95,7 +101,7 @@ export function AIVisualizationPanel({
   )
 
   useEffect(() => {
-    if (!projectId) {
+    if (!projectId || demoMode) {
       setVisualizations([])
       return
     }
@@ -142,7 +148,7 @@ export function AIVisualizationPanel({
     return () => {
       cancelled = true
     }
-  }, [projectId])
+  }, [demoMode, projectId])
 
   function addUploads(files: FileList | null) {
     if (!files) {
@@ -202,6 +208,10 @@ export function AIVisualizationPanel({
     setError(null)
 
     try {
+      if (demoMode && !demoOpenAIKey.trim()) {
+        throw new Error("Add an OpenAI API key to generate images in demo mode.")
+      }
+
       const savedProjectId = await ensureProject()
       const formData = new FormData()
       formData.append("brief", brief)
@@ -219,6 +229,7 @@ export function AIVisualizationPanel({
 
       const response = await fetch("/api/trall/ai-visualize", {
         method: "POST",
+        headers: getDemoHeaders(demoMode, demoOpenAIKey),
         body: formData,
       })
       const payload = (await response.json()) as {
@@ -260,6 +271,10 @@ export function AIVisualizationPanel({
     setError(null)
 
     try {
+      if (demoMode && !demoOpenAIKey.trim()) {
+        throw new Error("Add an OpenAI API key to expand images in demo mode.")
+      }
+
       const savedProjectId = await ensureProject()
       const formData = new FormData()
       formData.append("action", "expand")
@@ -272,6 +287,7 @@ export function AIVisualizationPanel({
 
       const response = await fetch("/api/trall/ai-visualize", {
         method: "POST",
+        headers: getDemoHeaders(demoMode, demoOpenAIKey),
         body: formData,
       })
       const payload = (await response.json()) as {
@@ -315,6 +331,10 @@ export function AIVisualizationPanel({
     setError(null)
 
     try {
+      if (demoMode && !demoOpenAIKey.trim()) {
+        throw new Error("Add an OpenAI API key to edit images in demo mode.")
+      }
+
       const savedProjectId = await ensureProject()
       const formData = new FormData()
       formData.append("action", "markup_edit")
@@ -327,6 +347,7 @@ export function AIVisualizationPanel({
 
       const response = await fetch("/api/trall/ai-visualize", {
         method: "POST",
+        headers: getDemoHeaders(demoMode, demoOpenAIKey),
         body: formData,
       })
       const payload = (await response.json()) as {
@@ -371,10 +392,28 @@ export function AIVisualizationPanel({
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="rounded-lg border bg-muted/25 p-3 text-xs text-muted-foreground">
-          Add exterior property photos, capture the 3D view for layout, then
-          describe what the generated image should show. Photos and generated
-          renders are saved to the project.
+          {demoMode
+            ? "Add exterior property photos, capture the 3D view for layout, then use your OpenAI API key for generation. Demo renders stay in this browser session."
+            : "Add exterior property photos, capture the 3D view for layout, then describe what the generated image should show. Photos and generated renders are saved to the project."}
         </div>
+
+        {demoMode ? (
+          <label className="grid gap-1.5 rounded-lg border border-amber-200 bg-amber-50/70 p-3">
+            <span className="text-xs font-medium text-amber-950">
+              OpenAI API key
+            </span>
+            <Input
+              autoComplete="off"
+              placeholder="sk-..."
+              type="password"
+              value={demoOpenAIKey}
+              onChange={(event) => setDemoOpenAIKey?.(event.target.value)}
+            />
+            <span className="text-xs text-amber-900/75">
+              Sent only with demo generation requests. It is not saved by this app.
+            </span>
+          </label>
+        ) : null}
 
         <Input
           ref={fileInputRef}
@@ -495,7 +534,7 @@ export function AIVisualizationPanel({
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
               <ImageIcon className="size-3.5" />
-              Saved AI images
+              {demoMode ? "Demo AI images" : "Saved AI images"}
             </div>
             <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
               <div className="grid grid-cols-2 gap-2">
@@ -558,6 +597,15 @@ export function AIVisualizationPanel({
       />
     </Card>
   )
+}
+
+function getDemoHeaders(demoMode: boolean, demoOpenAIKey: string) {
+  return demoMode
+    ? {
+        "x-openai-api-key": demoOpenAIKey.trim(),
+        "x-trall-demo": "true",
+      }
+    : undefined
 }
 
 function SavedVisualization({

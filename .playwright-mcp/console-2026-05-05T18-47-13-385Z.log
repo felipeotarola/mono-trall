@@ -1,0 +1,18 @@
+[  116613ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[  117074ms] [LOG] [Fast Refresh] done in 563ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[  117243ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[  117265ms] [LOG] [Fast Refresh] done in 128ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[  121146ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[  121173ms] [LOG] [Fast Refresh] done in 129ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[  121351ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:3000/login:0
+[  123749ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[  123764ms] [LOG] [Fast Refresh] done in 116ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[  125471ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[  126057ms] [WARNING] THREE.Clock: This module has been deprecated. Please use THREE.Timer instead. @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[  126219ms] [WARNING] THREE.WebGLShadowMap: PCFSoftShadowMap has been deprecated. Using PCFShadowMap instead. @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[  126279ms] [LOG] [Fast Refresh] done in 910ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[  126480ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[  126690ms] [LOG] [Fast Refresh] done in 310ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[  199004ms] [WARNING] THREE.WebGLShadowMap: PCFSoftShadowMap has been deprecated. Using PCFShadowMap instead. @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[  199556ms] [WARNING] THREE.WebGLShadowMap: PCFSoftShadowMap has been deprecated. Using PCFShadowMap instead. @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[  199613ms] [WARNING] THREE.WebGLShadowMap: PCFSoftShadowMap has been deprecated. Using PCFShadowMap instead. @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297

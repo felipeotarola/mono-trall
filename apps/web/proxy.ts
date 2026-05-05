@@ -41,7 +41,10 @@ export async function proxy(request: NextRequest) {
   const isLoginPath = request.nextUrl.pathname.startsWith("/login")
   const isPublicPath =
     request.nextUrl.pathname.startsWith("/landing") ||
-    request.nextUrl.pathname.startsWith("/api/auth/")
+    request.nextUrl.pathname.startsWith("/demo") ||
+    request.nextUrl.pathname.startsWith("/api/auth/") ||
+    request.nextUrl.pathname.startsWith("/api/trall/demo/") ||
+    request.nextUrl.pathname.startsWith("/api/trall/ai-visualize")
 
   if (!user && !isLoginPath && !isPublicPath) {
     const redirectUrl = request.nextUrl.clone()

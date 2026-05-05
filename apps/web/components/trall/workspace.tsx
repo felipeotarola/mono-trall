@@ -73,8 +73,10 @@ const AUTOSAVE_DELAY_MS = 1200
 const FALLBACK_PROJECT_NAME = "Untitled"
 
 export function Workspace({
+  demoMode = false,
   onProjectNameChange,
 }: {
+  demoMode?: boolean
   onProjectNameChange?: (name: string) => void
 }) {
   const { setOpen, setOpenMobile } = useSidebar()
@@ -113,11 +115,16 @@ export function Workspace({
     number | null
   >(null)
   const [house, setHouse] = useState<HouseModel>(initialHouse)
-  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null)
-  const [currentProjectName, setCurrentProjectName] = useState(
-    FALLBACK_PROJECT_NAME
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(
+    demoMode ? "demo" : null
   )
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>("Unsaved changes")
+  const [currentProjectName, setCurrentProjectName] = useState(
+    demoMode ? "Demo project" : FALLBACK_PROJECT_NAME
+  )
+  const [saveStatus, setSaveStatus] = useState<SaveStatus | "Demo mode">(
+    demoMode ? "Demo mode" : "Unsaved changes"
+  )
+  const [demoOpenAIKey, setDemoOpenAIKey] = useState("")
   const viewBoxRef = useRef(viewBox)
   const viewAspectRatioRef = useRef(viewAspectRatio)
   const hydratingProjectRef = useRef(false)
@@ -185,6 +192,15 @@ export function Workspace({
   }, [deckPoints, houseBounds, poolPoints])
 
   useEffect(() => {
+    if (demoMode) {
+      autosaveReadyRef.current = true
+      const frameId = requestAnimationFrame(() => {
+        onProjectNameChange?.("Demo project")
+      })
+
+      return () => cancelAnimationFrame(frameId)
+    }
+
     let cancelled = false
 
     async function loadInitialProject() {
@@ -255,7 +271,7 @@ export function Workspace({
     return () => {
       cancelled = true
     }
-  }, [onProjectNameChange, requestedProjectId])
+  }, [demoMode, onProjectNameChange, requestedProjectId])
 
   const calculations = useMemo(() => {
     const areaM2 = polygonArea(deckPoints) / PIXELS_PER_METER ** 2
@@ -323,6 +339,11 @@ export function Workspace({
 
   const savePlannerState = useCallback(
     async ({ source }: { source: "manual" | "autosave" }) => {
+      if (demoMode) {
+        setSaveStatus("Demo mode")
+        return
+      }
+
       const saveRequestId = latestSaveRequestRef.current + 1
       latestSaveRequestRef.current = saveRequestId
       setSaveStatus("Saving...")
@@ -354,10 +375,15 @@ export function Workspace({
         }
       }
     },
-    [currentProjectId, getPlannerState, onProjectNameChange]
+    [currentProjectId, demoMode, getPlannerState, onProjectNameChange]
   )
 
   const ensureCurrentProject = useCallback(async () => {
+    if (demoMode) {
+      setSaveStatus("Demo mode")
+      return "demo"
+    }
+
     if (currentProjectId) {
       return currentProjectId
     }
@@ -379,9 +405,13 @@ export function Workspace({
     })
 
     return project.id
-  }, [currentProjectId, getPlannerState, onProjectNameChange])
+  }, [currentProjectId, demoMode, getPlannerState, onProjectNameChange])
 
   useEffect(() => {
+    if (demoMode) {
+      return
+    }
+
     if (!autosaveReadyRef.current || hydratingProjectRef.current) {
       return
     }
@@ -406,6 +436,7 @@ export function Workspace({
     measurements,
     features,
     boardDirection,
+    demoMode,
     elevationSettings,
     poolEdgeConstraints,
     poolPoints,
@@ -496,6 +527,11 @@ export function Workspace({
       >
         <div className="min-w-0 flex-1">
           <section className="relative min-w-0 flex-1 overflow-hidden rounded-lg border bg-stone-50 shadow-sm dark:bg-zinc-950">
+            {demoMode ? (
+              <div className="absolute top-3 right-3 z-30 rounded-lg border border-amber-200 bg-amber-50/95 px-3 py-1.5 text-xs font-medium text-amber-900 shadow-sm backdrop-blur">
+                Demo mode · changes are not saved
+              </div>
+            ) : null}
             <CanvasToolbar
               activeTool={activeTool}
               extraTool={expandTool}
@@ -574,6 +610,8 @@ export function Workspace({
             calculations={calculations}
             boardDirection={boardDirection}
             deckPoints={deckPoints}
+            demoMode={demoMode}
+            demoOpenAIKey={demoOpenAIKey}
             ensureProject={ensureCurrentProject}
             elevationSettings={elevationSettings}
             features={features}
@@ -586,6 +624,7 @@ export function Workspace({
             setBoardDirection={setBoardDirection}
             setElevationSettings={setElevationSettings}
             setHouse={setHouse}
+            setDemoOpenAIKey={setDemoOpenAIKey}
             viewMode={viewMode}
             onDeleteFeature={handleDeleteFeature}
             onUpdateFeature={handleUpdateFeature}
@@ -597,6 +636,8 @@ export function Workspace({
             calculations={calculations}
             boardDirection={boardDirection}
             deckPoints={deckPoints}
+            demoMode={demoMode}
+            demoOpenAIKey={demoOpenAIKey}
             ensureProject={ensureCurrentProject}
             elevationSettings={elevationSettings}
             features={features}
@@ -609,6 +650,7 @@ export function Workspace({
             setBoardDirection={setBoardDirection}
             setElevationSettings={setElevationSettings}
             setHouse={setHouse}
+            setDemoOpenAIKey={setDemoOpenAIKey}
             viewMode={viewMode}
             onDeleteFeature={handleDeleteFeature}
             onUpdateFeature={handleUpdateFeature}
