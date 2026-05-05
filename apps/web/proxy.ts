@@ -39,10 +39,13 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const isLoginPath = request.nextUrl.pathname.startsWith("/login")
+  const isPublicPath =
+    request.nextUrl.pathname.startsWith("/landing") ||
+    request.nextUrl.pathname.startsWith("/api/auth/")
 
-  if (!user && !isLoginPath) {
+  if (!user && !isLoginPath && !isPublicPath) {
     const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = "/login"
+    redirectUrl.pathname = "/landing"
     redirectUrl.searchParams.set("next", request.nextUrl.pathname)
     return NextResponse.redirect(redirectUrl)
   }

@@ -831,7 +831,6 @@ function AIImageMarkupEditor({
             src={imageUrl}
             alt="AI generated property visualization"
             className="max-h-[calc(94svh-16rem)] max-w-full select-none rounded-md object-contain"
-            crossOrigin="anonymous"
             draggable={false}
             onLoad={initializeCanvases}
           />

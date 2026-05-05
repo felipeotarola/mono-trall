@@ -1,6 +1,11 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalEnv": ["BLOB_READ_WRITE_TOKEN", "OPENAI_API_KEY", "OPENAI_IMAGE_MODEL"],
+  "globalEnv": [
+    "BLOB_READ_WRITE_TOKEN",
+    "OPENAI_API_KEY",
+    "OPENAI_IMAGE_MODEL",
+    "SUPABASE_SERVICE_ROLE_KEY"
+  ],
   "ui": "tui",
   "tasks": {
     "build": {
