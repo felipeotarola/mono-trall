@@ -24,6 +24,7 @@ const copy = {
     heroText:
       "Design a deck precisely in 2D, inspect the build in 3D, then create realistic property images from real reference photos and correct them with markup.",
     heroPrimary: "Try the planner",
+    heroDemo: "Try demo",
     heroSecondary: "See workflow",
     proof: [
       {
@@ -75,8 +76,20 @@ const copy = {
         title: "Review with AI images",
         description:
           "Combine real property photos with the 3D model, open the generated render large, mark problem areas, and regenerate corrections.",
-        image: "/trall/landing/ai-review.png",
+        image: "/redigera.png",
         icon: SparklesIcon,
+        references: [
+          {
+            alt: "Original property reference photo from the garden",
+            label: "Reference 1",
+            src: "/1.jpeg",
+          },
+          {
+            alt: "Second original property reference photo from the garden",
+            label: "Reference 2",
+            src: "/2.jpeg",
+          },
+        ],
       },
     ],
     aiEyebrow: "AI that can be corrected",
@@ -107,6 +120,7 @@ const copy = {
     footerText:
       "Use it as a deck planning tool, a 3D construction preview, and a reference-photo AI visualization workflow.",
     footerPrimary: "Open planner",
+    footerDemo: "Try demo",
     footerSecondary: "View projects",
     imageAlt: "TrallAI AI image review modal with markup correction tools",
     heroAlt: "TrallAI Backsidan pool project in the deck planner",
@@ -117,6 +131,7 @@ const copy = {
     heroText:
       "Rita altanen exakt i 2D, granska bygget i 3D och skapa realistiska bilder från riktiga referensfoton. Markera fel och generera om bara det som behöver ändras.",
     heroPrimary: "Testa planeringen",
+    heroDemo: "Testa demo",
     heroSecondary: "Se arbetsflödet",
     proof: [
       {
@@ -168,8 +183,20 @@ const copy = {
         title: "Granska med AI-bilder",
         description:
           "Kombinera riktiga foton med 3D-modellen, öppna renderingen stort, markera problemområden och generera korrigeringar.",
-        image: "/trall/landing/ai-review.png",
+        image: "/redigera.png",
         icon: SparklesIcon,
+        references: [
+          {
+            alt: "Original referensbild från trädgården",
+            label: "Referens 1",
+            src: "/1.jpeg",
+          },
+          {
+            alt: "Andra originala referensbilden från trädgården",
+            label: "Referens 2",
+            src: "/2.jpeg",
+          },
+        ],
       },
     ],
     aiEyebrow: "AI som går att korrigera",
@@ -200,6 +227,7 @@ const copy = {
     footerText:
       "Använd det som altanplanerare, 3D-förhandsvisning för bygget och arbetsflöde för AI-visualisering med referensfoton.",
     footerPrimary: "Öppna planeringen",
+    footerDemo: "Testa demo",
     footerSecondary: "Visa projekt",
     imageAlt: "TrallAI-modal för AI-bildgranskning med markeringsverktyg",
     heroAlt: "TrallAI-projektet Backsidan pool i altanplaneraren",
@@ -270,10 +298,10 @@ export default function LandingPage() {
           </div>
           <div className="overflow-hidden rounded-lg border border-white/10 bg-white/5 shadow-2xl">
             <Image
-              src="/trall/landing/ai-review.png"
+              src="/redigera.png"
               alt={t.imageAlt}
-              width={1440}
-              height={1000}
+              width={2940}
+              height={1668}
               className="h-auto w-full"
             />
           </div>
@@ -321,6 +349,9 @@ export default function LandingPage() {
             <Button asChild>
               <Link href="/login?next=/">{t.footerPrimary}</Link>
             </Button>
+            <Button asChild variant="secondary">
+              <Link href="/demo">{t.footerDemo}</Link>
+            </Button>
             <Button asChild variant="outline">
               <Link href="/login?next=/dashboard">{t.footerSecondary}</Link>
             </Button>
@@ -361,6 +392,13 @@ function HeroSection({
               language={language}
               onLanguageChange={onLanguageChange}
             />
+            <Button
+              asChild
+              variant="outline"
+              className="hidden border-white/35 bg-white/10 text-white hover:bg-white/20 hover:text-white sm:inline-flex"
+            >
+              <Link href="/demo">{t.heroDemo}</Link>
+            </Button>
             <Button asChild variant="secondary">
               <Link href="/login?next=/">{t.navCta}</Link>
             </Button>
@@ -381,6 +419,9 @@ function HeroSection({
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild size="lg">
               <Link href="/login?next=/">{t.heroPrimary}</Link>
+            </Button>
+            <Button asChild size="lg" variant="secondary">
+              <Link href="/demo">{t.heroDemo}</Link>
             </Button>
             <Button
               asChild
@@ -458,6 +499,7 @@ function WorkflowStep({
   icon: Icon,
   image,
   index,
+  references,
   stepLabel,
   title,
 }: {
@@ -465,6 +507,11 @@ function WorkflowStep({
   icon: typeof Layers3Icon
   image: string
   index: number
+  references?: readonly {
+    alt: string
+    label: string
+    src: string
+  }[]
   stepLabel: string
   title: string
 }) {
@@ -485,14 +532,37 @@ function WorkflowStep({
         <h3 className="mt-5 text-2xl font-semibold tracking-tight">{title}</h3>
         <p className="mt-3 text-sm leading-6 text-zinc-600">{description}</p>
       </div>
-      <div className="bg-zinc-100 p-2">
+      <div className="space-y-2 bg-zinc-100 p-2">
         <Image
           src={image}
           alt={`${title} screenshot`}
           width={1440}
           height={1000}
-          className="h-full max-h-[32rem] w-full rounded-md object-cover object-left-top"
+          className="max-h-[32rem] w-full rounded-md object-cover object-left-top"
         />
+        {references ? (
+          <div className="grid gap-2 sm:grid-cols-2">
+            {references.map((reference) => (
+              <figure
+                key={reference.src}
+                className="overflow-hidden rounded-md border bg-white"
+              >
+                <div className="flex aspect-[4/3] items-center justify-center bg-zinc-100">
+                  <Image
+                    src={reference.src}
+                    alt={reference.alt}
+                    width={2048}
+                    height={1536}
+                    className="max-h-full w-full object-contain"
+                  />
+                </div>
+                <figcaption className="border-t px-3 py-2 text-xs font-medium text-zinc-600">
+                  {reference.label}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        ) : null}
       </div>
     </article>
   )
