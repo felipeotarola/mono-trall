@@ -23,7 +23,9 @@ export default function Page() {
     >
       <AppSidebar variant="inset" />
       <SidebarInset>
-        <SiteHeader title={projectTitle} />
+        <div className="hidden lg:block">
+          <SiteHeader title={projectTitle} />
+        </div>
         <Suspense fallback={null}>
           <Workspace onProjectNameChange={setProjectTitle} />
         </Suspense>

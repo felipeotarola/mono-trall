@@ -120,7 +120,7 @@ export function PlanningSurface({
 
   return (
     <div
-      className={`relative min-h-[calc(100svh-11rem)] overflow-hidden pt-28 md:min-h-[calc(100svh-7rem)] md:pt-24 2xl:pt-20 ${trallPlanClasses.page}`}
+      className={`relative min-h-[calc(100svh-1.5rem)] overflow-hidden pt-[104px] ${viewMode === "top" ? "pb-[176px]" : "pb-0"} lg:min-h-[calc(100svh-7rem)] lg:pt-24 lg:pb-0 2xl:pt-20 ${trallPlanClasses.page}`}
     >
       <div className={`absolute inset-0 ${trallPlanClasses.gridFine}`} />
       <div className={`absolute inset-0 ${trallPlanClasses.gridStrong}`} />
@@ -128,17 +128,19 @@ export function PlanningSurface({
       <div className="absolute top-0 left-16 h-full w-px bg-stone-500/20" />
       <div className="absolute top-16 left-16 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-stone-700/55" />
 
-      <div className={`absolute top-28 left-4 hidden text-[11px] font-medium md:top-24 sm:block 2xl:top-20 ${trallPlanClasses.floatingLabel}`}>
+      <div className={`absolute top-28 left-4 hidden text-[11px] font-medium lg:block lg:top-24 2xl:top-20 ${trallPlanClasses.floatingLabel}`}>
         x 0, y 0
       </div>
 
-      <p className={`absolute top-28 right-4 z-10 max-w-[min(24rem,calc(100%-2rem))] md:top-24 2xl:top-20 ${trallPlanClasses.floatingLabel}`}>
+      <p className={`absolute top-28 right-4 z-10 hidden max-w-[min(24rem,calc(100%-2rem))] lg:block lg:top-24 2xl:top-20 ${trallPlanClasses.floatingLabel}`}>
         {viewMode === "3d"
           ? "3D preview: orbit, pan, zoom. Edit geometry in Top view."
           : getPlannerInstruction(activeTool, placementMode)}
       </p>
 
-      <div className="relative flex h-[calc(100svh-13.5rem)] min-h-[520px] items-stretch justify-center px-3 py-8 md:h-[calc(100svh-10rem)]">
+      <div
+        className={`relative flex ${viewMode === "top" ? "h-[calc(100svh-17.5rem)]" : "h-[calc(100svh-8rem)]"} min-h-[390px] items-stretch justify-center px-0 py-6 lg:h-[calc(100svh-10rem)] lg:min-h-[520px] lg:px-3 lg:py-8`}
+      >
         <div ref={canvasFrameRef} className="h-full w-full">
           {viewMode === "3d" ? (
             <Plan3DView
@@ -190,7 +192,7 @@ export function PlanningSurface({
 
       {viewMode === "top" ? (
         <div
-          className={`pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between ${trallPlanClasses.bottomLegend}`}
+          className={`pointer-events-none absolute inset-x-0 bottom-0 hidden flex-col gap-2 lg:flex lg:flex-row lg:items-end lg:justify-between ${trallPlanClasses.bottomLegend}`}
         >
           <ScaleIndicator />
           <span>

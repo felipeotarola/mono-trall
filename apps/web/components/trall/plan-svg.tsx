@@ -238,7 +238,10 @@ export function PlanSvg({
     svgRef,
     viewBox,
   })
-  const canPan = activeTool === "pan" || viewport.spacePressed
+  const canPan =
+    activeTool === "pan" ||
+    viewport.spacePressed ||
+    (activeTool === "select" && !placementMode)
   const svgCursorClass = viewport.panActive
     ? "cursor-grabbing"
     : canPan
@@ -284,6 +287,8 @@ export function PlanSvg({
   }
 
   function handlePointerDown(event: ReactPointerEvent<SVGSVGElement>) {
+    const targetIsInteractive = isInteractiveTarget(event.target)
+
     if (placeSiteObjectFromCanvas(event)) {
       return
     }
@@ -296,12 +301,12 @@ export function PlanSvg({
       return
     }
 
-    if (viewport.startPointer(event, canPan)) {
-      return
+    if (activeTool === "select" && !targetIsInteractive) {
+      setSelectedFeatureId(null)
     }
 
-    if (activeTool === "select" && !isInteractiveTarget(event.target)) {
-      setSelectedFeatureId(null)
+    if (viewport.startPointer(event, canPan)) {
+      return
     }
   }
 
