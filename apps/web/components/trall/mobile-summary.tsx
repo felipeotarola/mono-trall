@@ -19,22 +19,32 @@ import type {
   FeaturePlacementType,
 } from "@/lib/trall/features"
 import type { ElevationSettings } from "@/lib/trall/elevation"
-import type { HouseModel, Material, Metric } from "@/lib/trall/types"
+import type {
+  HouseModel,
+  Material,
+  Metric,
+  PlannerViewMode,
+  Point,
+} from "@/lib/trall/types"
 import type { SupportLayout } from "@/lib/trall/supports"
 
 export function MobileSummary({
   boardDirection,
   calculations,
+  deckPoints,
   elevationSettings,
   ensureProject,
+  features,
   house,
   placementMode,
+  poolPoints,
   projectId,
   projectName,
   selectedFeature,
   setBoardDirection,
   setElevationSettings,
   setHouse,
+  viewMode,
   onDeleteFeature,
   onUpdateFeature,
 }: {
@@ -47,16 +57,20 @@ export function MobileSummary({
     metrics: Metric[]
     materials: Material[]
   }
+  deckPoints: Point[]
   elevationSettings: ElevationSettings
   ensureProject: () => Promise<string>
+  features: DeckFeature[]
   house: HouseModel
   placementMode: FeaturePlacementType | null
+  poolPoints: Point[] | null
   projectId: string | null
   projectName: string
   selectedFeature: DeckFeature | null
   setBoardDirection: (settings: BoardDirectionSettings) => void
   setElevationSettings: Dispatch<SetStateAction<ElevationSettings>>
   setHouse: Dispatch<SetStateAction<HouseModel>>
+  viewMode: PlannerViewMode
   onDeleteFeature: (featureId: string) => void
   onUpdateFeature: (feature: DeckFeature) => void
 }) {
@@ -93,9 +107,12 @@ export function MobileSummary({
               <CalculatorPanel
                 calculations={calculations}
                 boardDirection={boardDirection}
+                deckPoints={deckPoints}
                 elevationSettings={elevationSettings}
                 ensureProject={ensureProject}
+                features={features}
                 placementMode={placementMode}
+                poolPoints={poolPoints}
                 selectedFeature={selectedFeature}
                 house={house}
                 projectId={projectId}
@@ -103,6 +120,7 @@ export function MobileSummary({
                 setBoardDirection={setBoardDirection}
                 setElevationSettings={setElevationSettings}
                 setHouse={setHouse}
+                viewMode={viewMode}
                 onDeleteFeature={onDeleteFeature}
                 onUpdateFeature={onUpdateFeature}
               />

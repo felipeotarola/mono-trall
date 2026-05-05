@@ -573,9 +573,12 @@ export function Workspace({
           <CalculatorPanel
             calculations={calculations}
             boardDirection={boardDirection}
+            deckPoints={deckPoints}
             ensureProject={ensureCurrentProject}
             elevationSettings={elevationSettings}
+            features={features}
             placementMode={placementMode}
+            poolPoints={poolPoints}
             selectedFeature={selectedFeature}
             house={house}
             projectId={currentProjectId}
@@ -583,6 +586,7 @@ export function Workspace({
             setBoardDirection={setBoardDirection}
             setElevationSettings={setElevationSettings}
             setHouse={setHouse}
+            viewMode={viewMode}
             onDeleteFeature={handleDeleteFeature}
             onUpdateFeature={handleUpdateFeature}
           />
@@ -592,9 +596,12 @@ export function Workspace({
           <CalculatorPanel
             calculations={calculations}
             boardDirection={boardDirection}
+            deckPoints={deckPoints}
             ensureProject={ensureCurrentProject}
             elevationSettings={elevationSettings}
+            features={features}
             placementMode={placementMode}
+            poolPoints={poolPoints}
             selectedFeature={selectedFeature}
             house={house}
             projectId={currentProjectId}
@@ -602,6 +609,7 @@ export function Workspace({
             setBoardDirection={setBoardDirection}
             setElevationSettings={setElevationSettings}
             setHouse={setHouse}
+            viewMode={viewMode}
             onDeleteFeature={handleDeleteFeature}
             onUpdateFeature={handleUpdateFeature}
           />
@@ -611,9 +619,12 @@ export function Workspace({
       <MobileSummary
         calculations={calculations}
         boardDirection={boardDirection}
+        deckPoints={deckPoints}
         ensureProject={ensureCurrentProject}
         elevationSettings={elevationSettings}
+        features={features}
         placementMode={placementMode}
+        poolPoints={poolPoints}
         selectedFeature={selectedFeature}
         house={house}
         projectId={currentProjectId}
@@ -621,6 +632,7 @@ export function Workspace({
         setBoardDirection={setBoardDirection}
         setElevationSettings={setElevationSettings}
         setHouse={setHouse}
+        viewMode={viewMode}
         onDeleteFeature={handleDeleteFeature}
         onUpdateFeature={handleUpdateFeature}
       />

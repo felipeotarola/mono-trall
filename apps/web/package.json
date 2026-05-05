@@ -22,6 +22,7 @@
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.105.1",
     "@tanstack/react-table": "^8.21.3",
+    "@vercel/blob": "^2.3.3",
     "@workspace/ui": "workspace:*",
     "lucide-react": "^1.14.0",
     "next": "16.1.6",

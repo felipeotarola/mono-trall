@@ -4,6 +4,7 @@ import type { Dispatch, SetStateAction } from "react"
 import { useCallback, useState } from "react"
 import { Trash2Icon } from "lucide-react"
 
+import { AIVisualizationPanel } from "@/components/trall/ai-visualization-panel"
 import { BoardDirectionControl } from "@/components/trall/features/board-direction-control"
 import { FeatureSettingsCard } from "@/components/trall/features/feature-settings-card"
 import { MaterialsManager } from "@/components/trall/materials-manager"
@@ -28,6 +29,7 @@ import {
   normalizeElevationSettings,
   type ElevationSettings,
 } from "@/lib/trall/elevation"
+import { buildAIPlanSummary } from "@/lib/trall/ai-visualization"
 import type {
   HouseDoor,
   HouseModel,
@@ -35,6 +37,8 @@ import type {
   HouseWindow,
   Material,
   Metric,
+  PlannerViewMode,
+  Point,
 } from "@/lib/trall/types"
 import { clamp } from "@/lib/trall/geometry"
 import type {
@@ -78,16 +82,20 @@ import {
 export function CalculatorPanel({
   boardDirection,
   calculations,
+  deckPoints,
   elevationSettings,
   ensureProject,
+  features,
   house,
   placementMode,
+  poolPoints,
   projectId,
   projectName,
   selectedFeature,
   setBoardDirection,
   setElevationSettings,
   setHouse,
+  viewMode,
   onDeleteFeature,
   onUpdateFeature,
 }: {
@@ -99,16 +107,20 @@ export function CalculatorPanel({
     metrics: Metric[]
     materials: Material[]
   }
+  deckPoints: Point[]
   elevationSettings: ElevationSettings
   ensureProject: () => Promise<string>
+  features: DeckFeature[]
   house: HouseModel
   placementMode: FeaturePlacementType | null
+  poolPoints: Point[] | null
   projectId: string | null
   projectName: string
   selectedFeature: DeckFeature | null
   setBoardDirection: (settings: BoardDirectionSettings) => void
   setElevationSettings: Dispatch<SetStateAction<ElevationSettings>>
   setHouse: Dispatch<SetStateAction<HouseModel>>
+  viewMode: PlannerViewMode
   onDeleteFeature: (featureId: string) => void
   onUpdateFeature: (feature: DeckFeature) => void
 }) {
@@ -124,6 +136,15 @@ export function CalculatorPanel({
     []
   )
   const hasProjectMaterials = projectMaterialSummary.itemCount > 0
+  const aiPlanSummary = buildAIPlanSummary({
+    areaM2: calculations.areaM2,
+    deckPoints,
+    elevationSettings,
+    features,
+    house,
+    poolPoints,
+    projectName,
+  })
 
   return (
     <div className="space-y-3">
@@ -185,6 +206,13 @@ export function CalculatorPanel({
       <AppearanceSettingsCard
         elevationSettings={elevationSettings}
         setElevationSettings={setElevationSettings}
+      />
+
+      <AIVisualizationPanel
+        ensureProject={ensureProject}
+        planSummary={aiPlanSummary}
+        projectId={projectId}
+        viewMode={viewMode}
       />
 
       <HouseDimensionsCard house={house} setHouse={setHouse} />

@@ -71,10 +71,29 @@ create table if not exists public.project_materials (
 create index if not exists project_materials_material_id_idx
   on public.project_materials(material_id);
 
+create table if not exists public.trall_mono_ai_visualizations (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.trall_mono_projects(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  brief text not null default '',
+  style text not null default 'planning_realistic',
+  plan_summary text not null default '',
+  reference_images jsonb not null default '[]'::jsonb,
+  generated_images jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists trall_mono_ai_visualizations_project_id_idx
+  on public.trall_mono_ai_visualizations(project_id, created_at desc);
+
+create index if not exists trall_mono_ai_visualizations_user_id_idx
+  on public.trall_mono_ai_visualizations(user_id);
+
 alter table public.trall_mono_projects enable row level security;
 alter table public.trall_mono_project_versions enable row level security;
 alter table public.materials enable row level security;
 alter table public.project_materials enable row level security;
+alter table public.trall_mono_ai_visualizations enable row level security;
 
 create policy "Users can select own projects"
   on public.trall_mono_projects
@@ -115,6 +134,29 @@ create policy "Users can update own project versions"
 
 create policy "Users can delete own project versions"
   on public.trall_mono_project_versions
+  for delete
+  using (user_id = auth.uid());
+
+create policy "Users can select own AI visualizations"
+  on public.trall_mono_ai_visualizations
+  for select
+  using (user_id = auth.uid());
+
+create policy "Users can insert own AI visualizations"
+  on public.trall_mono_ai_visualizations
+  for insert
+  with check (
+    user_id = auth.uid()
+    and exists (
+      select 1
+      from public.trall_mono_projects
+      where trall_mono_projects.id = trall_mono_ai_visualizations.project_id
+        and trall_mono_projects.user_id = auth.uid()
+    )
+  );
+
+create policy "Users can delete own AI visualizations"
+  on public.trall_mono_ai_visualizations
   for delete
   using (user_id = auth.uid());
 
