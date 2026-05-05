@@ -80,7 +80,7 @@ export function NavMain({
             <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
               <DialogTrigger asChild>
                 <SidebarMenuButton
-                  title="Create project"
+                  title="Skapa projekt"
                   disabled={creating}
                   className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
                 >
@@ -89,7 +89,7 @@ export function NavMain({
                   ) : (
                     <CirclePlusIcon />
                   )}
-                  <span>Create project</span>
+                  <span>Skapa projekt</span>
                 </SidebarMenuButton>
               </DialogTrigger>
               <DialogContent>

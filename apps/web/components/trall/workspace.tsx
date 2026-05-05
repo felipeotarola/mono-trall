@@ -13,10 +13,13 @@ import {
   MoreHorizontalIcon,
   MousePointer2Icon,
   PanelRightIcon,
+  PencilIcon,
   RulerIcon,
+  Redo2Icon,
   Share2Icon,
   SlashIcon,
   SquareIcon,
+  Undo2Icon,
 } from "lucide-react"
 
 import { CalculatorPanel } from "@/components/trall/calculator-panel"
@@ -87,6 +90,7 @@ type MobileToolLabel = "Välj" | "Punkt" | "Kant" | "Rätvinkel" | "Mått"
 
 const AUTOSAVE_DELAY_MS = 1200
 const FALLBACK_PROJECT_NAME = "Untitled"
+const DESKTOP_FIT_ZOOM = 1.14
 
 export function Workspace({
   demoMode = false,
@@ -148,6 +152,11 @@ export function Workspace({
   const [demoOpenAIKey, setDemoOpenAIKey] = useState("")
   const viewBoxRef = useRef(viewBox)
   const viewAspectRatioRef = useRef(viewAspectRatio)
+  const fitStateRef = useRef<{
+    deckPoints: Point[]
+    houseBounds: ReturnType<typeof getHouseBounds>
+    poolPoints: Point[] | null
+  } | null>(null)
   const hydratingProjectRef = useRef(false)
   const autosaveReadyRef = useRef(false)
   const latestSaveRequestRef = useRef(0)
@@ -161,14 +170,14 @@ export function Workspace({
   const modeLabel = getModeLabel(activeTool, placementMode)
   const zoomPercent = Math.round((INITIAL_VIEW_BOX.width / viewBox.width) * 100)
   const fitViewBox = useCallback(() => {
-    setViewBox(
+    const nextViewBox =
       getFitViewBox(
         houseBounds,
         deckPoints,
         poolPoints ?? [],
         viewAspectRatioRef.current
       )
-    )
+    setViewBox(getDesktopEnhancedFitViewBox(nextViewBox))
   }, [deckPoints, houseBounds, poolPoints])
   const zoomIn = useCallback(() => {
     setViewBox((currentViewBox) => zoomViewBox(currentViewBox, ZOOM_STEP))
@@ -191,6 +200,43 @@ export function Workspace({
   }, [viewAspectRatio])
 
   useEffect(() => {
+    fitStateRef.current = {
+      deckPoints,
+      houseBounds,
+      poolPoints,
+    }
+  }, [deckPoints, houseBounds, poolPoints])
+
+  useEffect(() => {
+    if (
+      typeof window === "undefined" ||
+      !window.matchMedia("(min-width: 1024px)").matches
+    ) {
+      return
+    }
+
+    const frameId = requestAnimationFrame(() => {
+      const fitState = fitStateRef.current
+      if (!fitState) {
+        return
+      }
+
+      setViewBox(
+        getDesktopEnhancedFitViewBox(
+          getFitViewBox(
+            fitState.houseBounds,
+            fitState.deckPoints,
+            fitState.poolPoints ?? [],
+            viewAspectRatioRef.current
+          )
+        )
+      )
+    })
+
+    return () => cancelAnimationFrame(frameId)
+  }, [viewAspectRatio])
+
+  useEffect(() => {
     const contentBounds = getPlanContentBounds(
       houseBounds,
       deckPoints,
@@ -199,11 +245,13 @@ export function Workspace({
     if (!isContentInsideViewBox(contentBounds, viewBoxRef.current)) {
       const frameId = requestAnimationFrame(() => {
         setViewBox(
-          getFitViewBox(
-            houseBounds,
-            deckPoints,
-            poolPoints ?? [],
-            viewAspectRatioRef.current
+          getDesktopEnhancedFitViewBox(
+            getFitViewBox(
+              houseBounds,
+              deckPoints,
+              poolPoints ?? [],
+              viewAspectRatioRef.current
+            )
           )
         )
       })
@@ -271,7 +319,16 @@ export function Workspace({
         setSelectedFeatureId(null)
         setPoolPoints(version.state.poolPoints ?? null)
         setPoolEdgeConstraints(version.state.poolEdgeConstraints ?? [])
-        setViewBox(version.state.viewBox)
+        setViewBox(
+          getDesktopEnhancedFitViewBox(
+            getFitViewBox(
+              getHouseBounds(version.state.house),
+              version.state.deckPoints,
+              version.state.poolPoints ?? [],
+              viewAspectRatioRef.current
+            )
+          )
+        )
         setSaveStatus("Saved")
         window.localStorage.setItem(CURRENT_PROJECT_STORAGE_KEY, project.id)
         requestAnimationFrame(() => {
@@ -549,21 +606,25 @@ export function Workspace({
   }
 
   return (
-    <main className="flex h-svh flex-1 flex-col overflow-hidden bg-[#f7f4ee] dark:bg-background lg:h-auto lg:overflow-x-hidden lg:bg-stone-100/60">
+    <main className="flex h-svh flex-1 flex-col overflow-hidden bg-[#f7f4ee] dark:bg-background lg:!h-[calc(100vh-1rem)] lg:!max-h-[calc(100vh-1rem)] lg:min-h-0 lg:bg-[#f6f5f1]">
       <div
         className={
           calculatorOpen
-            ? "flex flex-1 flex-col gap-3 p-3 pb-3 transition-[padding] duration-200 lg:p-4 lg:pr-[348px] lg:pb-4 xl:p-5 xl:pr-[388px]"
-            : "flex flex-1 flex-col gap-3 p-3 pb-3 transition-[padding] duration-200 lg:p-4 lg:pb-4 xl:p-5"
+            ? "flex min-h-0 flex-1 flex-col gap-3 p-3 pb-3 transition-[padding] duration-200 lg:gap-0 lg:p-0 lg:pr-[336px] xl:pr-[376px]"
+            : "flex min-h-0 flex-1 flex-col gap-3 p-3 pb-3 transition-[padding] duration-200 lg:gap-0 lg:p-0"
         }
       >
-        <div className="min-w-0 flex-1">
-          <section className="relative min-w-0 flex-1 overflow-hidden rounded-[22px] border border-black/5 bg-stone-50 shadow-xl shadow-black/8 dark:bg-zinc-950 lg:rounded-lg lg:shadow-sm">
+        <div className="min-h-0 min-w-0 flex-1 lg:flex lg:flex-col">
+          <section className="relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-[22px] border border-black/5 bg-stone-50 shadow-xl shadow-black/8 dark:bg-zinc-950 lg:flex lg:flex-col lg:rounded-none lg:border-0 lg:bg-white lg:shadow-none">
             {demoMode ? (
               <div className="absolute top-3 right-3 z-30 rounded-lg border border-amber-200 bg-amber-50/95 px-3 py-1.5 text-xs font-medium text-amber-900 shadow-sm backdrop-blur">
                 Demo mode · changes are not saved
               </div>
             ) : null}
+            <DesktopWorkspaceHeader
+              projectName={currentProjectName}
+              saveStatus={saveStatus}
+            />
             <div className="hidden lg:block">
               <CanvasToolbar
                 activeTool={activeTool}
@@ -616,7 +677,7 @@ export function Workspace({
             {viewMode === "top" ? (
               <FeatureToolList
                 activeTool={activeTool}
-                className="absolute top-14 left-2 z-30 hidden lg:block xl:top-20"
+                className="absolute top-[152px] left-5 z-30 hidden lg:block"
                 collapsed={plannerToolsCollapsed}
                 placementMode={placementMode}
                 onAddPool={handleAddPool}
@@ -748,6 +809,73 @@ export function Workspace({
         />
       </div>
     </main>
+  )
+}
+
+function DesktopWorkspaceHeader({
+  projectName,
+  saveStatus,
+}: {
+  projectName: string
+  saveStatus: SaveStatus | "Demo mode"
+}) {
+  return (
+    <div className="hidden h-[72px] shrink-0 items-center justify-between border-b border-stone-200 bg-white px-6 lg:flex">
+      <div className="flex min-w-0 items-center gap-4">
+        <PanelRightIcon className="size-5 shrink-0 text-stone-900" />
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <h1 className="truncate text-lg font-semibold tracking-tight text-stone-950">
+              {projectName}
+            </h1>
+            <button
+              aria-label="Redigera projektnamn"
+              className="flex size-6 items-center justify-center rounded-md text-stone-500 hover:bg-stone-100 hover:text-stone-950"
+              type="button"
+            >
+              <PencilIcon className="size-3.5" />
+            </button>
+          </div>
+          <p className="mt-0.5 text-xs text-stone-500">
+            {saveStatus === "Saved"
+              ? "Senast sparad nyss"
+              : saveStatus === "Demo mode"
+                ? "Demo-läge"
+                : saveStatus}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-1">
+        <DesktopHeaderButton label="Ångra">
+          <Undo2Icon />
+        </DesktopHeaderButton>
+        <DesktopHeaderButton label="Gör om">
+          <Redo2Icon />
+        </DesktopHeaderButton>
+        <DesktopHeaderButton label="Fler alternativ">
+          <MoreHorizontalIcon />
+        </DesktopHeaderButton>
+      </div>
+    </div>
+  )
+}
+
+function DesktopHeaderButton({
+  children,
+  label,
+}: {
+  children: ReactNode
+  label: string
+}) {
+  return (
+    <button
+      aria-label={label}
+      className="flex size-8 items-center justify-center rounded-lg text-stone-700 hover:bg-stone-100 hover:text-stone-950 [&_svg]:size-4"
+      title={label}
+      type="button"
+    >
+      {children}
+    </button>
   )
 }
 
@@ -1078,15 +1206,26 @@ function MobileIconButton({
 }
 
 function getMobileTip(modeLabel: string) {
-  if (modeLabel === "Measure") {
+  if (modeLabel === "Mät") {
     return "Tryck och dra för att mäta avstånd i planen."
   }
 
-  if (modeLabel === "Draw") {
+  if (modeLabel === "Rita") {
     return "Tryck ut punkter för att rita formen på altanen."
   }
 
   return "Dra markerade punkter för att justera formen. Dubbelklicka på en kant för att lägga till en nod."
+}
+
+function getDesktopEnhancedFitViewBox(viewBox: ViewBox): ViewBox {
+  if (
+    typeof window === "undefined" ||
+    !window.matchMedia("(min-width: 1024px)").matches
+  ) {
+    return viewBox
+  }
+
+  return zoomViewBox(viewBox, DESKTOP_FIT_ZOOM)
 }
 
 function RightCalculatorSidebar({
@@ -1103,7 +1242,7 @@ function RightCalculatorSidebar({
       {!open ? (
         <CalculatorSidebarTrigger
           ariaLabel="Open calculator sidebar"
-          className="fixed top-[calc((var(--header-height)-var(--spacing)*7)/2)] right-3 z-30 hidden lg:inline-flex xl:right-5"
+          className="fixed top-5 right-3 z-30 hidden lg:inline-flex xl:right-5"
           title="Open calculator sidebar"
           onClick={onToggle}
         />
@@ -1112,12 +1251,12 @@ function RightCalculatorSidebar({
         aria-hidden={!open}
         className={
           open
-            ? "fixed inset-y-0 right-0 z-20 hidden w-[320px] translate-x-0 border-s bg-sidebar text-sidebar-foreground transition-transform duration-200 lg:flex xl:w-[360px]"
-            : "pointer-events-none fixed inset-y-0 right-0 z-20 hidden w-[320px] translate-x-full border-s bg-sidebar text-sidebar-foreground transition-transform duration-200 lg:flex xl:w-[360px]"
+            ? "fixed inset-y-0 right-0 z-20 hidden w-[320px] translate-x-0 border-s border-stone-200 bg-white text-sidebar-foreground transition-transform duration-200 lg:flex xl:w-[360px]"
+            : "pointer-events-none fixed inset-y-0 right-0 z-20 hidden w-[320px] translate-x-full border-s border-stone-200 bg-white text-sidebar-foreground transition-transform duration-200 lg:flex xl:w-[360px]"
         }
       >
         <div className="flex h-full min-h-0 w-full flex-col">
-          <div className="flex h-(--header-height) shrink-0 items-center gap-3 border-b px-4 lg:px-6">
+          <div className="flex h-[72px] shrink-0 items-center gap-3 border-b border-stone-200 px-4 lg:px-5">
             <CalculatorSidebarTrigger
               ariaLabel="Close calculator sidebar"
               className="-ms-1"
@@ -1130,7 +1269,7 @@ function RightCalculatorSidebar({
               </p>
             </div>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto p-3">{children}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto p-3.5">{children}</div>
         </div>
       </aside>
     </>
@@ -1197,16 +1336,16 @@ function getModeLabel(
   }
 
   if (activeTool === "draw") {
-    return "Draw deck"
+    return "Rita"
   }
 
   if (activeTool === "measure") {
-    return "Measure"
+    return "Mät"
   }
 
   if (activeTool === "pan") {
-    return "Pan"
+    return "Panorera"
   }
 
-  return "Select"
+  return "Välj"
 }

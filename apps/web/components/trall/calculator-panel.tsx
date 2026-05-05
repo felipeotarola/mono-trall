@@ -167,10 +167,13 @@ export function CalculatorPanel({
         />
       ) : null}
 
-      <Card size="sm" className="bg-zinc-950 text-white dark:bg-primary">
-        <CardContent className="space-y-4">
+      <Card
+        size="sm"
+        className="border-zinc-950 bg-zinc-950 text-white shadow-none dark:bg-primary"
+      >
+        <CardContent className="space-y-3 py-4">
           <div>
-            <p className="text-sm text-white/70">Estimated material price</p>
+            <p className="text-sm text-white/70">Uppskattat materialpris</p>
             <p className="mt-1 text-3xl font-semibold tracking-tight">
               {hasProjectMaterials
                 ? formatCurrency(projectMaterialSummary.totalCost)
@@ -178,16 +181,16 @@ export function CalculatorPanel({
             </p>
             <p className="mt-1 text-xs text-white/60">
               {hasProjectMaterials
-                ? "Calculated from materials assigned to this project"
-                : "Add project materials before creating a quote"}
+                ? "Beräknat från material som tilldelats detta projekt."
+                : "Lägg till projektmaterial för att skapa en offert."}
             </p>
           </div>
         </CardContent>
       </Card>
 
-      <Card size="sm">
-        <CardHeader>
-          <CardTitle>Measurements</CardTitle>
+      <Card size="sm" className="border-stone-200 shadow-none">
+        <CardHeader className="pb-3">
+          <CardTitle>Mått</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {calculations.metrics.map((metric) => (
@@ -243,10 +246,17 @@ export function CalculatorPanel({
 }
 
 function MetricRow({ label, value }: Metric) {
+  const labelMap: Record<string, string> = {
+    "Board run": "Brädgård",
+    "Deck area": "Däckyta",
+    Perimeter: "Omkrets",
+    "Waste factor": "Spillfaktor",
+  }
+
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/25 px-3 py-2">
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-stone-200 bg-white px-3 py-2">
       <span className="min-w-0 truncate text-sm text-muted-foreground">
-        {label}
+        {labelMap[label] ?? label}
       </span>
       <span className="shrink-0 text-sm font-semibold">{value}</span>
     </div>

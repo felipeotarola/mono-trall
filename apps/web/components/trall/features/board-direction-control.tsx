@@ -26,18 +26,18 @@ export function BoardDirectionControl({
   onChange: (settings: BoardDirectionSettings) => void
 }) {
   return (
-    <Card size="sm">
-      <CardHeader>
-        <CardTitle>Board direction</CardTitle>
+    <Card size="sm" className="border-stone-200 shadow-none">
+      <CardHeader className="space-y-1.5 pb-3">
+        <CardTitle>Brädriktning</CardTitle>
         <CardDescription>
-          Controls the visible direction of deck boards in the plan.
+          Styr den synliga riktningen på trallbrädorna i planen.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="grid grid-cols-3 gap-1 rounded-lg border bg-muted/20 p-1">
           <ModeButton
             active={boardDirection.boardDirectionMode === "parallel-house"}
-            label="Parallel"
+            label="Parallell"
             onClick={() =>
               onChange(setBoardDirectionMode("parallel-house", boardDirection))
             }
@@ -46,7 +46,7 @@ export function BoardDirectionControl({
             active={
               boardDirection.boardDirectionMode === "perpendicular-house"
             }
-            label="Perp."
+            label="Vinkelrät"
             onClick={() =>
               onChange(
                 setBoardDirectionMode("perpendicular-house", boardDirection)
@@ -55,7 +55,7 @@ export function BoardDirectionControl({
           />
           <ModeButton
             active={boardDirection.boardDirectionMode === "custom"}
-            label="Custom"
+            label="Anpassad"
             onClick={() =>
               onChange(setBoardDirectionMode("custom", boardDirection))
             }
@@ -64,7 +64,7 @@ export function BoardDirectionControl({
 
         <div className="grid grid-cols-[1fr_auto] gap-2">
           <label className="space-y-1">
-            <span className="text-xs text-muted-foreground">Angle</span>
+            <span className="text-xs text-muted-foreground">Vinkel</span>
             <div className="flex items-center gap-1 rounded-lg border bg-background px-2">
               <Input
                 className="border-0 px-0 shadow-none focus-visible:ring-0"
@@ -83,7 +83,7 @@ export function BoardDirectionControl({
                   )
                 }
               />
-              <span className="text-xs text-muted-foreground">deg</span>
+              <span className="text-xs text-muted-foreground">°</span>
             </div>
           </label>
           <Button
@@ -93,7 +93,7 @@ export function BoardDirectionControl({
             onClick={() => onChange(rotateBoardDirection(boardDirection))}
           >
             <RotateCwIcon />
-            90 deg
+            Återställ
           </Button>
         </div>
       </CardContent>

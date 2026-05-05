@@ -5,7 +5,6 @@ import { useEffect, useRef } from "react"
 
 import { Plan3DView } from "@/components/trall/plan-3d-view"
 import { PlanSvg } from "@/components/trall/plan-svg"
-import { ScaleIndicator } from "@/components/trall/svg/scale-indicator"
 import type { EdgeConstraint } from "@/lib/trall/edge-model"
 import type { ElevationSettings } from "@/lib/trall/elevation"
 import type {
@@ -120,7 +119,7 @@ export function PlanningSurface({
 
   return (
     <div
-      className={`relative min-h-[calc(100svh-1.5rem)] overflow-hidden pt-[104px] ${viewMode === "top" ? "pb-[176px]" : "pb-0"} lg:min-h-[calc(100svh-7rem)] lg:pt-24 lg:pb-0 2xl:pt-20 ${trallPlanClasses.page}`}
+      className={`relative min-h-[calc(100svh-1.5rem)] overflow-hidden pt-[104px] ${viewMode === "top" ? "pb-[176px]" : "pb-0"} lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:pt-0 lg:pb-0 ${trallPlanClasses.page}`}
     >
       <div className={`absolute inset-0 ${trallPlanClasses.gridFine}`} />
       <div className={`absolute inset-0 ${trallPlanClasses.gridStrong}`} />
@@ -128,18 +127,8 @@ export function PlanningSurface({
       <div className="absolute top-0 left-16 h-full w-px bg-stone-500/20" />
       <div className="absolute top-16 left-16 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-stone-700/55" />
 
-      <div className={`absolute top-28 left-4 hidden text-[11px] font-medium lg:block lg:top-24 2xl:top-20 ${trallPlanClasses.floatingLabel}`}>
-        x 0, y 0
-      </div>
-
-      <p className={`absolute top-28 right-4 z-10 hidden max-w-[min(24rem,calc(100%-2rem))] lg:block lg:top-24 2xl:top-20 ${trallPlanClasses.floatingLabel}`}>
-        {viewMode === "3d"
-          ? "3D preview: orbit, pan, zoom. Edit geometry in Top view."
-          : getPlannerInstruction(activeTool, placementMode)}
-      </p>
-
       <div
-        className={`relative flex ${viewMode === "top" ? "h-[calc(100svh-17.5rem)]" : "h-[calc(100svh-8rem)]"} min-h-[390px] items-stretch justify-center px-0 py-6 lg:h-[calc(100svh-10rem)] lg:min-h-[520px] lg:px-3 lg:py-8`}
+        className={`relative flex ${viewMode === "top" ? "h-[calc(100svh-17.5rem)]" : "h-[calc(100svh-8rem)]"} min-h-[390px] items-stretch justify-center px-0 py-6 lg:h-0 lg:min-h-0 lg:flex-1 lg:px-5 lg:py-5`}
       >
         <div ref={canvasFrameRef} className="h-full w-full">
           {viewMode === "3d" ? (
@@ -192,15 +181,14 @@ export function PlanningSurface({
 
       {viewMode === "top" ? (
         <div
-          className={`pointer-events-none absolute inset-x-0 bottom-0 hidden flex-col gap-2 lg:flex lg:flex-row lg:items-end lg:justify-between ${trallPlanClasses.bottomLegend}`}
+          className={`pointer-events-none absolute inset-x-0 bottom-0 hidden h-12 items-center justify-between gap-6 border-t border-stone-200 bg-white/92 px-5 text-xs text-stone-700 backdrop-blur lg:flex`}
         >
-          <ScaleIndicator />
-          <span>
-            Scale 1:100 · 1 grid square = 0.5 m · Cmd/Ctrl snaps angle · Alt
-            disables grid · Shift locks axis · Space pans · Zoom {zoomPercent}% ·
-            Drag pool body to move it · Click a dimension to edit length ·
-            Double-click an edge to add a node · Select an edge to add/remove
-            nodes · When edge snaps to house, it becomes attached
+          <span className="min-w-0 truncate">
+            Skala 1:100 · Rutnät 0.5 m · Zoom {zoomPercent}% · Snäpp Av ·
+            Panorera
+          </span>
+          <span className="hidden shrink-0 text-stone-500 xl:inline">
+            Tips: {getCompactPlannerTip(activeTool, placementMode)}
           </span>
         </div>
       ) : null}
@@ -208,42 +196,21 @@ export function PlanningSurface({
   )
 }
 
-function getPlannerInstruction(
+function getCompactPlannerTip(
   activeTool: ActiveTool,
   placementMode: FeaturePlacementType | null
 ) {
-  if (placementMode === "stairs") {
-    return "Stairs: click a deck edge to place stairs."
+  if (viewModeIsPlacement(placementMode)) {
+    return "Klicka i planen för att placera valt objekt."
   }
 
-  if (placementMode === "railing") {
-    return "Fence: click deck edges to toggle wood, glass, or metal fence coverage."
+  if (activeTool === "measure") {
+    return "Dra för att mäta avstånd."
   }
 
-  if (placementMode === "pergola") {
-    return "Pergola: click inside the deck to place it."
-  }
+  return "Dubbelklicka på en kant för att lägga till en nod."
+}
 
-  if (placementMode === "privacyScreen") {
-    return "Privacy screen: click a deck edge to place a screen segment."
-  }
-
-  if (
-    placementMode === "siteTree" ||
-    placementMode === "siteBush" ||
-    placementMode === "sitePlanter" ||
-    placementMode === "siteLight"
-  ) {
-    return "Landscape: click the plan to place it. Drag in Select mode to move it."
-  }
-
-  if (placementMode === "boardDirection") {
-    return "Board direction: use the calculator panel controls to rotate the deck boards."
-  }
-
-  if (activeTool === "select") {
-    return "Select mode: drag highlighted points to adjust the deck shape. Double-click an edge to add a node."
-  }
-
-  return "Drag points to adjust deck shape. Double-click an edge to add a node."
+function viewModeIsPlacement(placementMode: FeaturePlacementType | null) {
+  return placementMode !== null && placementMode !== "boardDirection"
 }
