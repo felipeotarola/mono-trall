@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { NavMain } from "@/components/nav-main"
@@ -14,6 +15,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@workspace/ui/components/sidebar"
 import {
   CalculatorIcon,
@@ -55,6 +57,7 @@ const fallbackUser: SidebarUser = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
+  const { setOpenMobile } = useSidebar()
   const [user, setUser] = React.useState<SidebarUser>(fallbackUser)
   const items = data.navMain.map((item) => ({
     ...item,
@@ -100,10 +103,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
-              <a href="#">
+              <Link href="/" onClick={() => setOpenMobile(false)}>
                 <PencilRulerIcon className="size-5!" />
                 <span className="text-base font-semibold">TrallAI</span>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

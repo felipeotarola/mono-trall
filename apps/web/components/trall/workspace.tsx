@@ -99,7 +99,7 @@ export function Workspace({
   demoMode?: boolean
   onProjectNameChange?: (name: string) => void
 }) {
-  const { setOpen, setOpenMobile } = useSidebar()
+  const { setOpen, setOpenMobile, toggleSidebar } = useSidebar()
   const searchParams = useSearchParams()
   const requestedProjectId = searchParams.get("projectId")
   const [calculatorOpen, setCalculatorOpen] = useState(true)
@@ -610,12 +610,12 @@ export function Workspace({
       <div
         className={
           calculatorOpen
-            ? "flex min-h-0 flex-1 flex-col gap-3 p-3 pb-3 transition-[padding] duration-200 lg:gap-0 lg:p-0 lg:pr-[336px] xl:pr-[376px]"
-            : "flex min-h-0 flex-1 flex-col gap-3 p-3 pb-3 transition-[padding] duration-200 lg:gap-0 lg:p-0"
+            ? "flex min-h-0 flex-1 flex-col gap-0 p-0 transition-[padding] duration-200 lg:gap-0 lg:p-0 lg:pr-[336px] xl:pr-[376px]"
+            : "flex min-h-0 flex-1 flex-col gap-0 p-0 transition-[padding] duration-200 lg:gap-0 lg:p-0"
         }
       >
         <div className="min-h-0 min-w-0 flex-1 lg:flex lg:flex-col">
-          <section className="relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-[22px] border border-black/5 bg-stone-50 shadow-xl shadow-black/8 dark:bg-zinc-950 lg:flex lg:flex-col lg:rounded-none lg:border-0 lg:bg-white lg:shadow-none">
+          <section className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-stone-50 dark:bg-zinc-950 lg:flex lg:flex-col lg:bg-white">
             {demoMode ? (
               <div className="absolute top-3 right-3 z-30 rounded-lg border border-amber-200 bg-amber-50/95 px-3 py-1.5 text-xs font-medium text-amber-900 shadow-sm backdrop-blur">
                 Demo mode · changes are not saved
@@ -624,6 +624,7 @@ export function Workspace({
             <DesktopWorkspaceHeader
               projectName={currentProjectName}
               saveStatus={saveStatus}
+              onToggleSidebar={toggleSidebar}
             />
             <div className="hidden lg:block">
               <CanvasToolbar
@@ -813,16 +814,25 @@ export function Workspace({
 }
 
 function DesktopWorkspaceHeader({
+  onToggleSidebar,
   projectName,
   saveStatus,
 }: {
+  onToggleSidebar: () => void
   projectName: string
   saveStatus: SaveStatus | "Demo mode"
 }) {
   return (
     <div className="hidden h-[72px] shrink-0 items-center justify-between border-b border-stone-200 bg-white px-6 lg:flex">
       <div className="flex min-w-0 items-center gap-4">
-        <PanelRightIcon className="size-5 shrink-0 text-stone-900" />
+        <button
+          aria-label="Toggle navigation sidebar"
+          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-stone-900 hover:bg-stone-100"
+          type="button"
+          onClick={onToggleSidebar}
+        >
+          <PanelRightIcon className="size-5" />
+        </button>
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <h1 className="truncate text-lg font-semibold tracking-tight text-stone-950">

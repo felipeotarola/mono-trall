@@ -27,6 +27,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@workspace/ui/components/sidebar"
 import { CirclePlusIcon, Loader2Icon } from "lucide-react"
 
@@ -41,6 +42,7 @@ export function NavMain({
   }[]
 }) {
   const router = useRouter()
+  const { setOpenMobile } = useSidebar()
   const [creating, setCreating] = useState(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [projectName, setProjectName] = useState("")
@@ -60,6 +62,7 @@ export function NavMain({
         createDefaultPlannerProjectState()
       )
       window.localStorage.setItem(CURRENT_PROJECT_STORAGE_KEY, project.id)
+      setOpenMobile(false)
       setCreateDialogOpen(false)
       setProjectName("")
       router.push(`/?projectId=${project.id}`)
@@ -147,7 +150,7 @@ export function NavMain({
                     <span>{item.title}</span>
                   </>
                 ) : (
-                  <a href={item.url}>
+                  <a href={item.url} onClick={() => setOpenMobile(false)}>
                     {item.icon}
                     <span>{item.title}</span>
                   </a>

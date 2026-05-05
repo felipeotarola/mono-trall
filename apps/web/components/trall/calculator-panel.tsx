@@ -179,13 +179,13 @@ export function CalculatorPanel({
               aria-pressed={activeTab === tab.id}
               className={
                 activeTab === tab.id
-                  ? "flex h-9 shrink-0 items-center gap-1.5 border-b-2 border-stone-950 px-2 text-sm font-semibold text-stone-950"
-                  : "flex h-9 shrink-0 items-center gap-1.5 border-b-2 border-transparent px-2 text-sm font-medium text-stone-500 hover:text-stone-950"
+                  ? "flex h-9 shrink-0 items-center border-b-2 border-stone-950 px-1.5 text-sm font-semibold text-stone-950"
+                  : "flex h-9 shrink-0 items-center border-b-2 border-transparent px-1.5 text-sm font-medium text-stone-500 hover:text-stone-950"
               }
               type="button"
               onClick={() => setActiveTab(tab.id)}
             >
-              <tab.icon className="size-4" />
+              <tab.icon className="hidden size-4" />
               {tab.label}
             </button>
           ))}
@@ -334,6 +334,7 @@ function BoardDirectionSummary({
   boardDirection: BoardDirectionSettings
   onChange: (settings: BoardDirectionSettings) => void
 }) {
+  const [open, setOpen] = useState(false)
   const modeLabel =
     boardDirection.boardDirectionMode === "custom"
       ? "Anpassad"
@@ -343,8 +344,12 @@ function BoardDirectionSummary({
 
   return (
     <Card size="sm" className="border-stone-200 shadow-none">
-      <details>
-        <summary className="flex cursor-pointer list-none items-start justify-between gap-3 p-4">
+      <div>
+        <button
+          className="flex w-full cursor-pointer items-start justify-between gap-3 p-4 text-left"
+          type="button"
+          onClick={() => setOpen((current) => !current)}
+        >
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <SlidersHorizontalIcon className="size-4" />
@@ -355,9 +360,10 @@ function BoardDirectionSummary({
             </CardDescription>
           </div>
           <span className="shrink-0 text-xs font-medium text-stone-500">
-            Redigera
+            {open ? "Stäng" : "Redigera"}
           </span>
-        </summary>
+        </button>
+        {open ? (
         <CardContent className="space-y-3 border-t pt-3">
           <div className="grid grid-cols-3 gap-1 rounded-lg border bg-muted/20 p-1">
             <ModeButton
@@ -420,7 +426,8 @@ function BoardDirectionSummary({
             </Button>
           </div>
         </CardContent>
-      </details>
+        ) : null}
+      </div>
     </Card>
   )
 }
