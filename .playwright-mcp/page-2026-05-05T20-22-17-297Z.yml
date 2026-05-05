@@ -1,0 +1,178 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - img "TrallAI-projektet Backsidan pool i altanplaneraren" [ref=e4]
+      - navigation [ref=e6]:
+        - generic [ref=e7]:
+          - link "TrallAI" [ref=e8] [cursor=pointer]:
+            - /url: /landing
+          - generic [ref=e9]:
+            - group "Language" [ref=e10]:
+              - button "EN" [ref=e11]
+              - button "SV" [pressed] [ref=e12]
+            - link "Repository" [ref=e13] [cursor=pointer]:
+              - /url: https://github.com/felipeotarola/mono-trall
+              - img
+              - text: Repository
+            - link "Deploya" [ref=e14] [cursor=pointer]:
+              - /url: https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Ffelipeotarola%2Fmono-trall&project-name=trallai&repository-name=mono-trall&root-directory=apps%2Fweb&env=NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,OPENAI_API_KEY,BLOB_READ_WRITE_TOKEN&envDescription=TrallAI%20needs%20Supabase%20credentials%20for%20auth%20and%20project%20storage%2C%20plus%20OpenAI%20and%20Vercel%20Blob%20tokens%20for%20AI%20image%20generation%20and%20saved%20assets.
+              - img
+              - text: Deploya
+            - link "Testa demo" [ref=e15] [cursor=pointer]:
+              - /url: /demo
+            - link "Öppna planeringen" [ref=e16] [cursor=pointer]:
+              - /url: /login?next=/
+      - generic [ref=e18]:
+        - paragraph [ref=e19]: Open source-planering för altan med AI-visualisering
+        - heading "TrallAI" [level=1] [ref=e20]
+        - paragraph [ref=e21]: Rita altanen exakt i 2D, granska bygget i 3D och skapa realistiska bilder från riktiga referensfoton. Markera fel och generera om bara det som behöver ändras.
+        - generic [ref=e22]:
+          - link "Testa planeringen" [ref=e23] [cursor=pointer]:
+            - /url: /login?next=/
+          - link "Testa demo" [ref=e24] [cursor=pointer]:
+            - /url: /demo
+          - link "Se arbetsflödet" [ref=e25] [cursor=pointer]:
+            - /url: "#workflow"
+    - generic [ref=e27]:
+      - generic [ref=e28]:
+        - img [ref=e30]
+        - generic [ref=e34]:
+          - paragraph [ref=e35]: Planen först
+          - paragraph [ref=e36]: 2D är sanningen
+      - generic [ref=e37]:
+        - img [ref=e39]
+        - generic [ref=e42]:
+          - paragraph [ref=e43]: Förhandsvisning
+          - paragraph [ref=e44]: Riktiga 3D-nivåer
+      - generic [ref=e45]:
+        - img [ref=e47]
+        - generic [ref=e51]:
+          - paragraph [ref=e52]: AI
+          - paragraph [ref=e53]: Foton + modell
+      - generic [ref=e54]:
+        - img [ref=e56]
+        - generic [ref=e58]:
+          - paragraph [ref=e59]: Materialuttag
+          - paragraph [ref=e60]: Löpmeter till pris
+    - generic [ref=e61]:
+      - generic [ref=e62]:
+        - paragraph [ref=e63]: Från uppmätt plan till trovärdig bild
+        - heading "TrallAI gör en altanidé till något du kan granska, förklara och justera." [level=2] [ref=e64]
+        - paragraph [ref=e65]: "Arbetsflödet är byggt för praktisk planering: håll geometrin exakt i 2D, kontrollera bygget och nivåerna i 3D, räkna ut materialets löpmeter bakom offerten och använd sedan AI för att visa hur projektet kan se ut på den riktiga tomten."
+      - generic [ref=e66]:
+        - article [ref=e67]:
+          - generic [ref=e68]:
+            - generic [ref=e69]:
+              - img [ref=e71]
+              - generic [ref=e73]: Steg 1
+            - heading "Rita altanen i 2D" [level=3] [ref=e74]
+            - paragraph [ref=e75]: Planera exakta kanter, mått, poolplacering, trappor, staket, pergola, växter och husets dörrar och fönster i planvyn.
+          - img "Rita altanen i 2D screenshot" [ref=e77]
+        - article [ref=e78]:
+          - generic [ref=e79]:
+            - generic [ref=e80]:
+              - img [ref=e82]
+              - generic [ref=e85]: Steg 2
+            - heading "Granska bygget i 3D" [level=3] [ref=e86]
+            - paragraph [ref=e87]: Vrid runt projektet och kontrollera altannivåer, lutande mark, stödreglar, glasräcken, poolhöjd, takform och material.
+          - img "Granska bygget i 3D screenshot" [ref=e89]
+        - article [ref=e90]:
+          - generic [ref=e91]:
+            - generic [ref=e92]:
+              - img [ref=e94]
+              - generic [ref=e96]: Steg 3
+            - heading "Räkna fram riktiga materialmängder" [level=3] [ref=e97]
+            - paragraph [ref=e98]: TrallAI räknar ut löpmeter från altanens geometri och valda brädor, så materialvalen kan ge en praktisk prisuppskattning istället för en grov gissning.
+          - img "Räkna fram riktiga materialmängder screenshot" [ref=e100]
+        - article [ref=e101]:
+          - generic [ref=e102]:
+            - generic [ref=e103]:
+              - img [ref=e105]
+              - generic [ref=e108]: Steg 4
+            - heading "Granska med AI-bilder" [level=3] [ref=e109]
+            - paragraph [ref=e110]: Jämför originalbilderna från tomten med färdiga genererade bilder där den riktiga platsen kombineras med den planerade 3D-modellen.
+          - generic [ref=e112]:
+            - figure "Referens 1" [ref=e113]:
+              - img "Original referensbild från trädgården" [ref=e115]
+              - generic [ref=e116]: Referens 1
+            - figure "Referens 2" [ref=e117]:
+              - img "Andra originala referensbilden från trädgården" [ref=e119]
+              - generic [ref=e120]: Referens 2
+            - figure "Genererad bild 1" [ref=e121]:
+              - img "Färdig genererad altanvisualisering från första referensbilden" [ref=e123]
+              - generic [ref=e124]: Genererad bild 1
+            - figure "Genererad bild 2" [ref=e125]:
+              - img "Färdig genererad altanvisualisering från andra referensbilden" [ref=e127]
+              - generic [ref=e128]: Genererad bild 2
+    - generic [ref=e130]:
+      - generic [ref=e131]:
+        - paragraph [ref=e132]: AI som går att korrigera
+        - heading "Markera bilden, skriv instruktionen och generera nästa version." [level=2] [ref=e133]
+        - paragraph [ref=e134]: En enda AI-rendering räcker inte för riktig planering. I TrallAI kan du öppna en genererad bild, markera ett område direkt i bilden och förklara vad som ska ändras. Nästa version sparas tillbaka i projektet.
+        - generic [ref=e135]:
+          - generic [ref=e136]:
+            - img [ref=e137]
+            - generic [ref=e140]: Ta bort verkliga objekt som ändå ska rivas.
+          - generic [ref=e141]:
+            - img [ref=e142]
+            - generic [ref=e145]: Korrigera delar som kommer från referensfotot men inte från 3D-planen.
+          - generic [ref=e146]:
+            - img [ref=e147]
+            - generic [ref=e150]: Behåll det som blev bra och iterera bara där det behövs.
+      - img "TrallAI-modal för AI-bildgranskning med markeringsverktyg" [ref=e152]
+    - generic [ref=e154]:
+      - generic [ref=e155]:
+        - paragraph [ref=e156]: Vad den kan modellera
+        - heading "Byggt för riktig altanplanering, inte bara snygga bilder." [level=2] [ref=e157]
+        - paragraph [ref=e158]: "Projektet Backsidan pool visar riktningen: en uppmätt plan, en 3D-scen som går att läsa byggmässigt, materialmängder som blir prisuppskattningar och AI-bilder som kan granskas som designutkast."
+      - generic [ref=e159]:
+        - generic [ref=e160]:
+          - img [ref=e161]
+          - generic [ref=e164]: Exakt altanplanering i 2D
+        - generic [ref=e165]:
+          - img [ref=e166]
+          - generic [ref=e169]: 3D-förhandsvisning med terräng och nivåer
+        - generic [ref=e170]:
+          - img [ref=e171]
+          - generic [ref=e174]: Pool, trappor, staket, pergola, växter och belysning
+        - generic [ref=e175]:
+          - img [ref=e176]
+          - generic [ref=e179]: Husmått, takstilar, dörrar och fönster
+        - generic [ref=e180]:
+          - img [ref=e181]
+          - generic [ref=e184]: Materialuttag i löpmeter för prisuppskattning
+        - generic [ref=e185]:
+          - img [ref=e186]
+          - generic [ref=e189]: Material och visuella förval
+        - generic [ref=e190]:
+          - img [ref=e191]
+          - generic [ref=e194]: AI-renderingar från riktiga referensfoton
+        - generic [ref=e195]:
+          - img [ref=e196]
+          - generic [ref=e199]: Korrigering av AI-bilder med markeringar
+        - generic [ref=e200]:
+          - img [ref=e201]
+          - generic [ref=e204]: Sparad projekthistorik och sparade AI-bilder
+    - generic [ref=e206]:
+      - generic [ref=e207]:
+        - heading "TrallAI är open source." [level=2] [ref=e208]
+        - paragraph [ref=e209]: Använd det som altanplanerare, 3D-förhandsvisning för bygget och arbetsflöde för AI-visualisering med referensfoton.
+      - generic [ref=e210]:
+        - link "Öppna planeringen" [ref=e211] [cursor=pointer]:
+          - /url: /login?next=/
+        - link "Testa demo" [ref=e212] [cursor=pointer]:
+          - /url: /demo
+        - link "Visa projekt" [ref=e213] [cursor=pointer]:
+          - /url: /login?next=/dashboard
+        - link "Se repository" [ref=e214] [cursor=pointer]:
+          - /url: https://github.com/felipeotarola/mono-trall
+          - img
+          - text: Se repository
+        - link "Deploya med Vercel" [ref=e215] [cursor=pointer]:
+          - /url: https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Ffelipeotarola%2Fmono-trall&project-name=trallai&repository-name=mono-trall&root-directory=apps%2Fweb&env=NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,OPENAI_API_KEY,BLOB_READ_WRITE_TOKEN&envDescription=TrallAI%20needs%20Supabase%20credentials%20for%20auth%20and%20project%20storage%2C%20plus%20OpenAI%20and%20Vercel%20Blob%20tokens%20for%20AI%20image%20generation%20and%20saved%20assets.
+          - img
+          - text: Deploya med Vercel
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e221] [cursor=pointer]:
+    - img [ref=e222]
+  - alert [ref=e225]

@@ -83,10 +83,9 @@ const copy = {
       {
         title: "Review with AI images",
         description:
-          "Combine real property photos with the 3D model, open the generated render large, mark problem areas, and regenerate corrections.",
-        image: "/redigera.png",
+          "Compare the original property photos with finished generated images that combine the real site with the planned 3D model.",
         icon: SparklesIcon,
-        references: [
+        gallery: [
           {
             alt: "Original property reference photo from the garden",
             label: "Reference 1",
@@ -96,6 +95,16 @@ const copy = {
             alt: "Second original property reference photo from the garden",
             label: "Reference 2",
             src: "/2.jpeg",
+          },
+          {
+            alt: "Finished generated deck visualization from the first reference photo",
+            label: "Generated result 1",
+            src: "/trall/landing/generated-render-1.png",
+          },
+          {
+            alt: "Finished generated deck visualization from the second reference photo",
+            label: "Generated result 2",
+            src: "/trall/landing/generated-render-2.png",
           },
         ],
       },
@@ -194,10 +203,9 @@ const copy = {
       {
         title: "Granska med AI-bilder",
         description:
-          "Kombinera riktiga foton med 3D-modellen, öppna renderingen stort, markera problemområden och generera korrigeringar.",
-        image: "/redigera.png",
+          "Jämför originalbilderna från tomten med färdiga genererade bilder där den riktiga platsen kombineras med den planerade 3D-modellen.",
         icon: SparklesIcon,
-        references: [
+        gallery: [
           {
             alt: "Original referensbild från trädgården",
             label: "Referens 1",
@@ -207,6 +215,16 @@ const copy = {
             alt: "Andra originala referensbilden från trädgården",
             label: "Referens 2",
             src: "/2.jpeg",
+          },
+          {
+            alt: "Färdig genererad altanvisualisering från första referensbilden",
+            label: "Genererad bild 1",
+            src: "/trall/landing/generated-render-1.png",
+          },
+          {
+            alt: "Färdig genererad altanvisualisering från andra referensbilden",
+            label: "Genererad bild 2",
+            src: "/trall/landing/generated-render-2.png",
           },
         ],
       },
@@ -542,22 +560,22 @@ function ProofItem({
 
 function WorkflowStep({
   description,
+  gallery,
   icon: Icon,
   image,
   index,
-  references,
   stepLabel,
   title,
 }: {
   description: string
-  icon: typeof Layers3Icon
-  image: string
-  index: number
-  references?: readonly {
+  gallery?: readonly {
     alt: string
     label: string
     src: string
   }[]
+  icon: typeof Layers3Icon
+  image?: string
+  index: number
   stepLabel: string
   title: string
 }) {
@@ -579,35 +597,36 @@ function WorkflowStep({
         <p className="mt-3 text-sm leading-6 text-zinc-600">{description}</p>
       </div>
       <div className="space-y-2 bg-zinc-100 p-2">
-        <Image
-          src={image}
-          alt={`${title} screenshot`}
-          width={1440}
-          height={1000}
-          className="max-h-[32rem] w-full rounded-md object-cover object-left-top"
-        />
-        {references ? (
+        {gallery ? (
           <div className="grid gap-2 sm:grid-cols-2">
-            {references.map((reference) => (
+            {gallery.map((item) => (
               <figure
-                key={reference.src}
+                key={item.src}
                 className="overflow-hidden rounded-md border bg-white"
               >
                 <div className="flex aspect-[4/3] items-center justify-center bg-zinc-100">
                   <Image
-                    src={reference.src}
-                    alt={reference.alt}
+                    src={item.src}
+                    alt={item.alt}
                     width={2048}
                     height={1536}
                     className="max-h-full w-full object-contain"
                   />
                 </div>
                 <figcaption className="border-t px-3 py-2 text-xs font-medium text-zinc-600">
-                  {reference.label}
+                  {item.label}
                 </figcaption>
               </figure>
             ))}
           </div>
+        ) : image ? (
+          <Image
+            src={image}
+            alt={`${title} screenshot`}
+            width={1440}
+            height={1000}
+            className="max-h-[32rem] w-full rounded-md object-cover object-left-top"
+          />
         ) : null}
       </div>
     </article>
