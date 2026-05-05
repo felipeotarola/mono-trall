@@ -1,11 +1,21 @@
 "use client"
 
-import type { Dispatch, SetStateAction } from "react"
+import type { Dispatch, ReactNode, SetStateAction } from "react"
 import { useCallback, useState } from "react"
-import { Trash2Icon } from "lucide-react"
+import {
+  BoxIcon,
+  HomeIcon,
+  ImageIcon,
+  Layers3Icon,
+  MountainIcon,
+  PackageIcon,
+  PencilIcon,
+  RulerIcon,
+  SlidersHorizontalIcon,
+  Trash2Icon,
+} from "lucide-react"
 
 import { AIVisualizationPanel } from "@/components/trall/ai-visualization-panel"
-import { BoardDirectionControl } from "@/components/trall/features/board-direction-control"
 import { FeatureSettingsCard } from "@/components/trall/features/feature-settings-card"
 import { MaterialsManager } from "@/components/trall/materials-manager"
 import { Button } from "@workspace/ui/components/button"
@@ -63,6 +73,7 @@ import {
   getHouseWindows,
   houseRoofStyleOptions,
 } from "@/lib/trall/house"
+import { rotateBoardDirection, setBoardDirectionMode, setCustomBoardDirection } from "@/lib/trall/features"
 import {
   emptyMaterialTotals,
   type ProjectMaterialSummary,
@@ -89,7 +100,6 @@ export function CalculatorPanel({
   ensureProject,
   features,
   house,
-  placementMode,
   poolPoints,
   projectId,
   projectName,
@@ -142,6 +152,11 @@ export function CalculatorPanel({
     []
   )
   const hasProjectMaterials = projectMaterialSummary.itemCount > 0
+  const displayPrice = hasProjectMaterials
+    ? formatCurrency(projectMaterialSummary.totalCost)
+    : calculations.priceLabel
+  const normalizedElevationSettings =
+    normalizeElevationSettings(elevationSettings)
   const aiPlanSummary = buildAIPlanSummary({
     areaM2: calculations.areaM2,
     deckPoints,
@@ -152,96 +167,331 @@ export function CalculatorPanel({
     projectName,
   })
 
-  return (
-    <div className="space-y-3">
-      <FeatureSettingsCard
-        feature={selectedFeature}
-        onDelete={onDeleteFeature}
-        onUpdate={onUpdateFeature}
-      />
+  const [activeTab, setActiveTab] = useState<InspectorTab>("overview")
 
-      {!selectedFeature || placementMode === "boardDirection" ? (
-        <BoardDirectionControl
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="sticky top-0 z-10 -mx-3.5 -mt-3.5 border-b bg-white px-3.5 pt-3.5">
+        <div className="flex gap-1 overflow-x-auto pb-2">
+          {inspectorTabs.map((tab) => (
+            <button
+              key={tab.id}
+              aria-pressed={activeTab === tab.id}
+              className={
+                activeTab === tab.id
+                  ? "flex h-9 shrink-0 items-center gap-1.5 border-b-2 border-stone-950 px-2 text-sm font-semibold text-stone-950"
+                  : "flex h-9 shrink-0 items-center gap-1.5 border-b-2 border-transparent px-2 text-sm font-medium text-stone-500 hover:text-stone-950"
+              }
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+            >
+              <tab.icon className="size-4" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <InspectorTabPanel active={activeTab === "overview"}>
+        <FeatureSettingsCard
+          feature={selectedFeature}
+          onDelete={onDeleteFeature}
+          onUpdate={onUpdateFeature}
+        />
+        <PriceSummaryCard
+          hasProjectMaterials={hasProjectMaterials}
+          price={displayPrice}
+        />
+        <MeasurementsCard metrics={calculations.metrics} />
+        <BoardDirectionSummary
           boardDirection={boardDirection}
           onChange={setBoardDirection}
         />
-      ) : null}
+        <TerrainSummaryCard elevationSettings={normalizedElevationSettings} />
+        <ProjectSummaryCard projectName={projectName} />
+      </InspectorTabPanel>
 
-      <Card
-        size="sm"
-        className="border-zinc-950 bg-zinc-950 text-white shadow-none dark:bg-primary"
-      >
-        <CardContent className="space-y-3 py-4">
-          <div>
-            <p className="text-sm text-white/70">Uppskattat materialpris</p>
-            <p className="mt-1 text-3xl font-semibold tracking-tight">
-              {hasProjectMaterials
-                ? formatCurrency(projectMaterialSummary.totalCost)
-                : "No materials"}
-            </p>
-            <p className="mt-1 text-xs text-white/60">
-              {hasProjectMaterials
-                ? "Beräknat från material som tilldelats detta projekt."
-                : "Lägg till projektmaterial för att skapa en offert."}
-            </p>
+      <InspectorTabPanel active={activeTab === "materials"}>
+        <MaterialsManager
+          deckAreaM2={calculations.areaM2}
+          demoMode={demoMode}
+          ensureProject={ensureProject}
+          onSummaryChange={handleProjectMaterialSummaryChange}
+          projectId={projectId}
+          supportLayout={calculations.supportLayout}
+        />
+      </InspectorTabPanel>
+
+      <InspectorTabPanel active={activeTab === "3d"}>
+        <ElevationSettingsCard
+          elevationSettings={elevationSettings}
+          setElevationSettings={setElevationSettings}
+        />
+        <AppearanceSettingsCard
+          elevationSettings={elevationSettings}
+          setElevationSettings={setElevationSettings}
+        />
+      </InspectorTabPanel>
+
+      <InspectorTabPanel active={activeTab === "ai"}>
+        <AIVisualizationPanel
+          demoMode={demoMode}
+          demoOpenAIKey={demoOpenAIKey}
+          ensureProject={ensureProject}
+          planSummary={aiPlanSummary}
+          projectId={projectId}
+          setDemoOpenAIKey={setDemoOpenAIKey}
+          viewMode={viewMode}
+        />
+      </InspectorTabPanel>
+
+      <InspectorTabPanel active={activeTab === "house"}>
+        <HouseDimensionsCard house={house} setHouse={setHouse} />
+      </InspectorTabPanel>
+    </div>
+  )
+}
+
+type InspectorTab = "overview" | "materials" | "3d" | "ai" | "house"
+
+const inspectorTabs: Array<{
+  id: InspectorTab
+  icon: typeof HomeIcon
+  label: string
+}> = [
+  { id: "overview", icon: HomeIcon, label: "Översikt" },
+  { id: "materials", icon: PackageIcon, label: "Material" },
+  { id: "3d", icon: BoxIcon, label: "3D" },
+  { id: "ai", icon: ImageIcon, label: "AI-bild" },
+  { id: "house", icon: HomeIcon, label: "Hus" },
+]
+
+function InspectorTabPanel({
+  active,
+  children,
+}: {
+  active: boolean
+  children: ReactNode
+}) {
+  return (
+    <div
+      className={active ? "space-y-3 py-3" : "hidden"}
+      role="tabpanel"
+      aria-hidden={!active}
+    >
+      {children}
+    </div>
+  )
+}
+
+function PriceSummaryCard({
+  hasProjectMaterials,
+  price,
+}: {
+  hasProjectMaterials: boolean
+  price: string
+}) {
+  return (
+    <Card
+      size="sm"
+      className="border-zinc-950 bg-zinc-950 text-white shadow-none dark:bg-primary"
+    >
+      <CardContent className="space-y-3 py-5">
+        <div>
+          <p className="text-sm text-white/70">Uppskattat materialpris</p>
+          <p className="mt-2 text-4xl font-semibold tracking-tight">{price}</p>
+          <p className="mt-2 text-xs text-white/60">
+            {hasProjectMaterials
+              ? "Beräknat från material som tilldelats detta projekt."
+              : "Visar en geometriuppskattning tills projektmaterial har lagts till."}
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function MeasurementsCard({ metrics }: { metrics: Metric[] }) {
+  return (
+    <Card size="sm" className="border-stone-200 shadow-none">
+      <CardHeader className="flex flex-row items-center gap-2 pb-3">
+        <RulerIcon className="size-4" />
+        <CardTitle>Mått</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {metrics.map((metric) => (
+          <MetricRow key={metric.label} {...metric} />
+        ))}
+      </CardContent>
+    </Card>
+  )
+}
+
+function BoardDirectionSummary({
+  boardDirection,
+  onChange,
+}: {
+  boardDirection: BoardDirectionSettings
+  onChange: (settings: BoardDirectionSettings) => void
+}) {
+  const modeLabel =
+    boardDirection.boardDirectionMode === "custom"
+      ? "Anpassad"
+      : boardDirection.boardDirectionMode === "perpendicular-house"
+        ? "Vinkelrät"
+        : "Parallell"
+
+  return (
+    <Card size="sm" className="border-stone-200 shadow-none">
+      <details>
+        <summary className="flex cursor-pointer list-none items-start justify-between gap-3 p-4">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <SlidersHorizontalIcon className="size-4" />
+              <CardTitle>Brädriktning</CardTitle>
+            </div>
+            <CardDescription className="mt-1">
+              {modeLabel} · {Math.round(boardDirection.boardDirectionDeg)}°
+            </CardDescription>
+          </div>
+          <span className="shrink-0 text-xs font-medium text-stone-500">
+            Redigera
+          </span>
+        </summary>
+        <CardContent className="space-y-3 border-t pt-3">
+          <div className="grid grid-cols-3 gap-1 rounded-lg border bg-muted/20 p-1">
+            <ModeButton
+              active={boardDirection.boardDirectionMode === "parallel-house"}
+              label="Parallell"
+              onClick={() =>
+                onChange(setBoardDirectionMode("parallel-house", boardDirection))
+              }
+            />
+            <ModeButton
+              active={
+                boardDirection.boardDirectionMode === "perpendicular-house"
+              }
+              label="Vinkelrät"
+              onClick={() =>
+                onChange(
+                  setBoardDirectionMode("perpendicular-house", boardDirection)
+                )
+              }
+            />
+            <ModeButton
+              active={boardDirection.boardDirectionMode === "custom"}
+              label="Anpassad"
+              onClick={() =>
+                onChange(setBoardDirectionMode("custom", boardDirection))
+              }
+            />
+          </div>
+          <div className="grid grid-cols-[1fr_auto] gap-2">
+            <label className="space-y-1">
+              <span className="text-xs text-muted-foreground">Vinkel</span>
+              <div className="flex items-center gap-1 rounded-lg border bg-background px-2">
+                <Input
+                  className="border-0 px-0 shadow-none focus-visible:ring-0"
+                  inputMode="decimal"
+                  max={359}
+                  min={0}
+                  step={1}
+                  type="number"
+                  value={Math.round(boardDirection.boardDirectionDeg)}
+                  onChange={(event) =>
+                    onChange(
+                      setCustomBoardDirection(
+                        boardDirection,
+                        Number.parseFloat(event.target.value)
+                      )
+                    )
+                  }
+                />
+                <span className="text-xs text-muted-foreground">°</span>
+              </div>
+            </label>
+            <Button
+              className="mt-5 h-10"
+              size="lg"
+              variant="outline"
+              onClick={() => onChange(rotateBoardDirection(boardDirection))}
+            >
+              Återställ
+            </Button>
           </div>
         </CardContent>
-      </Card>
+      </details>
+    </Card>
+  )
+}
 
-      <Card size="sm" className="border-stone-200 shadow-none">
-        <CardHeader className="pb-3">
-          <CardTitle>Mått</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {calculations.metrics.map((metric) => (
-            <MetricRow key={metric.label} {...metric} />
-          ))}
-        </CardContent>
-      </Card>
+function TerrainSummaryCard({
+  elevationSettings,
+}: {
+  elevationSettings: ElevationSettings
+}) {
+  const normalized = normalizeElevationSettings(elevationSettings)
+  const modeLabel =
+    normalized.terrain.mode === "single_slope" ? "Single slope" : "Flat"
 
-      <MaterialsManager
-        deckAreaM2={calculations.areaM2}
-        demoMode={demoMode}
-        ensureProject={ensureProject}
-        onSummaryChange={handleProjectMaterialSummaryChange}
-        projectId={projectId}
-        supportLayout={calculations.supportLayout}
-      />
+  return (
+    <Card size="sm" className="border-stone-200 shadow-none">
+      <CardContent className="flex items-center justify-between gap-3 py-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <MountainIcon className="size-4" />
+            <CardTitle>Nivåer & terräng</CardTitle>
+          </div>
+          <CardDescription className="mt-1 truncate">
+            {modeLabel} · pool {normalized.pool.bodyHeightCm} cm · deck{" "}
+            {normalized.deck.finishedHeightCm} cm
+          </CardDescription>
+        </div>
+        <Button size="sm" variant="outline" type="button">
+          <PencilIcon className="size-4" />
+          Redigera nivåer
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
 
-      <ElevationSettingsCard
-        elevationSettings={elevationSettings}
-        setElevationSettings={setElevationSettings}
-      />
+function ProjectSummaryCard({ projectName }: { projectName: string }) {
+  return (
+    <Card size="sm" className="border-stone-200 shadow-none">
+      <CardHeader className="flex flex-row items-center gap-2 pb-3">
+        <Layers3Icon className="size-4" />
+        <CardTitle>Projektsammanfattning</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <MetricRow label="Project name" value={projectName} />
+        <MetricRow label="House template" value="Single family house" />
+        <MetricRow label="Deck type" value="Attached angled edge" />
+        <MetricRow label="Last saved" value="Mock draft · 2 min ago" />
+      </CardContent>
+    </Card>
+  )
+}
 
-      <AppearanceSettingsCard
-        elevationSettings={elevationSettings}
-        setElevationSettings={setElevationSettings}
-      />
-
-      <AIVisualizationPanel
-        demoMode={demoMode}
-        demoOpenAIKey={demoOpenAIKey}
-        ensureProject={ensureProject}
-        planSummary={aiPlanSummary}
-        projectId={projectId}
-        setDemoOpenAIKey={setDemoOpenAIKey}
-        viewMode={viewMode}
-      />
-
-      <HouseDimensionsCard house={house} setHouse={setHouse} />
-
-      <Card size="sm">
-        <CardHeader>
-          <CardTitle>Project summary</CardTitle>
-          <CardDescription>{projectName}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <MetricRow label="House template" value="Single family house" />
-          <MetricRow label="Deck type" value="Attached angled edge" />
-          <MetricRow label="Last saved" value="Mock draft · 2 min ago" />
-        </CardContent>
-      </Card>
-    </div>
+function ModeButton({
+  active,
+  label,
+  onClick,
+}: {
+  active: boolean
+  label: string
+  onClick: () => void
+}) {
+  return (
+    <Button
+      aria-pressed={active}
+      className="h-8 px-2"
+      size="sm"
+      variant={active ? "secondary" : "ghost"}
+      onClick={onClick}
+    >
+      {label}
+    </Button>
   )
 }
 
@@ -250,6 +500,7 @@ function MetricRow({ label, value }: Metric) {
     "Board run": "Brädgård",
     "Deck area": "Däckyta",
     Perimeter: "Omkrets",
+    "Project name": "Projektnamn",
     "Waste factor": "Spillfaktor",
   }
 
@@ -985,13 +1236,13 @@ function HouseDimensionsCard({
           {doors.length > 0 ? (
             <div className="grid gap-1">
               {doors.map((door, index) => (
-                <div
+                <details
                   key={door.id}
-                  className="grid gap-2 rounded-md bg-background p-2"
+                  className="rounded-md bg-background"
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="min-w-0 truncate text-xs">
-                      Door {index + 1}
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-2">
+                    <span className="min-w-0 truncate text-xs font-medium">
+                      Door {index + 1} · {door.widthCm} x {door.heightCm} cm
                     </span>
                     <Button
                       aria-label={`Remove door ${index + 1}`}
@@ -1002,8 +1253,8 @@ function HouseDimensionsCard({
                     >
                       <Trash2Icon />
                     </Button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  </summary>
+                  <div className="grid grid-cols-2 gap-2 border-t p-2">
                     <label className="space-y-1">
                       <span className="text-[11px] text-muted-foreground">
                         Width
@@ -1057,7 +1308,7 @@ function HouseDimensionsCard({
                       </div>
                     </label>
                   </div>
-                </div>
+                </details>
               ))}
             </div>
           ) : null}
@@ -1072,13 +1323,14 @@ function HouseDimensionsCard({
           {windows.length > 0 ? (
             <div className="grid gap-1">
               {windows.map((window, index) => (
-                <div
+                <details
                   key={window.id}
-                  className="grid gap-2 rounded-md bg-background p-2"
+                  className="rounded-md bg-background"
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="min-w-0 truncate text-xs">
-                      Window {index + 1}
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-2">
+                    <span className="min-w-0 truncate text-xs font-medium">
+                      Window {index + 1} · {window.row} · {window.widthCm} x{" "}
+                      {window.heightCm} cm
                     </span>
                     <Button
                       aria-label={`Remove window ${index + 1}`}
@@ -1089,8 +1341,8 @@ function HouseDimensionsCard({
                     >
                       <Trash2Icon />
                     </Button>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  </summary>
+                  <div className="grid grid-cols-3 gap-2 border-t p-2">
                     <label className="space-y-1">
                       <span className="text-[11px] text-muted-foreground">
                         Row
@@ -1166,7 +1418,7 @@ function HouseDimensionsCard({
                       </div>
                     </label>
                   </div>
-                </div>
+                </details>
               ))}
             </div>
           ) : null}

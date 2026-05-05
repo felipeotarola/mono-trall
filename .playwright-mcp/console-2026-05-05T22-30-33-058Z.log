@@ -2,3 +2,147 @@
 [  992457ms] [LOG] [Fast Refresh] done in 795ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
 [ 1097449ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
 [ 1100103ms] [LOG] [Fast Refresh] done in 2950ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1163061ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1163809ms] [LOG] [Fast Refresh] done in 861ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1209077ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1211210ms] [LOG] [Fast Refresh] done in 2242ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1212497ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1212518ms] [LOG] [Fast Refresh] done in 123ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1248376ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1253755ms] [LOG] [Fast Refresh] done in 2637ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1272948ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1275347ms] [LOG] [Fast Refresh] done in 2502ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1332234ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1350170ms] ReferenceError: inspectorTabs is not defined
+    at CalculatorPanel (http://localhost:3000/_next/static/chunks/Project_trall-mono_apps_web_components_trall_calculator-panel_tsx_eae0d3d2._.js?id=%255Bproject%255D%252FProject%252Ftrall-mono%252Fapps%252Fweb%252Fcomponents%252Ftrall%252Fcalculator-panel.tsx+%255Bapp-client%255D+%2528ecmascript%2529:77:31)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:14826:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:4651:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:6112:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:6708:24)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:965:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9562:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9456:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9440:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9105:47)
+    at performSyncWorkOnRoot (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:10238:9)
+    at flushSyncWorkAcrossRoots_impl (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:10154:316)
+    at flushSyncWork$1 (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9237:86)
+    at Object.scheduleRefresh (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:299:13)
+    at http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_975bb59f._.js:391:33
+    at Set.forEach (<anonymous>)
+    at Object.performReactRefresh (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_975bb59f._.js:384:38)
+    at applyUpdate (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_975bb59f._.js:878:31)
+    at http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_975bb59f._.js:886:13
+[ 1349267ms] [LOG] [Fast Refresh] done in 15985ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1351747ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1355950ms] [LOG] [Fast Refresh] done in 4306ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1356108ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1362347ms] [LOG] [Fast Refresh] done in 6308ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1414138ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1414861ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1415118ms] [LOG] [Fast Refresh] done in 773ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1415311ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1415919ms] ReferenceError: ModeButton is not defined
+    at BoardDirectionSummary (http://localhost:3000/_next/static/chunks/Project_trall-mono_apps_web_components_trall_calculator-panel_tsx_eae0d3d2._.js?id=%255Bproject%255D%252FProject%252Ftrall-mono%252Fapps%252Fweb%252Fcomponents%252Ftrall%252Fcalculator-panel.tsx+%255Bapp-client%255D+%2528ecmascript%2529:476:391)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:14826:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:4651:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:6112:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:6708:24)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:965:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9562:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9456:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9440:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9105:47)
+    at performSyncWorkOnRoot (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:10238:9)
+    at flushSyncWorkAcrossRoots_impl (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:10154:316)
+    at flushSyncWork$1 (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9237:86)
+    at Object.scheduleRefresh (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:299:13)
+    at http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_975bb59f._.js:391:33
+    at Set.forEach (<anonymous>)
+    at Object.performReactRefresh (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_975bb59f._.js:384:38)
+    at applyUpdate (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_975bb59f._.js:878:31)
+    at http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_975bb59f._.js:886:13
+[ 1417709ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1420634ms] [LOG] [Fast Refresh] done in 3024ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1421997ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1425543ms] [LOG] [Fast Refresh] done in 3646ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1439630ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1439803ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1440068ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1440127ms] [LOG] [Fast Refresh] done in 170ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1440535ms] ReferenceError: ModeButton is not defined
+    at BoardDirectionSummary (http://localhost:3000/_next/static/chunks/Project_trall-mono_apps_web_components_trall_calculator-panel_tsx_eae0d3d2._.js:477:391)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:14826:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:4651:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:6112:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:6708:24)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:965:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9562:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9456:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9440:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9105:47)
+    at performSyncWorkOnRoot (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:10238:9)
+    at flushSyncWorkAcrossRoots_impl (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:10154:316)
+    at flushSpawnedWork (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9914:13)
+    at commitRoot (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9720:432)
+    at commitRootWhenReady (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9194:9)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9166:25)
+    at performWorkOnRootViaSchedulerTask (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:10230:9)
+    at MessagePort.performWorkUntilDeadline (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_975bb59f._.js:2647:64)
+[ 1442040ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1442644ms] [LOG] [Fast Refresh] done in 704ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1453177ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1453644ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1453657ms] [LOG] [Fast Refresh] done in 552ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1454445ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1455869ms] [LOG] [Fast Refresh] done in 1525ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1458672ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1458741ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1459494ms] ReferenceError: ModeButton is not defined
+    at BoardDirectionSummary (http://localhost:3000/_next/static/chunks/Project_trall-mono_apps_web_components_trall_calculator-panel_tsx_eae0d3d2._.js:477:391)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:14826:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:4651:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:6112:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:6708:24)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:965:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9562:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9456:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9440:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9105:47)
+    at performSyncWorkOnRoot (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:10238:9)
+    at flushSyncWorkAcrossRoots_impl (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:10154:316)
+    at flushSpawnedWork (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9914:13)
+    at commitRoot (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9720:432)
+    at commitRootWhenReady (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9194:9)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:9166:25)
+    at performWorkOnRootViaSchedulerTask (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_react-dom_a8df2724._.js:10230:9)
+    at MessagePort.performWorkUntilDeadline (http://localhost:3000/_next/static/chunks/e7646_next_dist_compiled_975bb59f._.js:2647:64)
+[ 1460259ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1460579ms] [LOG] [Fast Refresh] done in 421ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1475503ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1475639ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1475689ms] [LOG] [Fast Refresh] done in 232ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1476007ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1476149ms] [LOG] [Fast Refresh] done in 244ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1477271ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1477303ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1478347ms] [LOG] %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1478347ms] [LOG] %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {route: /, path: /} @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1478352ms] [LOG] %c[Vercel Web Analytics]%c [view] http://localhost:3000/?projectId=18500be0-16a1-4359-97d0-6fd0e3e010c4 color: rgb(120, 120, 120) color: inherit {o: http://localhost:3000/?projectId=18500be0-16a1-4359-97d0-6fd0e3e010c4, sv: 0.1.3, sdkn: @vercel/analytics/next, sdkv: 2.0.1, ts: 1778021711409} /_vercel/insights/view @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1506629ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1507073ms] [LOG] [Fast Refresh] done in 222ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1532821ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1532931ms] [LOG] [Fast Refresh] done in 212ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1608325ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1609468ms] [LOG] [Fast Refresh] done in 697ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1697558ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1702006ms] [LOG] [Fast Refresh] done in 4549ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1709907ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1710007ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1711985ms] [LOG] %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1711985ms] [LOG] %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {route: /, path: /} @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1711988ms] [LOG] %c[Vercel Web Analytics]%c [view] http://localhost:3000/?projectId=18500be0-16a1-4359-97d0-6fd0e3e010c4 color: rgb(120, 120, 120) color: inherit {o: http://localhost:3000/?projectId=18500be0-16a1-4359-97d0-6fd0e3e010c4, sv: 0.1.3, sdkn: @vercel/analytics/next, sdkv: 2.0.1, ts: 1778021945045} /_vercel/insights/view @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1713602ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1713668ms] [LOG] [Fast Refresh] done in 168ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1714579ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
+[ 1714907ms] [LOG] [Fast Refresh] done in 430ms @ http://localhost:3000/_next/static/chunks/e7646_next_dist_0559f6a9._.js:2297
