@@ -1,0 +1,74 @@
+- generic [active] [ref=e1]:
+  - main [ref=e3]:
+    - main [ref=e4]:
+      - generic [ref=e7]:
+        - generic [ref=e8]: Demo mode · changes are not saved
+        - generic:
+          - generic [ref=e9]:
+            - generic [ref=e10]:
+              - button "Open menu" [ref=e11]:
+                - img [ref=e12]
+              - heading "Demo project" [level=1] [ref=e13]
+              - button "More" [ref=e14]:
+                - img [ref=e15]
+            - generic [ref=e19]:
+              - button "Top" [pressed] [ref=e20]
+              - button "3D" [ref=e21]
+          - button "Layers" [ref=e22]:
+            - img [ref=e23]
+          - generic [ref=e29]:
+            - img [ref=e31]
+            - generic [ref=e33]:
+              - paragraph [ref=e34]: Tips & hjälp
+              - paragraph [ref=e35]: Dra markerade punkter för att justera formen. Dubbelklicka på en kant för att lägga till en nod.
+            - button "Stäng tips" [ref=e36]: ×
+          - generic [ref=e38]:
+            - button "Välj" [pressed] [ref=e39]:
+              - img [ref=e41]
+              - generic [ref=e43]: Välj
+            - button "Punkt" [ref=e44]:
+              - img [ref=e46]
+              - generic [ref=e52]: Punkt
+            - button "Kant" [ref=e53]:
+              - img [ref=e55]
+              - generic [ref=e57]: Kant
+            - button "Rätvinkel" [ref=e58]:
+              - img [ref=e60]
+              - generic [ref=e62]: Rätvinkel
+            - button "Mått" [ref=e63]:
+              - img [ref=e65]
+              - generic [ref=e71]: Mått
+            - button "Mer" [ref=e72]:
+              - img [ref=e74]
+              - generic [ref=e78]: Mer
+          - generic [ref=e79]:
+            - generic [ref=e80]:
+              - img [ref=e81]
+              - generic [ref=e87]:
+                - paragraph [ref=e88]: Skala 1:100
+                - paragraph [ref=e89]: 1 ruta = 0.5 m
+            - generic [ref=e90]:
+              - button "Zoom out" [ref=e91]: "-"
+              - generic [ref=e92]: 111%
+              - button "Zoom in" [ref=e93]: +
+            - button "Klar" [ref=e94]:
+              - img [ref=e95]
+              - text: Klar
+        - img "Deck plan with house outline, deck polygon, dimensions, and draggable corner handles" [ref=e106]:
+          - generic [ref=e118]: House
+          - generic [ref=e122]: 10.5 m
+          - generic [ref=e126]: 6 m
+          - generic [ref=e134]: 12.4 m
+          - generic [ref=e139]: 5.092 m
+          - generic [ref=e144]: 14.218 m
+          - generic [ref=e149]: 5.954 m
+          - generic [ref=e150]:
+            - generic: P1
+          - generic [ref=e155]:
+            - generic: P2
+          - generic [ref=e160]:
+            - generic: P3
+          - generic [ref=e165]:
+            - generic: P4
+  - region "Notifications alt+T"
+  - alert [ref=e170]
