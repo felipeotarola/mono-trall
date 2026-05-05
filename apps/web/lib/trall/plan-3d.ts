@@ -232,8 +232,14 @@ export function getPlan3DModel({
       points: deckPoints,
       spacingPx: 18,
     })
-      .flatMap((line) => clipLineToPolygon(line.start, line.end, deckPoints))
-      .filter((line) => !isLineInsidePool(line, poolPoints))
+      .flatMap((line) =>
+        clipLineToPolygonWithHoles(
+          line.start,
+          line.end,
+          deckPoints,
+          poolPoints ? [poolPoints] : []
+        )
+      )
       .map((line, index) => ({
         id: `board-line-${index}`,
         start: pointToPlan3D(line.start, origin),
@@ -301,23 +307,6 @@ export function getPlan3DModel({
       terrainBounds,
     }),
   }
-}
-
-function isLineInsidePool(
-  line: { start: Point; end: Point },
-  poolPoints: Point[] | null
-) {
-  if (!poolPoints || poolPoints.length < 3) {
-    return false
-  }
-
-  return pointInPolygon(
-    {
-      x: (line.start.x + line.end.x) / 2,
-      y: (line.start.y + line.end.y) / 2,
-    },
-    poolPoints
-  )
 }
 
 function getTerrainBounds(
@@ -427,7 +416,12 @@ function dedupeSupportPoints(points: Point3D[]) {
   )
 }
 
-function clipLineToPolygon(start: Point, end: Point, polygon: Point[]) {
+function clipLineToPolygonWithHoles(
+  start: Point,
+  end: Point,
+  polygon: Point[],
+  holes: Point[][] = []
+) {
   const intersections: Array<{ point: Point; t: number }> = []
 
   if (pointInPolygon(start, polygon)) {
@@ -438,23 +432,25 @@ function clipLineToPolygon(start: Point, end: Point, polygon: Point[]) {
     intersections.push({ point: end, t: 1 })
   }
 
-  polygon.forEach((point, index) => {
-    const next = polygon[(index + 1) % polygon.length]
-    if (!next) {
-      return
-    }
+  for (const candidatePolygon of [polygon, ...holes]) {
+    candidatePolygon.forEach((point, index) => {
+      const next = candidatePolygon[(index + 1) % candidatePolygon.length]
+      if (!next) {
+        return
+      }
 
-    const intersection = getLineIntersection(start, end, point, next)
-    if (intersection) {
-      intersections.push(intersection)
-    }
-  })
+      const intersection = getLineIntersection(start, end, point, next)
+      if (intersection) {
+        intersections.push(intersection)
+      }
+    })
+  }
 
   const sorted = dedupeIntersections(intersections).sort((a, b) => a.t - b.t)
 
   return sorted.flatMap((intersection, index) => {
     const next = sorted[index + 1]
-    if (!next) {
+    if (!next || next.t - intersection.t < 0.0001) {
       return []
     }
 
@@ -463,7 +459,8 @@ function clipLineToPolygon(start: Point, end: Point, polygon: Point[]) {
       y: (intersection.point.y + next.point.y) / 2,
     }
 
-    return pointInPolygon(midpoint, polygon)
+    return pointInPolygon(midpoint, polygon) &&
+      holes.every((hole) => !pointInPolygon(midpoint, hole))
       ? [{ start: intersection.point, end: next.point }]
       : []
   })

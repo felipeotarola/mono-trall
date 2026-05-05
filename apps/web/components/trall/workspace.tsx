@@ -549,7 +549,7 @@ export function Workspace({
             {viewMode === "top" ? (
               <FeatureToolList
                 activeTool={activeTool}
-                className="absolute top-36 left-3 z-30 sm:top-32 xl:top-20"
+                className="absolute top-14 left-2 z-30 sm:top-32 sm:left-3 xl:top-20"
                 collapsed={plannerToolsCollapsed}
                 placementMode={placementMode}
                 onAddPool={handleAddPool}

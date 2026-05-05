@@ -871,7 +871,8 @@ function DeckSlab({
       createPolygonSlabGeometry(
         model.deckPoints,
         model.elevation.deckThicknessM,
-        model.poolPoints ? [model.poolPoints] : []
+        model.poolPoints ? [model.poolPoints] : [],
+        { includeHoleSideFaces: false }
       ),
     [model.deckPoints, model.elevation.deckThicknessM, model.poolPoints]
   )
@@ -1338,7 +1339,7 @@ function Stairs({
         const stepDepth = stairs.depthM / stepCount
         const bottomY = terrainOverlayY(stairs.terrainY)
         const topY =
-          model.elevation.deckFinishedY - PLAN_3D_LAYERS.renderEpsilonM
+          model.elevation.deckFinishedY - PLAN_3D_LAYERS.coplanarClearanceM
         const effectiveHeight = Math.max(0.12, topY - bottomY)
         const stepRise = effectiveHeight / stepCount
         const treadThickness = Math.min(0.09, stepRise * 0.45)
@@ -1880,7 +1881,10 @@ function createTerrainGeometry(model: Plan3DModel) {
 function createPolygonSlabGeometry(
   points: Point3D[],
   thickness: number,
-  holes: Point3D[][] = []
+  holes: Point3D[][] = [],
+  options: {
+    includeHoleSideFaces?: boolean
+  } = {}
 ) {
   const contour = points.map((point) => new THREE.Vector2(point.x, point.z))
   const holeContours = holes.map((hole) =>
@@ -1909,7 +1913,9 @@ function createPolygonSlabGeometry(
   }
 
   addSlabSideFaces(positions, points, thickness)
-  holes.forEach((hole) => addSlabSideFaces(positions, hole, thickness))
+  if (options.includeHoleSideFaces !== false) {
+    holes.forEach((hole) => addSlabSideFaces(positions, hole, thickness))
+  }
 
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute(

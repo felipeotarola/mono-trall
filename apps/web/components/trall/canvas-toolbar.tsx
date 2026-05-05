@@ -53,19 +53,19 @@ export function CanvasToolbar({
   const panActive = activeTool === "pan"
 
   return (
-    <div className="absolute top-3 left-3 z-20 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-2 rounded-xl border border-stone-200 bg-white/92 p-2 shadow-sm backdrop-blur">
-      <div className="flex min-h-10 items-center gap-2 rounded-lg border border-stone-200 bg-white/70 px-3 py-1">
+    <div className="absolute top-2 left-2 z-20 flex max-w-[calc(100%-1rem)] items-center gap-1.5 overflow-x-auto rounded-lg border border-stone-200 bg-white/92 p-1.5 shadow-sm backdrop-blur sm:top-3 sm:left-3 sm:max-w-[calc(100%-1.5rem)] sm:flex-wrap sm:gap-2 sm:rounded-xl sm:p-2">
+      <div className="flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-stone-200 bg-white/70 px-1.5 py-1 sm:h-10 sm:gap-2 sm:rounded-lg sm:px-3">
         <span className="hidden text-[10px] font-semibold tracking-[0.12em] text-stone-500 uppercase sm:inline">
           Mode
         </span>
-        <span className="rounded-md bg-stone-950 px-2.5 py-1 text-xs font-semibold text-white">
+        <span className="rounded-md bg-stone-950 px-1.5 py-1 text-xs font-semibold text-white sm:px-2.5">
           {modeLabel}
         </span>
       </div>
 
       <div
         aria-label="Planner view"
-        className="flex h-10 items-center rounded-lg border border-stone-200 bg-stone-100 p-1"
+        className="flex h-9 shrink-0 items-center rounded-md border border-stone-200 bg-stone-100 p-1 sm:h-10 sm:rounded-lg"
         role="group"
       >
         <button
@@ -89,7 +89,7 @@ export function CanvasToolbar({
       {viewMode === "top" ? (
         <div
           aria-label="Canvas view controls"
-          className="flex h-10 items-center overflow-hidden rounded-lg border border-stone-200 bg-white/75"
+          className="flex h-9 shrink-0 items-center overflow-hidden rounded-md border border-stone-200 bg-white/75 sm:h-10 sm:rounded-lg"
           role="group"
         >
           <ToolbarIconButton label="Zoom out" onClick={onZoomOut}>
@@ -116,7 +116,7 @@ export function CanvasToolbar({
 
       <Button
         aria-label="Save project"
-        className="h-10 min-w-10 gap-1.5 px-2.5"
+        className="hidden h-9 min-w-9 shrink-0 gap-1.5 px-2 sm:inline-flex sm:h-10 sm:min-w-10 sm:px-2.5"
         size="lg"
         title="Save project"
         variant="outline"
@@ -134,7 +134,7 @@ export function CanvasToolbar({
         <DropdownMenuTrigger asChild>
           <Button
             aria-label="More project actions"
-            className="size-10"
+            className="size-9 shrink-0 sm:size-10"
             size="icon-lg"
             variant="ghost"
           >
@@ -155,6 +155,10 @@ export function CanvasToolbar({
           >
             {extraTool.icon}
             {extraTool.label}
+          </DropdownMenuItem>
+          <DropdownMenuItem className="h-9 gap-2 sm:hidden" onSelect={onSaveProject}>
+            <SaveIcon />
+            Save
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuLabel className="font-normal text-muted-foreground">
@@ -183,8 +187,8 @@ function ToolbarIconButton({
       aria-pressed={active}
       className={
         active
-          ? "flex size-10 items-center justify-center bg-stone-950 text-white"
-          : "flex size-10 items-center justify-center text-stone-700 hover:bg-stone-100 hover:text-stone-950"
+          ? "flex size-9 shrink-0 items-center justify-center bg-stone-950 text-white sm:size-10"
+          : "flex size-9 shrink-0 items-center justify-center text-stone-700 hover:bg-stone-100 hover:text-stone-950 sm:size-10"
       }
       title={label}
       type="button"
@@ -197,8 +201,8 @@ function ToolbarIconButton({
 
 function getViewModeButtonClass(active: boolean) {
   return active
-    ? "h-8 rounded-md bg-stone-950 px-3 text-xs font-semibold text-white shadow-sm"
-    : "h-8 rounded-md px-3 text-xs font-semibold text-stone-600 hover:bg-white/75 hover:text-stone-950"
+    ? "h-7 rounded-md bg-stone-950 px-2.5 text-xs font-semibold text-white shadow-sm sm:h-8 sm:px-3"
+    : "h-7 rounded-md px-2.5 text-xs font-semibold text-stone-600 hover:bg-white/75 hover:text-stone-950 sm:h-8 sm:px-3"
 }
 
 function ProjectAction({

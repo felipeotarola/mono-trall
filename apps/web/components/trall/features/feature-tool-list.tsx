@@ -137,7 +137,7 @@ export function FeatureToolList({
       className={cn(
         "min-w-0 border-stone-200 bg-white/94 shadow-lg shadow-black/10 backdrop-blur transition-[width] duration-200",
         collapsed
-          ? "max-h-[calc(100svh-17rem)] w-[calc(100vw-2rem)] overflow-y-auto sm:w-[4.25rem]"
+          ? "max-h-16 w-[calc(100vw-1rem)] overflow-hidden sm:max-h-[calc(100svh-17rem)] sm:w-[4.25rem] sm:overflow-y-auto"
           : "w-[min(17rem,calc(100vw-2rem))]",
         className
       )}
@@ -145,7 +145,9 @@ export function FeatureToolList({
       <CardHeader
         className={cn(
           "flex flex-row items-center gap-2 pb-2",
-          collapsed ? "justify-center px-2" : "justify-between"
+          collapsed
+            ? "absolute top-1 right-1 z-10 justify-center p-0 sm:static sm:px-2 sm:pb-2"
+            : "justify-between"
         )}
       >
         <CardTitle className={cn("text-sm", collapsed && "sr-only")}>
@@ -154,7 +156,7 @@ export function FeatureToolList({
         {onToggleCollapsed ? (
           <Button
             aria-label={collapsed ? "Expand planner tools" : "Collapse planner tools"}
-            className="size-8 shrink-0"
+            className="size-7 shrink-0 bg-white/80 sm:size-8"
             size="icon-sm"
             title={collapsed ? "Expand planner tools" : "Collapse planner tools"}
             variant="ghost"
@@ -164,7 +166,7 @@ export function FeatureToolList({
           </Button>
         ) : null}
       </CardHeader>
-      <CardContent className={cn("grid gap-3", collapsed && "px-2")}>
+      <CardContent className={cn("grid gap-3", collapsed && "px-1.5 py-1.5 sm:px-2 sm:py-3")}>
         {collapsed ? (
           <ToolSection collapsed label="Planner tools">
             {[...plannerTools, ...featureTools]}
@@ -214,7 +216,7 @@ function ToolSection({
         className={cn(
           "grid gap-1.5",
           collapsed
-            ? "grid-flow-col auto-cols-9 overflow-x-auto pb-1 sm:grid-flow-row sm:grid-cols-1 sm:overflow-visible sm:pb-0"
+            ? "grid-flow-col auto-cols-8 overflow-x-auto pr-8 sm:auto-cols-9 sm:grid-flow-row sm:grid-cols-1 sm:overflow-visible sm:pr-0 sm:pb-0"
             : "grid-flow-col auto-cols-[minmax(8.5rem,1fr)] overflow-x-auto pb-1 md:grid-flow-row md:grid-cols-1 md:overflow-visible md:pb-0"
         )}
       >
@@ -240,7 +242,7 @@ function ToolButton({
       className={cn(
         "h-10 gap-2 text-sm",
         collapsed
-          ? "w-full justify-center px-0"
+          ? "h-12 w-full justify-center rounded-md px-0 sm:h-10"
           : "justify-start px-3 text-left",
         active && "border-stone-900 bg-stone-950 text-white hover:bg-stone-900"
       )}

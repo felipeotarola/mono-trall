@@ -80,6 +80,71 @@ describe("plan 3D conversion", () => {
     }
   })
 
+  it("clips deck board preview lines around the pool opening", () => {
+    const deckPoints = [
+      { x: 0, y: 0 },
+      { x: PIXELS_PER_METER * 6, y: 0 },
+      { x: PIXELS_PER_METER * 6, y: PIXELS_PER_METER * 4 },
+      { x: 0, y: PIXELS_PER_METER * 4 },
+    ]
+    const poolPoints = [
+      { x: PIXELS_PER_METER * 2, y: PIXELS_PER_METER },
+      { x: PIXELS_PER_METER * 4, y: PIXELS_PER_METER },
+      { x: PIXELS_PER_METER * 4, y: PIXELS_PER_METER * 3 },
+      { x: PIXELS_PER_METER * 2, y: PIXELS_PER_METER * 3 },
+    ]
+    const model = getPlan3DModel({
+      boardDirection: {
+        boardDirectionDeg: 0,
+        boardDirectionMode: "custom",
+      },
+      deckEdgeConstraints: [],
+      deckPoints,
+      elevationSettings: getDefaultElevationSettings(),
+      features: [],
+      house: initialHouse,
+      houseBounds: {
+        left:
+          initialHouse.centerX - (initialHouse.widthM * PIXELS_PER_METER) / 2,
+        right:
+          initialHouse.centerX + (initialHouse.widthM * PIXELS_PER_METER) / 2,
+        top: initialHouse.topY,
+        bottom: initialHouse.topY + initialHouse.depthM * PIXELS_PER_METER,
+        centerX: initialHouse.centerX,
+        widthPx: initialHouse.widthM * PIXELS_PER_METER,
+        depthPx: initialHouse.depthM * PIXELS_PER_METER,
+      },
+      poolPoints,
+    })
+
+    assert.ok(model.poolPoints)
+    const poolMinX = Math.min(...model.poolPoints.map((point) => point.x))
+    const poolMaxX = Math.max(...model.poolPoints.map((point) => point.x))
+    const poolMinZ = Math.min(...model.poolPoints.map((point) => point.z))
+    const poolMaxZ = Math.max(...model.poolPoints.map((point) => point.z))
+
+    for (const line of model.boardLines) {
+      const midpoint = {
+        x: (line.start.x + line.end.x) / 2,
+        z: (line.start.z + line.end.z) / 2,
+      }
+      assert.equal(
+        midpoint.x > poolMinX &&
+          midpoint.x < poolMaxX &&
+          midpoint.z > poolMinZ &&
+          midpoint.z < poolMaxZ,
+        false
+      )
+      assert.equal(
+        line.start.z > poolMinZ &&
+          line.start.z < poolMaxZ &&
+          Math.min(line.start.x, line.end.x) < poolMinX &&
+          Math.max(line.start.x, line.end.x) > poolMaxX,
+        false
+      )
+    }
+  })
+
   it("uses configured house window dimensions in the 3D model", () => {
     const model = getPlan3DModel({
       boardDirection: defaultBoardDirection,

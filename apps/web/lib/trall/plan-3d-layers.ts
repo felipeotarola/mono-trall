@@ -9,6 +9,7 @@ export const PLAN_3D_SCALE = {
 // planner's construction dimensions.
 export const PLAN_3D_LAYERS = {
   renderEpsilonM: 0.006,
+  coplanarClearanceM: 0.024,
   surfaceLiftM: 0.018,
   lineLiftM: 0.036,
   trimLiftM: 0.052,
