@@ -2,6 +2,10 @@
 
 Trall Mono is a pnpm/Turborepo workspace for TrallAI, a deck planning and material estimation app. The main web app lets users draw and edit a deck shape against a house outline, inspect measurements, estimate materials, and autosave project versions to Supabase.
 
+Repository: https://github.com/felipeotarola/mono-trall
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Ffelipeotarola%2Fmono-trall&project-name=trallai&repository-name=mono-trall&root-directory=apps%2Fweb&env=NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,OPENAI_API_KEY,BLOB_READ_WRITE_TOKEN&envDescription=TrallAI%20needs%20Supabase%20credentials%20for%20auth%20and%20project%20storage%2C%20plus%20OpenAI%20and%20Vercel%20Blob%20tokens%20for%20AI%20image%20generation%20and%20saved%20assets.)
+
 ## Stack
 
 - Next.js 16 with React 19 and Turbopack

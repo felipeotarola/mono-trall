@@ -7,9 +7,11 @@ import {
   BadgeCheckIcon,
   BoxIcon,
   CalculatorIcon,
+  GitForkIcon,
   ImagePlusIcon,
   Layers3Icon,
   MousePointer2Icon,
+  RocketIcon,
   SparklesIcon,
 } from "lucide-react"
 
@@ -17,9 +19,15 @@ import { Button } from "@workspace/ui/components/button"
 
 type Language = "en" | "sv"
 
+const repositoryUrl = "https://github.com/felipeotarola/mono-trall"
+const deployUrl =
+  "https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Ffelipeotarola%2Fmono-trall&project-name=trallai&repository-name=mono-trall&root-directory=apps%2Fweb&env=NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,OPENAI_API_KEY,BLOB_READ_WRITE_TOKEN&envDescription=TrallAI%20needs%20Supabase%20credentials%20for%20auth%20and%20project%20storage%2C%20plus%20OpenAI%20and%20Vercel%20Blob%20tokens%20for%20AI%20image%20generation%20and%20saved%20assets."
+
 const copy = {
   en: {
     navCta: "Open planner",
+    navRepository: "Repository",
+    navDeploy: "Deploy",
     heroEyebrow: "Open-source deck planning with AI visualization",
     heroText:
       "Design a deck precisely in 2D, inspect the build in 3D, then create realistic property images from real reference photos and correct them with markup.",
@@ -121,12 +129,16 @@ const copy = {
       "Use it as a deck planning tool, a 3D construction preview, and a reference-photo AI visualization workflow.",
     footerPrimary: "Open planner",
     footerDemo: "Try demo",
+    footerRepository: "View repository",
+    footerDeploy: "Deploy with Vercel",
     footerSecondary: "View projects",
     imageAlt: "TrallAI AI image review modal with markup correction tools",
     heroAlt: "TrallAI Backsidan pool project in the deck planner",
   },
   sv: {
     navCta: "Öppna planeringen",
+    navRepository: "Repository",
+    navDeploy: "Deploya",
     heroEyebrow: "Open source-planering för altan med AI-visualisering",
     heroText:
       "Rita altanen exakt i 2D, granska bygget i 3D och skapa realistiska bilder från riktiga referensfoton. Markera fel och generera om bara det som behöver ändras.",
@@ -228,6 +240,8 @@ const copy = {
       "Använd det som altanplanerare, 3D-förhandsvisning för bygget och arbetsflöde för AI-visualisering med referensfoton.",
     footerPrimary: "Öppna planeringen",
     footerDemo: "Testa demo",
+    footerRepository: "Se repository",
+    footerDeploy: "Deploya med Vercel",
     footerSecondary: "Visa projekt",
     imageAlt: "TrallAI-modal för AI-bildgranskning med markeringsverktyg",
     heroAlt: "TrallAI-projektet Backsidan pool i altanplaneraren",
@@ -355,6 +369,18 @@ export default function LandingPage() {
             <Button asChild variant="outline">
               <Link href="/login?next=/dashboard">{t.footerSecondary}</Link>
             </Button>
+            <Button asChild variant="outline">
+              <Link href={repositoryUrl} target="_blank" rel="noreferrer">
+                <GitForkIcon className="size-4" />
+                {t.footerRepository}
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href={deployUrl} target="_blank" rel="noreferrer">
+                <RocketIcon className="size-4" />
+                {t.footerDeploy}
+              </Link>
+            </Button>
           </div>
         </div>
       </section>
@@ -396,6 +422,26 @@ function HeroSection({
               asChild
               variant="outline"
               className="hidden border-white/35 bg-white/10 text-white hover:bg-white/20 hover:text-white sm:inline-flex"
+            >
+              <Link href={repositoryUrl} target="_blank" rel="noreferrer">
+                <GitForkIcon className="size-4" />
+                {t.navRepository}
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="hidden border-white/35 bg-white/10 text-white hover:bg-white/20 hover:text-white lg:inline-flex"
+            >
+              <Link href={deployUrl} target="_blank" rel="noreferrer">
+                <RocketIcon className="size-4" />
+                {t.navDeploy}
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="hidden border-white/35 bg-white/10 text-white hover:bg-white/20 hover:text-white md:inline-flex"
             >
               <Link href="/demo">{t.heroDemo}</Link>
             </Button>
