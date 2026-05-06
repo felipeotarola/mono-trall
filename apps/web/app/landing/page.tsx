@@ -63,21 +63,21 @@ const copy = {
         title: "Draw the deck in 2D",
         description:
           "Plan accurate edges, dimensions, pool placement, stairs, fences, pergolas, planting, and house openings in the top-down editor.",
-        image: "/trall/landing/planner.png",
+        image: "/trall/landing/baksidan-planner.png",
         icon: MousePointer2Icon,
       },
       {
         title: "Inspect the build in 3D",
         description:
           "Orbit around the project to understand deck levels, sloped terrain, support posts, glass fencing, pool height, roof shape, and materials.",
-        image: "/trall/landing/preview-3d.png",
+        image: "/trall/landing/baksidan-preview-3d.png",
         icon: BoxIcon,
       },
       {
         title: "Estimate real material quantities",
         description:
           "TrallAI calculates linear metres from the deck geometry and selected boards, so material choices can produce a practical price estimate instead of a rough guess.",
-        image: "/trall/landing/calculator-sidebar.png",
+        image: "/trall/landing/baksidan-calculator-sidebar.png",
         imageFit: "contain",
         imageHeight: 1000,
         imageWidth: 360,
@@ -100,14 +100,14 @@ const copy = {
             src: "/2.jpeg",
           },
           {
-            alt: "Finished generated deck visualization from the first reference photo",
-            label: "Generated result 1",
-            src: "/trall/landing/generated-render-1.png",
+            alt: "Corrected finished deck visualization from the first reference photo",
+            label: "Corrected result",
+            src: "/trall/landing/baksidan-generated-corrected.png",
           },
           {
-            alt: "Finished generated deck visualization from the second reference photo",
-            label: "Generated result 2",
-            src: "/trall/landing/generated-render-2.png",
+            alt: "Expanded finished deck visualization from the second reference photo",
+            label: "Expanded result",
+            src: "/trall/landing/baksidan-generated-expanded.png",
           },
         ],
       },
@@ -124,7 +124,7 @@ const copy = {
     modelEyebrow: "What it can model",
     modelTitle: "Built for real deck planning, not just pretty pictures.",
     modelText:
-      "The current project, Backsidan pool, shows the intended direction: a measured plan, a construction-readable 3D scene, material quantities that turn into real price estimates, and AI images that can be reviewed like design drafts.",
+      "The current project, Baksidan pool, shows the intended direction: a measured plan, a construction-readable 3D scene, material quantities that turn into real price estimates, and AI images that can be reviewed like design drafts.",
     capabilities: [
       "2D precision deck planner",
       "3D terrain and elevation preview",
@@ -145,7 +145,8 @@ const copy = {
     footerDeploy: "Deploy with Vercel",
     footerSecondary: "View projects",
     imageAlt: "TrallAI AI image review modal with markup correction tools",
-    heroAlt: "TrallAI Backsidan pool project in the deck planner",
+    correctedAlt: "Finished corrected AI property visualization for Baksidan pool",
+    heroAlt: "TrallAI Baksidan pool project in the deck planner",
   },
   sv: {
     navCta: "Öppna planeringen",
@@ -186,21 +187,21 @@ const copy = {
         title: "Rita altanen i 2D",
         description:
           "Planera exakta kanter, mått, poolplacering, trappor, staket, pergola, växter och husets dörrar och fönster i planvyn.",
-        image: "/trall/landing/planner.png",
+        image: "/trall/landing/baksidan-planner.png",
         icon: MousePointer2Icon,
       },
       {
         title: "Granska bygget i 3D",
         description:
           "Vrid runt projektet och kontrollera altannivåer, lutande mark, stödreglar, glasräcken, poolhöjd, takform och material.",
-        image: "/trall/landing/preview-3d.png",
+        image: "/trall/landing/baksidan-preview-3d.png",
         icon: BoxIcon,
       },
       {
         title: "Räkna fram riktiga materialmängder",
         description:
           "TrallAI räknar ut löpmeter från altanens geometri och valda brädor, så materialvalen kan ge en praktisk prisuppskattning istället för en grov gissning.",
-        image: "/trall/landing/calculator-sidebar.png",
+        image: "/trall/landing/baksidan-calculator-sidebar.png",
         imageFit: "contain",
         imageHeight: 1000,
         imageWidth: 360,
@@ -223,14 +224,14 @@ const copy = {
             src: "/2.jpeg",
           },
           {
-            alt: "Färdig genererad altanvisualisering från första referensbilden",
-            label: "Genererad bild 1",
-            src: "/trall/landing/generated-render-1.png",
+            alt: "Färdig korrigerad altanvisualisering från första referensbilden",
+            label: "Korrigerad bild",
+            src: "/trall/landing/baksidan-generated-corrected.png",
           },
           {
-            alt: "Färdig genererad altanvisualisering från andra referensbilden",
-            label: "Genererad bild 2",
-            src: "/trall/landing/generated-render-2.png",
+            alt: "Färdig expanderad altanvisualisering från andra referensbilden",
+            label: "Expanderad bild",
+            src: "/trall/landing/baksidan-generated-expanded.png",
           },
         ],
       },
@@ -247,7 +248,7 @@ const copy = {
     modelEyebrow: "Vad den kan modellera",
     modelTitle: "Byggt för riktig altanplanering, inte bara snygga bilder.",
     modelText:
-      "Projektet Backsidan pool visar riktningen: en uppmätt plan, en 3D-scen som går att läsa byggmässigt, materialmängder som blir prisuppskattningar och AI-bilder som kan granskas som designutkast.",
+      "Projektet Baksidan pool visar riktningen: en uppmätt plan, en 3D-scen som går att läsa byggmässigt, materialmängder som blir prisuppskattningar och AI-bilder som kan granskas som designutkast.",
     capabilities: [
       "Exakt altanplanering i 2D",
       "3D-förhandsvisning med terräng och nivåer",
@@ -268,7 +269,8 @@ const copy = {
     footerDeploy: "Deploya med Vercel",
     footerSecondary: "Visa projekt",
     imageAlt: "TrallAI-modal för AI-bildgranskning med markeringsverktyg",
-    heroAlt: "TrallAI-projektet Backsidan pool i altanplaneraren",
+    correctedAlt: "Färdig korrigerad AI-visualisering för Baksidan pool",
+    heroAlt: "TrallAI-projektet Baksidan pool i altanplaneraren",
   },
 } as const
 
@@ -334,14 +336,25 @@ export default function LandingPage() {
               ))}
             </div>
           </div>
-          <div className="overflow-hidden rounded-lg border border-white/10 bg-white/5 shadow-2xl">
-            <Image
-              src="/redigera.png"
-              alt={t.imageAlt}
-              width={2940}
-              height={1668}
-              className="h-auto w-full"
-            />
+          <div className="grid gap-4">
+            <figure className="overflow-hidden rounded-lg border border-white/10 bg-white/5 shadow-2xl">
+              <Image
+                src="/trall/landing/redigera.png"
+                alt={t.imageAlt}
+                width={1382}
+                height={939}
+                className="h-auto w-full"
+              />
+            </figure>
+            <figure className="overflow-hidden rounded-lg border border-white/10 bg-white/5 shadow-2xl">
+              <Image
+                src="/trall/landing/baksidan-ai-edited-final.png"
+                alt={t.correctedAlt}
+                width={1536}
+                height={1024}
+                className="h-auto w-full"
+              />
+            </figure>
           </div>
         </div>
       </section>
@@ -425,7 +438,7 @@ function HeroSection({
     <section className="relative min-h-[82svh] overflow-hidden">
       <Image
         priority
-        src="/trall/landing/planner.png"
+        src="/trall/landing/baksidan-planner.png"
         alt={t.heroAlt}
         fill
         sizes="100vw"
