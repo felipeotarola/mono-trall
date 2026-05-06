@@ -8,7 +8,7 @@ import { Workspace } from "@/components/trall/workspace"
 import { SidebarInset, SidebarProvider } from "@workspace/ui/components/sidebar"
 
 export default function DemoPage() {
-  const [projectTitle, setProjectTitle] = useState("Demo project")
+  const [, setProjectTitle] = useState("Demo project")
 
   return (
     <SidebarProvider
