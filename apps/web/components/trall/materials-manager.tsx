@@ -1,9 +1,15 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { ArchiveIcon, PlusIcon } from "lucide-react"
+import { PlusIcon } from "lucide-react"
 import { toast } from "sonner"
 
+import {
+  createLocalProjectMaterial,
+  listDemoMaterials,
+} from "@/components/trall/materials-manager/demo-materials"
+import { MaterialSelectionHint } from "@/components/trall/materials-manager/material-selection-hint"
+import { ProjectMaterialRow } from "@/components/trall/materials-manager/project-material-row"
 import {
   getErrorMessage,
   parseQuantity,
@@ -20,13 +26,10 @@ import {
   getCalculatedMaterialRule,
   getCalculatedProjectMaterialQuantity,
   getDeckingLinearMetres,
-  getMaterialDimensionsLabel,
   getPiecesForLinearMetres,
-  getProjectMaterialLineTotal,
   getProjectMaterialTotals,
   materialUnitLabels,
   materialUnits,
-  type CalculatedMaterialRule,
   type MaterialRecord,
   type ProjectMaterialSummary,
   type ProjectMaterialItem,
@@ -601,172 +604,5 @@ export function MaterialsManager({
         </div>
       </CardContent>
     </Card>
-  )
-}
-
-async function listDemoMaterials() {
-  const response = await fetch("/api/trall/demo/materials")
-  const payload = (await response.json().catch(() => null)) as
-    | { error?: string }
-    | MaterialRecord[]
-    | null
-
-  if (!response.ok || !Array.isArray(payload)) {
-    throw new Error(
-      payload && !Array.isArray(payload) && payload.error
-        ? payload.error
-        : "Could not load demo materials."
-    )
-  }
-
-  return payload
-}
-
-function createLocalProjectMaterial({
-  material,
-  projectId,
-  quantity,
-}: {
-  material: MaterialRecord
-  projectId: string
-  quantity: number
-}): ProjectMaterialItem {
-  const now = new Date().toISOString()
-
-  return {
-    project_id: projectId,
-    material_id: material.id,
-    quantity,
-    created_at: now,
-    updated_at: now,
-    material,
-  }
-}
-
-function ProjectMaterialRow({
-  calculationRule,
-  item,
-  onQuantityChange,
-  onQuantityCommit,
-  onRemove,
-}: {
-  calculationRule: CalculatedMaterialRule | null
-  item: ProjectMaterialItem
-  onQuantityChange: (quantity: number) => void
-  onQuantityCommit: () => void
-  onRemove: () => void
-}) {
-  const dimensions = getMaterialDimensionsLabel(item.material)
-  const calculationLabel =
-    calculationRule === "decking_area"
-      ? "Calculated from deck edges"
-      : calculationRule === "support_cc600"
-        ? "Calculated from c/c 600 support runs"
-        : null
-
-  return (
-    <div className="space-y-2 rounded-lg border bg-muted/25 px-3 py-2">
-      <div className="grid grid-cols-[minmax(0,1fr)_80px_32px] gap-2">
-        <div className="grid min-w-0 grid-cols-[40px_minmax(0,1fr)] gap-2">
-          <MaterialThumbnail material={item.material} />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{item.material.name}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {formatCurrency(item.material.cost)} /{" "}
-              {materialUnitLabels[item.material.unit]} ·{" "}
-              {formatCurrency(getProjectMaterialLineTotal(item))}
-            </p>
-            {dimensions ? (
-              <p className="truncate text-xs text-muted-foreground">
-                {dimensions}
-              </p>
-            ) : null}
-            {calculationLabel ? (
-              <p className="truncate text-xs text-muted-foreground">
-                {calculationLabel}
-              </p>
-            ) : null}
-          </div>
-        </div>
-        <Input
-          aria-label={`${item.material.name} quantity`}
-          disabled={calculationRule !== null}
-          inputMode="decimal"
-          min={0}
-          step={0.1}
-          type="number"
-          value={item.quantity}
-          onBlur={onQuantityCommit}
-          onChange={(event) =>
-            onQuantityChange(Math.max(0, Number(event.target.value) || 0))
-          }
-        />
-        <div className="flex items-center justify-end gap-1">
-          <Button
-            aria-label="Remove material from project"
-            size="icon-sm"
-            title="Remove"
-            variant="ghost"
-            onClick={onRemove}
-          >
-            <ArchiveIcon />
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function MaterialThumbnail({ material }: { material: MaterialRecord }) {
-  if (!material.image_url) {
-    return <div className="size-10 rounded-md border bg-muted" />
-  }
-
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      alt={material.name}
-      className="size-10 rounded-md border object-cover"
-      src={material.image_url}
-    />
-  )
-}
-
-function MaterialSelectionHint({
-  boardGapMm,
-  material,
-  onUseSuggested,
-  suggestedLinearMetres,
-  suggestedPieces,
-}: {
-  boardGapMm: number
-  material: MaterialRecord
-  onUseSuggested: () => void
-  suggestedLinearMetres: number | null
-  suggestedPieces: number | null
-}) {
-  const dimensions = getMaterialDimensionsLabel(material)
-
-  if (!dimensions && !suggestedLinearMetres) {
-    return null
-  }
-
-  return (
-    <div className="rounded-lg bg-muted/50 px-2 py-1.5 text-xs text-muted-foreground">
-      <div className="flex items-center justify-between gap-2">
-        <span className="min-w-0 truncate">
-          {dimensions ? `${dimensions}` : "No dimensions"}
-          {suggestedLinearMetres
-            ? ` · ${boardGapMm} mm gap · suggested ${suggestedLinearMetres} lpm`
-            : ""}
-          {suggestedPieces ? ` · ${suggestedPieces} boards` : ""}
-        </span>
-        {suggestedLinearMetres ? (
-          <Button size="xs" variant="outline" onClick={onUseSuggested}>
-            Use
-          </Button>
-        ) : null}
-      </div>
-    </div>
   )
 }
