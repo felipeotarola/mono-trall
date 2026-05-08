@@ -66,8 +66,10 @@ export function MeasurementsCard({ metrics }: { metrics: Metric[] }) {
 
 export function TerrainSummaryCard({
   elevationSettings,
+  onEdit,
 }: {
   elevationSettings: ElevationSettings
+  onEdit: () => void
 }) {
   const normalized = normalizeElevationSettings(elevationSettings)
   const modeLabel =
@@ -86,7 +88,7 @@ export function TerrainSummaryCard({
             {normalized.deck.finishedHeightCm} cm
           </CardDescription>
         </div>
-        <Button size="sm" variant="outline" type="button">
+        <Button size="sm" variant="outline" type="button" onClick={onEdit}>
           <PencilIcon className="size-4" />
           Redigera nivåer
         </Button>

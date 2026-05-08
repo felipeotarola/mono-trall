@@ -12,10 +12,7 @@ import {
 import { AIImageEditorDialog } from "@/components/trall/ai-visualization/components/ai-image-editor-dialog"
 import { ReferenceImage } from "@/components/trall/ai-visualization/components/reference-image"
 import { SavedVisualization } from "@/components/trall/ai-visualization/components/saved-visualization"
-import {
-  type ExpansionMode,
-  useAIVisualizationFlow,
-} from "@/components/trall/ai-visualization/hooks/use-ai-visualization-flow"
+import { useAIVisualizationFlow } from "@/components/trall/ai-visualization/hooks/use-ai-visualization-flow"
 import { formatFileLabel } from "@/components/trall/ai-visualization/utils"
 import { Button } from "@workspace/ui/components/button"
 import {
@@ -65,10 +62,6 @@ export function AIVisualizationPanel({
     capture3DReference,
     editingVisualization,
     error,
-    expandingSourceUrl,
-    expandVisualization,
-    expansionBrief,
-    expansionMode,
     generateVisualization,
     generating,
     loadingHistory,
@@ -78,8 +71,6 @@ export function AIVisualizationPanel({
     selectedStyle,
     setBrief,
     setEditingVisualization,
-    setExpansionBrief,
-    setExpansionMode,
     setReference3D,
     setStyle,
     style,
@@ -252,46 +243,10 @@ export function AIVisualizationPanel({
               <ImageIcon className="size-3.5" />
               {demoMode ? "Demo AI images" : "Saved AI images"}
             </div>
-            <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="grid gap-1.5">
-                  <span className="text-xs text-muted-foreground">
-                    Expand canvas
-                  </span>
-                  <Select
-                    value={expansionMode}
-                    onValueChange={(nextMode) =>
-                      setExpansionMode(nextMode as ExpansionMode)
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="wide">Wide</SelectItem>
-                      <SelectItem value="vertical">Vertical</SelectItem>
-                      <SelectItem value="square">Square</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid content-end">
-                  <span className="text-xs text-muted-foreground">
-                    Saved as a new image
-                  </span>
-                </div>
-              </div>
-              <textarea
-                className="min-h-16 resize-none rounded-md border bg-background px-3 py-2 text-sm shadow-xs outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                value={expansionBrief}
-                onChange={(event) => setExpansionBrief(event.target.value)}
-              />
-            </div>
             <div className="grid gap-2">
               {visualizations.map((visualization) => (
                 <SavedVisualization
                   key={visualization.id}
-                  expandingSourceUrl={expandingSourceUrl}
-                  onExpand={() => expandVisualization(visualization)}
                   onOpen={() => setEditingVisualization(visualization)}
                   visualization={visualization}
                 />

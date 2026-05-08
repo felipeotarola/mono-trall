@@ -12,8 +12,6 @@ export type UploadedReference = {
   previewUrl: string
 }
 
-export type ExpansionMode = "wide" | "vertical" | "square"
-
 export function useAIVisualizationFlow({
   demoMode,
   demoOpenAIKey,
@@ -31,13 +29,6 @@ export function useAIVisualizationFlow({
     "Show the planned deck, pool, fences, stairs, planting, and house materials realistically on this property."
   )
   const [error, setError] = useState<string | null>(null)
-  const [expandingSourceUrl, setExpandingSourceUrl] = useState<string | null>(
-    null
-  )
-  const [expansionBrief, setExpansionBrief] = useState(
-    "Expand the scene naturally while keeping the house, deck, pool, materials, and lighting unchanged."
-  )
-  const [expansionMode, setExpansionMode] = useState<ExpansionMode>("wide")
   const [editingVisualization, setEditingVisualization] =
     useState<AIVisualizationRecord | null>(null)
   const [visualizations, setVisualizations] = useState<
@@ -207,56 +198,6 @@ export function useAIVisualizationFlow({
     }
   }
 
-  async function expandVisualization(visualization: AIVisualizationRecord) {
-    const sourceImage = visualization.generated_images[0]
-
-    if (!sourceImage) {
-      setError("This visualization has no generated image to expand.")
-      return
-    }
-
-    setExpandingSourceUrl(sourceImage.url)
-    setError(null)
-
-    try {
-      if (demoMode && !demoOpenAIKey.trim()) {
-        throw new Error("Add an OpenAI API key to expand images in demo mode.")
-      }
-
-      const savedProjectId = await ensureProject()
-      const formData = new FormData()
-      formData.append("action", "expand")
-      formData.append("brief", expansionBrief)
-      formData.append("expansionMode", expansionMode)
-      formData.append("planSummary", planSummary)
-      formData.append("projectId", savedProjectId)
-      formData.append("sourceImageUrl", sourceImage.url)
-      formData.append("style", visualization.style)
-
-      const payload = await postAIVisualization({
-        demoMode,
-        demoOpenAIKey,
-        formData,
-        fallbackError: "Image expansion failed.",
-      })
-
-      if (payload.visualization) {
-        setVisualizations((currentVisualizations) => [
-          payload.visualization as AIVisualizationRecord,
-          ...currentVisualizations,
-        ])
-      }
-    } catch (caughtError) {
-      setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "Image expansion failed."
-      )
-    } finally {
-      setExpandingSourceUrl(null)
-    }
-  }
-
   async function regenerateMarkedImage({
     instruction,
     mask,
@@ -317,10 +258,6 @@ export function useAIVisualizationFlow({
     capture3DReference,
     editingVisualization,
     error,
-    expandingSourceUrl,
-    expandVisualization,
-    expansionBrief,
-    expansionMode,
     generateVisualization,
     generating,
     loadingHistory,
@@ -330,8 +267,6 @@ export function useAIVisualizationFlow({
     selectedStyle,
     setBrief,
     setEditingVisualization,
-    setExpansionBrief,
-    setExpansionMode,
     setReference3D,
     setStyle,
     style,

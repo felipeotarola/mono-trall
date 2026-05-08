@@ -1,18 +1,11 @@
-import { Loader2Icon, Maximize2Icon } from "lucide-react"
-
-import { Button } from "@workspace/ui/components/button"
 import type { AIVisualizationRecord } from "@/lib/trall/ai-visualization"
 
 import { getStyleLabel } from "../utils"
 
 export function SavedVisualization({
-  expandingSourceUrl,
-  onExpand,
   onOpen,
   visualization,
 }: {
-  expandingSourceUrl: string | null
-  onExpand: () => void
   onOpen: () => void
   visualization: AIVisualizationRecord
 }) {
@@ -50,21 +43,6 @@ export function SavedVisualization({
         <p className="line-clamp-2 text-xs text-muted-foreground">
           {visualization.brief || "No brief"}
         </p>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="mt-2 w-full"
-          disabled={expandingSourceUrl !== null}
-          onClick={onExpand}
-        >
-          {expandingSourceUrl === generatedImage.url ? (
-            <Loader2Icon className="size-4 animate-spin" />
-          ) : (
-            <Maximize2Icon className="size-4" />
-          )}
-          {expandingSourceUrl === generatedImage.url ? "Expanding..." : "Expand"}
-        </Button>
       </div>
     </div>
   )

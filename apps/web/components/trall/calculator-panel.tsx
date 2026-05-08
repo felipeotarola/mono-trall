@@ -159,7 +159,10 @@ export function CalculatorPanel({
           boardDirection={boardDirection}
           onChange={setBoardDirection}
         />
-        <TerrainSummaryCard elevationSettings={elevationSettings} />
+        <TerrainSummaryCard
+          elevationSettings={elevationSettings}
+          onEdit={() => setActiveTab("3d")}
+        />
         <ProjectSummaryCard projectName={projectName} />
       </InspectorTabPanel>
 
