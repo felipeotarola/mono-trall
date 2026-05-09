@@ -255,6 +255,21 @@ export function PlanSvg({
       return
     }
 
+    if (selectedMeasurementId && !isTypingTarget(event.target)) {
+      event.preventDefault()
+      setMeasurements((current) =>
+        current.filter((line) => line.id !== selectedMeasurementId)
+      )
+      setEditingMeasurement((current) =>
+        current?.id === selectedMeasurementId ? null : current
+      )
+      setMeasurementDrag((current) =>
+        current?.id === selectedMeasurementId ? null : current
+      )
+      setSelectedMeasurementId(null)
+      return
+    }
+
     if (selectedFeatureId && !isTypingTarget(event.target)) {
       event.preventDefault()
       onDeleteFeature(selectedFeatureId)
@@ -826,6 +841,9 @@ export function PlanSvg({
     svgRef.current.focus()
     svgRef.current.setPointerCapture(event.pointerId)
     setSelectedMeasurementId(line.id)
+    setSelectedFeatureId(null)
+    setActivePointIndex(null)
+    setActivePoolPointIndex(null)
     setEditingMeasurement(null)
     setMeasurementDrag({
       type,
