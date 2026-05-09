@@ -10,11 +10,19 @@ import {
 import type { SaveStatus } from "./types"
 
 export function DesktopWorkspaceHeader({
+  canRedo,
+  canUndo,
+  onRedo,
   onToggleSidebar,
+  onUndo,
   projectName,
   saveStatus,
 }: {
+  canRedo: boolean
+  canUndo: boolean
+  onRedo: () => void
   onToggleSidebar: () => void
+  onUndo: () => void
   projectName: string
   saveStatus: SaveStatus | "Demo mode"
 }) {
@@ -52,10 +60,18 @@ export function DesktopWorkspaceHeader({
         </div>
       </div>
       <div className="flex items-center gap-1">
-        <DesktopHeaderButton label="Ångra">
+        <DesktopHeaderButton
+          disabled={!canUndo}
+          label="Ångra"
+          onClick={onUndo}
+        >
           <Undo2Icon />
         </DesktopHeaderButton>
-        <DesktopHeaderButton label="Gör om">
+        <DesktopHeaderButton
+          disabled={!canRedo}
+          label="Gör om"
+          onClick={onRedo}
+        >
           <Redo2Icon />
         </DesktopHeaderButton>
         <DesktopHeaderButton label="Fler alternativ">
@@ -68,17 +84,27 @@ export function DesktopWorkspaceHeader({
 
 function DesktopHeaderButton({
   children,
+  disabled = false,
   label,
+  onClick,
 }: {
   children: ReactNode
+  disabled?: boolean
   label: string
+  onClick?: () => void
 }) {
   return (
     <button
       aria-label={label}
-      className="flex size-8 items-center justify-center rounded-lg text-stone-700 hover:bg-stone-100 hover:text-stone-950 [&_svg]:size-4"
+      className={
+        disabled
+          ? "flex size-8 items-center justify-center rounded-lg text-stone-300 [&_svg]:size-4"
+          : "flex size-8 items-center justify-center rounded-lg text-stone-700 hover:bg-stone-100 hover:text-stone-950 [&_svg]:size-4"
+      }
+      disabled={disabled}
       title={label}
       type="button"
+      onClick={onClick}
     >
       {children}
     </button>

@@ -80,6 +80,25 @@ import { useSidebar } from "@workspace/ui/components/sidebar"
 
 const AUTOSAVE_DELAY_MS = 1200
 const FALLBACK_PROJECT_NAME = "Untitled"
+const HISTORY_LIMIT = 60
+
+type UndoablePlannerState = {
+  house: HouseModel
+  deckPoints: Point[]
+  deckEdgeConstraints: EdgeConstraint[]
+  measurements: MeasurementLine[]
+  features: DeckFeature[]
+  boardDirection: BoardDirectionSettings
+  elevationSettings: ElevationSettings
+  poolPoints: Point[] | null
+  poolEdgeConstraints: EdgeConstraint[]
+}
+
+type PlannerHistory = {
+  past: UndoablePlannerState[]
+  current: UndoablePlannerState
+  future: UndoablePlannerState[]
+}
 
 export function Workspace({
   demoMode = false,
@@ -139,6 +158,10 @@ export function Workspace({
     demoMode ? "Demo mode" : "Unsaved changes"
   )
   const [demoOpenAIKey, setDemoOpenAIKey] = useState("")
+  const [historyAvailability, setHistoryAvailability] = useState({
+    canRedo: false,
+    canUndo: false,
+  })
   const viewBoxRef = useRef(viewBox)
   const viewAspectRatioRef = useRef(viewAspectRatio)
   const fitStateRef = useRef<{
@@ -147,8 +170,24 @@ export function Workspace({
     poolPoints: Point[] | null
   } | null>(null)
   const hydratingProjectRef = useRef(false)
+  const applyingHistoryRef = useRef(false)
   const autosaveReadyRef = useRef(false)
   const latestSaveRequestRef = useRef(0)
+  const historyRef = useRef<PlannerHistory>({
+    past: [],
+    current: createUndoablePlannerState({
+      boardDirection,
+      deckEdgeConstraints,
+      deckPoints,
+      elevationSettings,
+      features,
+      house,
+      measurements,
+      poolEdgeConstraints,
+      poolPoints,
+    }),
+    future: [],
+  })
 
   const houseBounds = useMemo(() => getHouseBounds(house), [house])
   const selectedFeature = useMemo(
@@ -158,6 +197,48 @@ export function Workspace({
   )
   const modeLabel = getModeLabel(activeTool, placementMode)
   const zoomPercent = Math.round((INITIAL_VIEW_BOX.width / viewBox.width) * 100)
+  const undoableState = useMemo(
+    () =>
+      createUndoablePlannerState({
+        boardDirection,
+        deckEdgeConstraints,
+        deckPoints,
+        elevationSettings,
+        features,
+        house,
+        measurements,
+        poolEdgeConstraints,
+        poolPoints,
+      }),
+    [
+      boardDirection,
+      deckEdgeConstraints,
+      deckPoints,
+      elevationSettings,
+      features,
+      house,
+      measurements,
+      poolEdgeConstraints,
+      poolPoints,
+    ]
+  )
+  const canUndo = historyAvailability.canUndo
+  const canRedo = historyAvailability.canRedo
+  const updateHistoryAvailability = useCallback((history: PlannerHistory) => {
+    setHistoryAvailability({
+      canRedo: history.future.length > 0,
+      canUndo: history.past.length > 0,
+    })
+  }, [])
+  const resetHistory = useCallback((state: UndoablePlannerState) => {
+    const history = {
+      past: [],
+      current: clonePlannerState(state),
+      future: [],
+    }
+    historyRef.current = history
+    updateHistoryAvailability(history)
+  }, [updateHistoryAvailability])
   const fitViewBox = useCallback(() => {
     const nextViewBox =
       getFitViewBox(
@@ -195,6 +276,31 @@ export function Workspace({
       poolPoints,
     }
   }, [deckPoints, houseBounds, poolPoints])
+
+  useEffect(() => {
+    if (hydratingProjectRef.current) {
+      return
+    }
+
+    if (applyingHistoryRef.current) {
+      applyingHistoryRef.current = false
+      return
+    }
+
+    const history = historyRef.current
+    if (plannerStatesEqual(history.current, undoableState)) {
+      return
+    }
+
+    historyRef.current = {
+      past: [...history.past, clonePlannerState(history.current)].slice(
+        -HISTORY_LIMIT
+      ),
+      current: clonePlannerState(undoableState),
+      future: [],
+    }
+    updateHistoryAvailability(historyRef.current)
+  }, [undoableState, updateHistoryAvailability])
 
   useEffect(() => {
     if (
@@ -292,22 +398,46 @@ export function Workspace({
         }
 
         hydratingProjectRef.current = true
+        const loadedFeatures = normalizeDeckFeatures(version.state.features)
+        const loadedBoardDirection = normalizeBoardDirection(
+          version.state.boardDirection
+        )
+        const loadedElevationSettings = normalizeElevationSettings(
+          version.state.elevationSettings
+        )
+        const loadedDeckEdgeConstraints =
+          version.state.deckEdgeConstraints ?? []
+        const loadedMeasurements = version.state.measurements ?? []
+        const loadedPoolPoints = version.state.poolPoints ?? null
+        const loadedPoolEdgeConstraints =
+          version.state.poolEdgeConstraints ?? []
+        resetHistory(
+          createUndoablePlannerState({
+            boardDirection: loadedBoardDirection,
+            deckEdgeConstraints: loadedDeckEdgeConstraints,
+            deckPoints: version.state.deckPoints,
+            elevationSettings: loadedElevationSettings,
+            features: loadedFeatures,
+            house: version.state.house,
+            measurements: loadedMeasurements,
+            poolEdgeConstraints: loadedPoolEdgeConstraints,
+            poolPoints: loadedPoolPoints,
+          })
+        )
         setCurrentProjectId(project.id)
         setCurrentProjectName(project.name)
         onProjectNameChange?.(project.name)
         setHouse(version.state.house)
         setDeckPoints(version.state.deckPoints)
-        setDeckEdgeConstraints(version.state.deckEdgeConstraints ?? [])
-        setMeasurements(version.state.measurements ?? [])
-        setFeatures(normalizeDeckFeatures(version.state.features))
-        setBoardDirection(normalizeBoardDirection(version.state.boardDirection))
-        setElevationSettings(
-          normalizeElevationSettings(version.state.elevationSettings)
-        )
+        setDeckEdgeConstraints(loadedDeckEdgeConstraints)
+        setMeasurements(loadedMeasurements)
+        setFeatures(loadedFeatures)
+        setBoardDirection(loadedBoardDirection)
+        setElevationSettings(loadedElevationSettings)
         setPlacementMode(null)
         setSelectedFeatureId(null)
-        setPoolPoints(version.state.poolPoints ?? null)
-        setPoolEdgeConstraints(version.state.poolEdgeConstraints ?? [])
+        setPoolPoints(loadedPoolPoints)
+        setPoolEdgeConstraints(loadedPoolEdgeConstraints)
         setViewBox(
           getDesktopEnhancedFitViewBox(
             getFitViewBox(
@@ -338,7 +468,7 @@ export function Workspace({
     return () => {
       cancelled = true
     }
-  }, [demoMode, onProjectNameChange, requestedProjectId])
+  }, [demoMode, onProjectNameChange, requestedProjectId, resetHistory])
 
   const calculations = useMemo(() => {
     const areaM2 = polygonArea(deckPoints) / PIXELS_PER_METER ** 2
@@ -515,6 +645,60 @@ export function Workspace({
     await savePlannerState({ source: "manual" })
   }
 
+  function applyPlannerHistoryState(state: UndoablePlannerState) {
+    applyingHistoryRef.current = true
+    setHouse(clonePlannerState(state.house))
+    setDeckPoints(clonePlannerState(state.deckPoints))
+    setDeckEdgeConstraints(clonePlannerState(state.deckEdgeConstraints))
+    setMeasurements(clonePlannerState(state.measurements))
+    setFeatures(clonePlannerState(state.features))
+    setBoardDirection(clonePlannerState(state.boardDirection))
+    setElevationSettings(clonePlannerState(state.elevationSettings))
+    setPoolPoints(clonePlannerState(state.poolPoints))
+    setPoolEdgeConstraints(clonePlannerState(state.poolEdgeConstraints))
+    setPlacementMode(null)
+    setSelectedFeatureId(null)
+    setActivePointIndex(null)
+    setActivePoolPointIndex(null)
+  }
+
+  function handleUndo() {
+    const history = historyRef.current
+    const previous = history.past.at(-1)
+    if (!previous) {
+      return
+    }
+
+    historyRef.current = {
+      past: history.past.slice(0, -1),
+      current: clonePlannerState(previous),
+      future: [
+        clonePlannerState(history.current),
+        ...history.future,
+      ].slice(0, HISTORY_LIMIT),
+    }
+    updateHistoryAvailability(historyRef.current)
+    applyPlannerHistoryState(previous)
+  }
+
+  function handleRedo() {
+    const history = historyRef.current
+    const next = history.future[0]
+    if (!next) {
+      return
+    }
+
+    historyRef.current = {
+      past: [...history.past, clonePlannerState(history.current)].slice(
+        -HISTORY_LIMIT
+      ),
+      current: clonePlannerState(next),
+      future: history.future.slice(1),
+    }
+    updateHistoryAvailability(historyRef.current)
+    applyPlannerHistoryState(next)
+  }
+
   function handleAddPool() {
     setPlacementMode(null)
     setSelectedFeatureId(null)
@@ -606,22 +790,30 @@ export function Workspace({
         <div className="min-h-0 min-w-0 flex-1 lg:flex lg:flex-col">
           <section className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-stone-50 dark:bg-zinc-950 lg:flex lg:flex-col lg:bg-white">
             {demoMode ? (
-              <div className="absolute top-3 right-3 z-30 rounded-lg border border-amber-200 bg-amber-50/95 px-3 py-1.5 text-xs font-medium text-amber-900 shadow-sm backdrop-blur">
+              <div className="pointer-events-none absolute top-3 right-3 z-30 rounded-lg border border-amber-200 bg-amber-50/95 px-3 py-1.5 text-xs font-medium text-amber-900 shadow-sm backdrop-blur">
                 Demo mode · changes are not saved
               </div>
             ) : null}
             <DesktopWorkspaceHeader
+              canRedo={canRedo}
+              canUndo={canUndo}
               projectName={currentProjectName}
               saveStatus={saveStatus}
+              onRedo={handleRedo}
               onToggleSidebar={toggleSidebar}
+              onUndo={handleUndo}
             />
             <div className="hidden lg:block">
               <CanvasToolbar
                 activeTool={activeTool}
+                canRedo={canRedo}
+                canUndo={canUndo}
                 extraTool={expandTool}
                 modeLabel={modeLabel}
+                onRedo={handleRedo}
                 onResetView={fitViewBox}
                 onSaveProject={handleSaveProject}
+                onUndo={handleUndo}
                 onViewModeChange={setViewMode}
                 onZoomIn={zoomIn}
                 onZoomOut={zoomOut}
@@ -800,4 +992,21 @@ export function Workspace({
       </div>
     </main>
   )
+}
+
+function createUndoablePlannerState(
+  state: UndoablePlannerState
+): UndoablePlannerState {
+  return clonePlannerState(state)
+}
+
+function clonePlannerState<T>(state: T): T {
+  return structuredClone(state)
+}
+
+function plannerStatesEqual(
+  first: UndoablePlannerState,
+  second: UndoablePlannerState
+) {
+  return JSON.stringify(first) === JSON.stringify(second)
 }

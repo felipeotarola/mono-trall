@@ -8,6 +8,7 @@ import {
   MinusIcon,
   MoreHorizontalIcon,
   PlusIcon,
+  Redo2Icon,
   SaveIcon,
   Undo2Icon,
   type LucideIcon,
@@ -28,8 +29,12 @@ export function CanvasToolbar({
   activeTool,
   extraTool,
   modeLabel,
+  canRedo,
+  canUndo,
+  onRedo,
   onResetView,
   onSaveProject,
+  onUndo,
   onViewModeChange,
   onZoomIn,
   onZoomOut,
@@ -41,8 +46,12 @@ export function CanvasToolbar({
   activeTool: ActiveTool
   extraTool: Tool
   modeLabel: string
+  canRedo: boolean
+  canUndo: boolean
+  onRedo: () => void
   onResetView: () => void
   onSaveProject: () => void
+  onUndo: () => void
   onViewModeChange: (mode: PlannerViewMode) => void
   onZoomIn: () => void
   onZoomOut: () => void
@@ -155,10 +164,18 @@ export function CanvasToolbar({
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>Project actions</DropdownMenuLabel>
           <ProjectAction
-            disabled
+            disabled={!canUndo}
             icon={Undo2Icon}
             label="Undo"
-            title="Undo is not available yet"
+            title={canUndo ? "Undo" : "Nothing to undo"}
+            onSelect={onUndo}
+          />
+          <ProjectAction
+            disabled={!canRedo}
+            icon={Redo2Icon}
+            label="Redo"
+            title={canRedo ? "Redo" : "Nothing to redo"}
+            onSelect={onRedo}
           />
           <DropdownMenuItem
             className="h-9 gap-2"
@@ -242,15 +259,22 @@ function ProjectAction({
   disabled,
   icon: Icon,
   label,
+  onSelect,
   title,
 }: {
   disabled?: boolean
   icon: LucideIcon
   label: string
+  onSelect?: () => void
   title?: string
 }) {
   return (
-    <DropdownMenuItem disabled={disabled} className="h-9 gap-2" title={title}>
+    <DropdownMenuItem
+      disabled={disabled}
+      className="h-9 gap-2"
+      title={title}
+      onSelect={onSelect}
+    >
       <Icon />
       {label}
     </DropdownMenuItem>
